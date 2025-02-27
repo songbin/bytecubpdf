@@ -1,0 +1,21 @@
+{
+    "USE_MODELSCOPE": "1",
+    "PDF2ZH_LANG_FROM": "English",
+    "PDF2ZH_LANG_TO": "Simplified Chinese",
+    "translators": [
+        {
+            "name": "zhipu",
+            "envs": {
+                "ZHIPU_API_KEY": "ce5c1b748888e7d43201dfe2c91177a8.YwIxNgWmsS2RxGcj",
+                "ZHIPU_MODEL": "GLM-4-Flash"
+            }
+        },
+        {
+            "name": "deepseek",
+            "envs": {
+                "DEEPSEEK_API_KEY": "sk-069f999c07d347bcae5ff968d6f4917a",
+                "DEEPSEEK_MODEL": "deepseek-chat"
+            }
+        }
+    ]
+}

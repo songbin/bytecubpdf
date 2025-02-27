@@ -1,0 +1,70 @@
+# 忽略 Python 编译生成的文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 忽略虚拟环境目录
+venv/
+env/
+.venv/
+ENV/
+
+# 忽略 Python 打包生成的文件
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+
+# 忽略 IDE 和编辑器生成的配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# 忽略日志文件和数据库文件
+*.log
+*.sqlite3
+*.db
+
+# 忽略操作系统生成的文件
+.DS_Store
+Thumbs.db
+
+# 忽略测试生成的临时文件
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 忽略 Jupyter Notebook 的检查点文件
+.ipynb_checkpoints/
+
+# 忽略环境变量文件
+.env
+.env.local
+.env.*.local
+
+# 忽略缓存目录
+.cache/
+
+# 忽略静态文件和媒体文件（如果需要）
+staticfiles/
+media/
+
+# 忽略其他临时文件
+*.tmp
+*.bak
+*.backup
+
+# 忽略日志目录
+/logs/
+
+# 忽略文档目录
+/docs/
+
+/fonts/
+/.conda/
+/pdf2zh_files/
+/files
