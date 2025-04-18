@@ -1,0 +1,49 @@
+{
+  "leftside": {
+    "addPdf": "Translate PDF",
+    "function": "Function",
+    "settings": "Settings",
+    "transHistory": "Translate history"
+  },
+  "main": {
+    "platformConfigIncomplete": "Platform Configuration Incomplete",
+    "platformConfigIncompleteDesc": "Please configure API URL and Key first to use this platform",
+    "goToSettings": "Go to Settings",
+    "cancel": "Cancel",
+    "uploadPdf": {
+      "introHow": "Click or drag files to this area to upload",
+      "carefull": "Please do not upload sensitive data such as your bank card numbers and passwords, credit card numbers, expiration dates, and security codes"
+    },
+    "languages": {
+      "zh": "Simplified Chinese",
+      "zh-TW": "Traditional Chinese",
+      "en": "English",
+      "fr": "French",
+      "de": "German",
+      "ja": "Japanese",
+      "ko": "Korean",
+      "ru": "Russian",
+      "es": "Spanish",
+      "it": "Italian"
+    },
+    "tsform": {
+      "sourceLang": "Source Language",
+      "targetLang": "Target Language",
+      "platform": "Service Platform",
+      "model": "Model",
+      "apikey": "API Key",
+      "engine": "Translation Engine",
+      "thread": "Thread Count",
+      "sourceLangPlaceholder": "Select source language",
+      "targetLangPlaceholder": "Select target language",
+      "platformPlaceholder": "Select platform",
+      "modelPlaceholder": "Select model",
+      "enginePlaceholder": "Select translation engine",
+      "threadPlaceholder": "Enter thread count",
+      "buttons": {
+        "translate": "Translate",
+        "stop": "Stop"
+      }
+    }
+  }
+}

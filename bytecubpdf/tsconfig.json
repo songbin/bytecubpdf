@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "strict": true,
+    "jsx": "preserve",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    // "types": ["vite/client","node"],
+    "paths": {
+      "@/renderer/*": ["./src/renderer/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/main/*": ["./src/main/*"],
+
+    },
+    "typeRoots": [
+      "./node_modules/@types",
+       "./src/types",
+      "./src/types/global",
+      "./src/renderer/types",
+      "./node_modules/vite/client"],
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue"
+  ],
+  "exclude": ["node_modules"]
+}

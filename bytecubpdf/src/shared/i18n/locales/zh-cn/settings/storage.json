@@ -1,0 +1,13 @@
+{
+  "title": "存储设置",
+  "pathLabel": "数据存储路径",
+  "pathPlaceholder": "请选择文件存储目录",
+  "browse": "浏览目录",
+  "loadError": "加载存储路径失败",
+  "saveSuccess": "存储路径保存成功",
+  "saveError": "存储路径保存失败",
+  "selectError": "目录选择失败",
+  "common": {
+    "save": "保存"
+  }
+}

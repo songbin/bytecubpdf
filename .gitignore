@@ -1,36 +1,127 @@
-.DS_Store
-node_modules
-/dist
+# =====================================
+# bytecubpdf (Electron/Vue 项目) 忽略规则
+# =====================================
+/bytecubpdf/node_modules/
+/bytecubpdf/dist/
+/bytecubpdf/execute/**
+# 但保留所有.bat文件
+!/bytecubpdf/execute/**/*.bat
+/bytecubpdf/release/
+/bytecubpdf/dist-electron/
+/bytecubpdf/*.log
+/bytecubpdf/.DS_Store
 
-
-# local env files
-.env.local
-.env.*.local
-
-# Log files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Local development files
+/bytecubpdf/.env.local
+/bytecubpdf/.env.*.local
 
 # Editor directories and files
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+/bytecubpdf/.idea
+/bytecubpdf/*.suo
+/bytecubpdf/*.ntvs*
+/bytecubpdf/*.njsproj
+/bytecubpdf/*.sln
+/bytecubpdf/*.sw?
 
-#Electron-builder output
-/dist_electron
+# =====================================
+# bytecub-plugin (Python 项目) 忽略规则
+# =====================================
+/bytecub-plugin/__pycache__/
+/bytecub-plugin/*.py[cod]
+/bytecub-plugin/*$py.class
 
-# 特别忽略 resource/execute 下的 Python 脚本
-/resources/execute/**/*.pyc
-/resources/execute/**/*.pyo
-/resources/execute/**/*.pyd
-/resources/dist
-/resources/build
-/resources/execute/*.spec
-/resources/*.spec
-/resources/execute/__pycache__
+# 虚拟环境目录
+/bytecub-plugin/venv/
+/bytecub-plugin/env/
+/bytecub-plugin/.venv/
+/bytecub-plugin/ENV/
+
+# Python 打包生成的文件
+/bytecub-plugin/*.egg-info/
+/bytecub-plugin/dist/
+/bytecub-plugin/bytecubplugin.spec
+/bytecub-plugin/models/
+/bytecub-plugin/build/
+/bytecub-plugin/*.egg
+/bytecub-plugin/*.whl
+
+# IDE 和编辑器配置
+/bytecub-plugin/.idea/
+/bytecub-plugin/*.swp
+/bytecub-plugin/*.swo
+/bytecub-plugin/*.sublime-workspace
+/bytecub-plugin/*.sublime-project
+
+# 日志和数据库文件
+/bytecub-plugin/*.log
+/bytecub-plugin/*.sqlite3
+/bytecub-plugin/*.db
+
+# 系统生成文件
+/bytecub-plugin/.DS_Store
+/bytecub-plugin/Thumbs.db
+
+# 测试缓存
+/bytecub-plugin/.pytest_cache/
+/bytecub-plugin/.coverage
+/bytecub-plugin/htmlcov/
+
+# Jupyter Notebook 检查点
+/bytecub-plugin/.ipynb_checkpoints/
+
+# 环境变量文件
+/bytecub-plugin/.env
+/bytecub-plugin/.env.local
+/bytecub-plugin/.env.*.local
+
+# 缓存目录
+/bytecub-plugin/.cache/
+
+# 静态/媒体文件（按需取消注释）
+#/bytecub-plugin/staticfiles/
+#/bytecub-plugin/media/
+
+# 临时文件
+/bytecub-plugin/*.tmp
+/bytecub-plugin/*.bak
+/bytecub-plugin/*.backup
+
+# 日志目录
+/bytecub-plugin/logs/
+
+# 文档目录
+/bytecub-plugin/docs/
+
+# 其他特定目录
+/bytecub-plugin/fonts/
+/bytecub-plugin/.conda/
+/bytecub-plugin/files
+/bytecub-plugin/output
+/bytecub-plugin/cachedata
+bytecub-plugin/bytecubplugin.spec
+bytecub-plugin/bytecubplugin.spec
+/bytecub-plugin/bytecubplugin.spec
+
+# 在文件末尾添加 Vitepress 相关忽略规则
+# =====================================
+# Vitepress 文档项目
+# =====================================
+/vitepress/.vitepress/dist/
+/vitepress/.vitepress/cache/
+/vitepress/node_modules/
+/vitepress/.temp/
+/vitepress/.cache/
+
+# Vitepress 默认生成的文件
+/vitepress/.vitepress/theme/override.css
+/vitepress/.vitepress/theme/index.css
+
+# 保留自定义主题文件
+!/vitepress/.vitepress/theme/custom.css
+
+# 开发环境文件
+/vitepress/.env*
+/vitepress/*.env
+
+# 调试文件
+/vitepress/debug.*

@@ -1,0 +1,23 @@
+node_modules
+node_modules/
+dist/
+execute/**
+# 但保留所有.bat文件
+!execute/**/*.bat
+release/
+dist-electron/
+*.log
+.DS_Store
+
+# Local development files
+.env.local
+.env.*.local
+
+# Editor directories and files
+.idea
+# .vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

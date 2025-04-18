@@ -1,0 +1,7 @@
+{
+  "buttons": {
+    "system": "系统设置",
+    "model": "大模型设置",
+    "addPlatform": "添加平台"
+  }
+}

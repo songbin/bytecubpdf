@@ -1,0 +1,68 @@
+{
+  "leftside": {
+    "buttons": {
+      "save": "Save",
+      "search": "Search",
+      "addPlatform": "Add Platform",
+      "addModel": "Add Model"
+    },
+    "searchPlaceholder": "Search model platforms"
+  },
+  "platformName": "Platform Name",
+  "platformNamePlaceholder": "Enter platform name",
+  "protocolType": "Protocol Type",
+  "protocolTypePlaceholder": "Select protocol type",
+  "apiKey": "API Key",
+  "apiCheck":"Check",
+  "apiKeyPlaceholder": "Enter platform API key",
+  "apiUrl": "API URL",
+  "apiUrlPlaceholder": "Enter base URL",
+  "list": "model list",
+  "dialog": {
+    "editTitle": "Edit Model",
+    "addTitle": "Add Model",
+    "modelId": "Model ID",
+    "modelIdRequired": "Please enter model ID",
+    "modelIdPlaceholder": "e.g. gpt-4-0613",
+    "modelName": "Model Name",
+    "modelNameRequired": "Please enter model name",
+    "modelNamePlaceholder": "e.g. GPT-4",
+    "modelType": "Model Type"
+  },
+  "types": {
+    "text": "Text",
+    "vision": "Vision",
+    "embedded": "Embedded",
+    "multi": "Multimodal"
+  },
+  "validation": {
+    "platformName": "Please enter platform name",
+    "protocolType": "Please select protocol type",
+    "apiKey": "Please enter API key",
+    "apiUrl": "Please enter API URL"
+  },
+  "messages": {
+    "modelUpdateSuccess": "Model updated successfully",
+    "modelAddSuccess": "Model added successfully",
+    "modelDeleteSuccess": "Model deleted successfully",
+    "saveSuccess": "Settings saved successfully",
+    "saveError": "Save failed, please check console",
+    "deleteError": "Delete failed, please check console",
+    "formValidationError": "Please complete all required fields",
+    "checkingApi": "Checking API connection...",
+    "apiCheckSuccess": "API connection test succeeded",
+    "apiCheckFailed": "API connection test failed"
+  },
+  "platform": {
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure to delete this platform?",
+      "cannotDeleteLast": "Cannot delete the last platform, please keep at least one platform"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  }
+}

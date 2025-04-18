@@ -1,0 +1,50 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Electron: Main",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "electron:dev",
+                "--",
+                "--remote-debugging-port=9222",
+                "--disable-gpu",  // 新增参数
+                "--no-sandbox"   // 新增参数
+            ],
+            "console": "integratedTerminal",
+            "outputCapture": "std",
+            "timeout": 30000,
+            "skipFiles": ["<node_internals>/**"],
+            "env": {
+                "ELECTRON_DISABLE_SANDBOX": "1",  // 禁用沙盒
+                "ELECTRON_ENABLE_LOGGING": "1"    // 启用详细日志
+            }
+        },
+        {
+            "name": "Electron: Renderer",
+            "type": "chrome",
+            "request": "attach",
+            "port": 9222,
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/src/renderer",
+            "sourceMapPathOverrides": {
+                "webpack:///./src/*": "${webRoot}/*",
+                "webpack:///src/*": "${webRoot}/*",
+                "webpack:///./*": "${webRoot}/*",  // 新增路径映射
+                "webpack:///*": "${webRoot}/*",  
+                "/@fs/*": "${webRoot}/*",
+                "/@vite/*": "${webRoot}/*"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Electron: All",
+            "configurations": ["Electron: Main", "Electron: Renderer"]
+        }
+    ]
+}

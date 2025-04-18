@@ -1,0 +1,13 @@
+{
+  "title": "Storage Settings",
+  "pathLabel": "File Storage Path",
+  "pathPlaceholder": "Please select a file storage directory",
+  "browse": "Browse Directory",
+  "loadError": "Failed to load storage path",
+  "saveSuccess": "Storage path saved successfully",
+  "saveError": "Failed to save storage path",
+  "selectError": "Failed to select directory",
+  "common": {
+    "save": "Save"
+  }
+}

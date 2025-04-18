@@ -1,0 +1,99 @@
+<template>
+    <n-card :title="t('settings.storage.title')" class="settings-card">
+      <n-form ref="formRef" :model="storageForm">
+        <n-form-item :label="t('settings.storage.pathLabel')" path="storagePath">
+          <n-input 
+            v-model:value="storageForm.storagePath"
+            :placeholder="t('settings.storage.pathPlaceholder')"
+            :loading="loading"
+            clearable
+          >
+            <template #suffix>
+              <n-button 
+                secondary 
+                type="primary" 
+                @click="handleSelectFolder"
+                :disabled="loading"
+              >
+                {{ t('settings.storage.browse') }}
+              </n-button>
+              <n-button
+                circle tertiary 
+                @click="handleOpenFolder"
+                :disabled="!storageForm.storagePath || loading"
+              >
+              <template #icon>
+                <n-icon><SearchLocate /></n-icon>
+              </template>
+              
+              </n-button>
+            </template>
+          </n-input>
+        </n-form-item>
+      </n-form>
+    </n-card>
+  </template>
+  
+  <script lang="ts" setup>
+  import { ref, onMounted } from 'vue'
+  import { useI18n } from 'vue-i18n'
+  import { NButton, NCard, NForm, NFormItem, NInput, NIcon, useMessage } from 'naive-ui'
+  import { configService } from '@/renderer/service/ConfigService'
+ import { SearchLocate } from '@vicons/carbon'
+
+
+  const { t } = useI18n()
+  const message = useMessage()
+
+  // 表单状态
+  const storageForm = ref({
+    storagePath: ''
+  })
+  
+  // 加载状态
+  const loading = ref(true) 
+  
+  // 初始化加载路径
+  onMounted(async () => {
+    try {
+      const path = await configService.getFileStoragePath()
+      storageForm.value.storagePath = path || ''
+    } catch (error) {
+      message.error(t('settings.storage.loadError'))
+    } finally {
+      loading.value = false
+    }
+  })
+  
+  // 处理文件夹选择
+  const handleSelectFolder = async () => {
+      try {
+          const path = await (window as any).window.electronAPI?.openDirectory()
+          if (path) {
+              storageForm.value.storagePath = path.replace(/\\/g, '/')
+              await configService.saveFileStoragePath(storageForm.value.storagePath)
+              await (window as any).electronAPI?.DbInitTables()
+          }
+      } catch (error) {
+          message.error(t('settings.storage.selectError'))
+          console.error('目录选择失败:', error)
+      }
+  }
+  const handleOpenFolder = async () => {
+    if (!storageForm.value.storagePath) return
+    try {
+        await (window as any).window.electronAPI?.openPath(storageForm.value.storagePath)
+    } catch (error) {
+        message.error(t('settings.storage.openError'))
+        console.error('打开文件夹失败:', error)
+    }
+}
+   
+  </script>
+  
+  <style scoped>
+  .settings-card {
+    max-width: 600px;
+    margin: 20px;
+  }
+  </style>

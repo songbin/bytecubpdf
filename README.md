@@ -1,118 +1,75 @@
+# 字节立方 - PDF翻译工具
 
+## 环境要求
+- **操作系统**: Windows 10/11 64位
+- **Python**: 3.11.9 (推荐使用Miniconda管理环境)
+- **Node.js**: 20.9.0 (推荐使用nvm管理版本)
 
-# ByteCubTS 安装与打包指南
+## 安装指南
 
-## 编译环境要求
-- **Python**: `3.11.9`
-- **Node.js**: `20.9.0`
-- **pnpm**: `7+`（通过 `npm install -g pnpm` 安装）
-
----
-
-## 一、打包后端服务
-### 1. 编译Python为可执行文件
-# 进入资源目录
-cd resources\execute
-
-# 执行打包脚本
-build.bat
-
-### 2. 复制打包资源
-将生成的以下内容：
-- `dist` 文件夹
-- `start.bat`
-- `stop.bat`
-
-按原目录结构复制到：
-根目录/dist-electron/resources/
-
-（若目录不存在请手动创建）
-
----
-## 二、前端编译与运行
-### 1. 安装依赖
+### 1. 后端服务配置
 ```bash
-# 在项目根目录执行
-pnpm install
+# 进入插件目录
+cd bytecub-plugin
+
+# 编译Python为可执行文件
+python build_exe.py
 ```
 
-### 2. 启动开发环境
+### 2. 前端开发环境
 ```bash
-pnpm run electron:serve
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
 ```
 
----
-
-## 三、打包生产环境应用
-### 1. 执行打包命令
+## 生产环境打包
 ```bash
-pnpm run electron:build -- --win --x64
+# 完整打包(包含前后端)
+npm run build
 ```
 
-### 2. 补充资源文件
-将之前生成的：
-- `dist` 文件夹
-- `start.bat`
-- `stop.bat`
+## 快速开始
+1. 双击运行 `字节立方.exe`
+2. 首次启动需等待服务初始化(约1-3分钟)
+3. 主界面加载完成后即可使用
 
-复制到以下两个位置：
-```
-dist_electron/win-unpacked/resources/
-dist_electron/resources/
-```
-
-### 3. 运行程序
-进入打包目录执行：
+## 常见问题
+### 环境验证
 ```bash
-cd dist_electron/win-unpacked
-.\bytecubts.exe
+# 验证Python版本
+python --version
+
+# 验证Node.js版本 
+node --version
 ```
 
----
+### 依赖安装问题
+```bash
+# 清除缓存后重试
+npm store prune
+npm install --force
+```
 
-## 四、快速下载
-已打包好的最新版本可从官网下载：  
-[ByteCubTS 下载地址](https://ts.bytecub.cn/down.html)
+### 防火墙设置
+首次运行时请允许程序通过防火墙，以确保网络功能正常。
 
----
+## 下载
+最新版本可从官网下载:  
+[字节立方下载中心](https://ts.bytecub.cn/down.html)
 
-## 注意事项
-1. **系统要求**：Windows 10/11 64位系统
-2. **环境验证**：  
-   - Python版本验证：`python --version` 应输出 `Python 3.11.9`  
-   - Node.js版本验证：`node --version` 应输出 `v20.9.0`
-3. 若依赖安装失败，可尝试清除缓存后重试：
-   ```bash
-   pnpm store prune
-   pnpm install --force
-   ```
----
+## 致谢
+本项目基于以下开源项目二次开发:
+- [PDFMathTranslate](https://github.com/Byaidu/PDFMathTranslate)
+- [BabelDoc](https://github.com/funstory-ai/BabelDOC)
 
-## 注意事项
-1. **启动流程说明**  
-   - 双击 `bytecubts.exe` 启动程序  
-   - 首次启动需等待后台翻译服务初始化（约1-3分钟）  
-   - 启动成功时会弹出主界面：  
-     ![启动界面](./resources/imgs/start.png)
-
-2. **防火墙提示处理**  
-   - 首次运行可能出现防火墙拦截提示：  
-     ![防火墙提示](./resourcesimgs/network.png)  
-   - 请勾选「允许访问」或「解除阻止」以确保网络功能正常
-
-3. **系统要求**：Windows 10/11 64位系统
-
-4. **环境验证**：  
-   - Python版本验证：`python --version` 应输出 `Python 3.11.9`  
-   - Node.js版本验证：`node --version` 应输出 `v20.9.0`
-
-5. **依赖问题处理**：  
-   若安装依赖失败，尝试清除缓存后重试：
-   ```bash
-   pnpm store prune
-   pnpm install --force
-   ```
----
-
-## 开源致谢
-本项目基于 [PDFMathTranslate](https://github.com/Byaidu/PDFMathTranslate) 进行二次开发，感谢原作者的贡献！
+感谢原作者的杰出贡献！
+## 界面截图
+![1.png](images/1.png)
+![2.png](images/2.png) 
+![3.png](images/3.png)
+![4.png](images/4.png)
+![5.png](images/5.png)
+```

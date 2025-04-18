@@ -1,0 +1,49 @@
+appId: com.bytecub.desktop
+productName: 字节立方
+copyright: Copyright © 2025 bytecub
+asar: true
+directories:
+  output: dist
+  buildResources: build
+files:
+  - "dist-electron/main/index.js"
+  - "dist-electron/preload/index.js"
+  - "dist/assets/**"
+  - "dist/index.html"
+  - "dist/*.js"
+  # 显式排除所有node_modules（除了sqlite3）
+  - "!node_modules"
+  - "node_modules/sqlite3/**"
+  - "node_modules/bindings/**"
+  - "node_modules/file-uri-to-path/**"
+  - "node_modules/ms/**"
+  - "node_modules/debug/**"
+  - "node_modules/semver/**"
+  # - "index.html"  # 添加根目录的index.html
+npmRebuild: false
+extraResources:
+  - from: "node_modules/sqlite3"
+    to: "node_modules/sqlite3"
+    filter:
+      - "**/*.node"
+      - "**/binding.gyp"       # 新增必要文件
+      - "**/build/**"          # 包含编译后的二进制文件
+  - from: "node_modules/bindings"  # 新增bindings资源
+    to: "node_modules/bindings"
+    filter:
+      - "**/*.node"
+  - from: "../bytecub-plugin/dist/bytecubplugin.exe"
+    to: "../execute/bytecubplugin.exe"
+win:
+  target:
+    - target: nsis
+    - target: portable
+  icon: build/icon.ico
+  extraFiles:           # 确保文件保持独立不被asar打包
+    - "../bytecub-plugin/dist/bytecubplugin.exe"
+    - "execute/*.bat"
+
+mac:
+  target: dmg
+linux:
+  target: AppImage

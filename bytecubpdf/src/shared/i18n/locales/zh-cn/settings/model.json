@@ -1,0 +1,69 @@
+{
+  "leftside": {
+    "buttons": {
+      "save": "保存",
+      "search": "搜索",
+      "addPlatform": "添加平台",
+      "addModel": "添加模型"
+    },
+    "searchPlaceholder": "搜索模型平台"
+  },
+  "platformName": "平台名称",
+  "platformNamePlaceholder": "请输入平台名称",
+  "protocolType": "协议类型",
+  "protocolTypePlaceholder": "请选择协议类型",
+  "apiKey": "API密钥",
+  "apiCheck":"检查",
+  "apiKeyPlaceholder": "输入申请的平台密钥",
+  "apiUrl": "API地址",
+  "apiUrlPlaceholder": "请输入接口地址",
+  "list": "模型列表",
+  "dialog": {
+    "editTitle": "编辑模型",
+    "addTitle": "添加模型",
+    "modelId": "模型ID",
+    "modelIdRequired": "请输入模型ID",
+    "modelIdPlaceholder": "例如: gpt-4-0613",
+    "modelName": "模型名称",
+    "modelNameRequired": "请输入模型名称",
+    "modelNamePlaceholder": "例如: GPT-4",
+    "modelType": "模型类型"
+  },
+  "types": {
+    "text": "文本",
+    "vision": "视觉",
+    "embedded": "嵌入",
+    "multi": "多模态"
+  },
+  "validation": {
+    "platformName": "请输入平台名称",
+    "protocolType": "请选择协议类型",
+    "apiKey": "请输入API密钥",
+    "apiUrl": "请输入API地址"
+  },
+  "messages": {
+    "modelUpdateSuccess": "模型更新成功",
+    "modelAddSuccess": "模型添加成功",
+    "modelDeleteSuccess": "模型已删除",
+    "saveSuccess": "设置保存成功",
+    "saveError": "保存失败，请检查控制台",
+    "deleteError": "删除失败，请检查控制台",
+    "formValidationError": "请填写完整信息",
+    "saveFirst": "请先保存平台再进行API检查",
+    "checkingApi": "正在检查API连接...",
+    "apiCheckSuccess": "API连接测试成功",
+    "apiCheckFailed": "API连接测试失败"
+  },
+  "platform": {
+    "actions": {
+      "edit": "编辑", 
+      "delete": "删除",
+      "confirmDelete": "确定要删除此平台吗？",
+      "cannotDeleteLast": "无法删除最后一个平台，请至少保留一个平台"
+    },
+    "status": {
+      "active": "活跃",
+      "inactive": "未激活"
+    }
+  }
+}

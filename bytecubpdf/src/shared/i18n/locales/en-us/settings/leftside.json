@@ -1,0 +1,7 @@
+{
+  "buttons": {
+    "system": "System Settings",
+    "model": "LLM Settings",
+    "addPlatform": "Add Platform"
+  }
+}

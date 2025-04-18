@@ -1,0 +1,49 @@
+{
+  "leftside": {
+    "addPdf": "我要翻译",
+    "function": "功能",
+    "settings": "设置",
+    "transHistory": "翻译历史"
+  },
+  "main": {
+    "platformConfigIncomplete": "平台配置不完整",
+    "platformConfigIncompleteDesc": "请先配置API地址和密钥才能使用该平台", 
+    "goToSettings": "去设置",
+    "cancel": "取消",
+    "uploadPdf": {
+      "introHow": "点击或者拖动文件到该区域来上传",
+      "carefull": "请不要上传敏感数据，比如你的银行卡号和密码，信用卡号有效期和安全码"
+    },
+    "languages": {
+      "zh": "简体中文",
+      "zh-TW": "繁体中文",
+      "en": "英文",
+      "fr": "法语",
+      "de": "德语",
+      "ja": "日语",
+      "ko": "韩语",
+      "ru": "俄语",
+      "es": "西班牙语",
+      "it": "意大利语"
+    },
+    "tsform": {
+      "sourceLang": "源语言",
+      "targetLang": "目标语言",
+      "platform": "服务平台",
+      "model": "模型",
+      "apikey": "API密钥",
+      "engine": "翻译引擎",
+      "thread": "线程数",
+      "sourceLangPlaceholder": "请选择源语言",
+      "targetLangPlaceholder": "请选择目标语言",
+      "platformPlaceholder": "请选择平台",
+      "modelPlaceholder": "请选择模型",
+      "enginePlaceholder": "请选择翻译引擎",
+      "threadPlaceholder": "请输入线程数",
+      "buttons": {
+        "translate": "翻译",
+        "stop": "终止"
+      }
+    }
+  }
+}
