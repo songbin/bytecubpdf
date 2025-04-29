@@ -1,5 +1,5 @@
-# 字节立方 - PDF翻译工具
-
+# 小书芽 - PDF翻译工具
+小书芽原名字节立方。
 ## 环境要求
 - **操作系统**: Windows 10/11 64位
 - **Python**: 3.11.9 (推荐使用Miniconda管理环境)
@@ -32,7 +32,7 @@ npm run build
 ```
 
 ## 快速开始
-1. 双击运行 `字节立方.exe`
+1. 双击运行 `小书芽.exe`
 2. 首次启动需等待服务初始化(约1-3分钟)
 3. 主界面加载完成后即可使用
 
@@ -58,7 +58,7 @@ npm install --force
 
 ## 下载
 最新版本可从官网下载:  
-[字节立方下载中心](https://ts.bytecub.cn/down.html)
+[小书芽下载中心](https://www.docfable.com/docs/introduction/download.html)
 
 ## 致谢
 本项目基于以下开源项目二次开发:
@@ -72,4 +72,5 @@ npm install --force
 ![3.png](images/3.png)
 ![4.png](images/4.png)
 ![5.png](images/5.png)
+![6.png](images/6.png)
 ```
