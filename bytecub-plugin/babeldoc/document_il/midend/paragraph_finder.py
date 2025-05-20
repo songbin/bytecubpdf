@@ -3,14 +3,20 @@ import random
 import re
 
 from babeldoc.document_il import Box
+from babeldoc.document_il import Document
 from babeldoc.document_il import Page
 from babeldoc.document_il import PdfCharacter
 from babeldoc.document_il import PdfLine
 from babeldoc.document_il import PdfParagraph
 from babeldoc.document_il import PdfParagraphComposition
+from babeldoc.document_il import PdfRectangle
+from babeldoc.document_il.babeldoc_exception.BabelDOCException import ExtractTextError
 from babeldoc.document_il.utils.layout_helper import Layout
 from babeldoc.document_il.utils.layout_helper import add_space_dummy_chars
 from babeldoc.document_il.utils.layout_helper import get_char_unicode_string
+from babeldoc.document_il.utils.layout_helper import is_bullet_point
+from babeldoc.document_il.utils.paragraph_helper import is_cid_paragraph
+from babeldoc.document_il.utils.style_helper import WHITE
 from babeldoc.translation_config import TranslationConfig
 
 logger = logging.getLogger(__name__)
@@ -28,12 +34,44 @@ class ParagraphFinder:
     stage_name = "Parse Paragraphs"
 
     # 定义项目符号的正则表达式模式
-    BULLET_POINT_PATTERN = re.compile(
-        r"[■•⚫⬤◆◇○●◦‣⁃▪▫∗†‡¹²³⁴⁵⁶⁷⁸⁹⁰₁₂₃₄₅₆₇₈₉₀ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖᵍʳˢᵗᵘᵛʷˣʸᶻ†‡§¶※⁑⁂⁕⁎⁜⁑❧☙⁋‖‽]"
-    )
 
     def __init__(self, translation_config: TranslationConfig):
         self.translation_config = translation_config
+
+    def add_text_fill_background(self, page: Page):
+        layout_map = {layout.id: layout for layout in page.page_layout}
+        for paragraph in page.pdf_paragraph:
+            layout_id = paragraph.layout_id
+            if layout_id is None:
+                continue
+            layout = layout_map[layout_id]
+            if paragraph.box is None:
+                continue
+            x1, y1, x2, y2 = (
+                paragraph.box.x,
+                paragraph.box.y,
+                paragraph.box.x2,
+                paragraph.box.y2,
+            )
+            layout_box = layout.box
+            if layout_box.x < x1:
+                x1 = layout_box.x
+            if layout_box.y < y1:
+                y1 = layout_box.y
+            if layout_box.x2 > x2:
+                x2 = layout_box.x2
+            if layout_box.y2 > y2:
+                y2 = layout_box.y2
+            assert x2 > x1 and y2 > y1
+            page.pdf_rectangle.append(
+                PdfRectangle(
+                    box=Box(x1, y1, x2, y2),
+                    fill_background=True,
+                    graphic_state=WHITE,
+                    debug_info=False,
+                    xobj_id=paragraph.xobj_id,
+                )
+            )
 
     def update_paragraph_data(self, paragraph: PdfParagraph, update_unicode=False):
         if not paragraph.pdf_paragraph_composition:
@@ -97,6 +135,25 @@ class ParagraphFinder:
                 self.process_page(page)
                 pbar.advance()
 
+            total_paragraph_count = 0
+            for page in document.page:
+                total_paragraph_count += len(page.pdf_paragraph)
+            if total_paragraph_count == 0:
+                raise ExtractTextError("The document contains no paragraphs.")
+
+            if self.check_cid_paragraph(document):
+                raise ExtractTextError("The document contains too many CID paragraphs.")
+
+    def check_cid_paragraph(self, doc: Document):
+        cid_para_count = 0
+        para_total = 0
+        for page in doc.page:
+            para_total += len(page.pdf_paragraph)
+            for para in page.pdf_paragraph:
+                if is_cid_paragraph(para):
+                    cid_para_count += 1
+        return cid_para_count / para_total > 0.8
+
     def bbox_overlap(self, bbox1: Box, bbox2: Box) -> bool:
         return (
             bbox1.x < bbox2.x2
@@ -125,6 +182,14 @@ class ParagraphFinder:
 
         for paragraph in paragraphs:
             self.update_paragraph_data(paragraph, update_unicode=True)
+
+        if self.translation_config.ocr_workaround:
+            self.add_text_fill_background(page)
+            # since this is ocr file,
+            # image characters are not needed
+            page.pdf_character = []
+
+        self.fix_overlapping_paragraphs(page)
 
     def is_isolated_formula(self, char: PdfCharacter):
         return char.char_unicode in (
@@ -176,6 +241,7 @@ class ParagraphFinder:
                     if current_paragraph is None:
                         current_paragraph = PdfParagraph(
                             pdf_paragraph_composition=[line],
+                            layout_id=char_layout.id,
                             debug_id=generate_base58_id(),
                             layout_label=char_layout.name
                             if not current_layout
@@ -193,7 +259,7 @@ class ParagraphFinder:
             is_small_char = char_area < median_char_area * 0.1
 
             # 检查是否需要开始新段落
-            # 如果字符面积小于中位数面积的10%且当前段落已有字符，则跳过新段落检测
+            # 如果字符面积小于中位数面积的 10% 且当前段落已有字符，则跳过新段落检测
             if not (is_small_char and current_line_chars) and (
                 current_layout is None
                 or char_layout.id != current_layout.id
@@ -202,7 +268,7 @@ class ParagraphFinder:
                     and current_line_chars[-1].xobj_id != char.xobj_id
                 )
                 or (
-                    self.is_bullet_point(char)  # 如果是项目符号，开启新段落
+                    is_bullet_point(char)  # 如果是项目符号，开启新段落
                     and not current_line_chars
                 )
             ):
@@ -214,6 +280,7 @@ class ParagraphFinder:
                     else:
                         current_paragraph = PdfParagraph(
                             pdf_paragraph_composition=[line],
+                            layout_id=current_layout.id,
                             debug_id=generate_base58_id(),
                             layout_label=current_layout.name,
                         )
@@ -231,6 +298,7 @@ class ParagraphFinder:
             if current_paragraph is None:
                 current_paragraph = PdfParagraph(
                     pdf_paragraph_composition=[line],
+                    layout_id=current_layout.id,
                     debug_id=generate_base58_id(),
                     layout_label=current_layout.name,
                 )
@@ -420,6 +488,7 @@ class ParagraphFinder:
                         unicode="",
                         debug_id=generate_base58_id(),
                         layout_label=paragraph.layout_label,
+                        layout_id=paragraph.layout_id,
                     )
                     # 更新原段落
                     paragraph.pdf_paragraph_composition = (
@@ -449,6 +518,7 @@ class ParagraphFinder:
                         unicode="",
                         debug_id=generate_base58_id(),
                         layout_label=paragraph.layout_label,
+                        layout_id=paragraph.layout_id,
                     )
                     # 更新原段落
                     paragraph.pdf_paragraph_composition = (
@@ -465,14 +535,104 @@ class ParagraphFinder:
                 j += 1
             i += 1
 
-    def is_bullet_point(self, char: PdfCharacter) -> bool:
-        """Check if the character is a bullet point.
+    @staticmethod
+    def is_bbox_contain_in_vertical(bbox1: Box, bbox2: Box) -> bool:
+        """Check if one bounding box is completely contained within the other."""
+        # Check if bbox1 is contained in bbox2
+        bbox1_in_bbox2 = bbox1.y >= bbox2.y and bbox1.y2 <= bbox2.y2
+        # Check if bbox2 is contained in bbox1
+        bbox2_in_bbox1 = bbox2.y >= bbox1.y and bbox2.y2 <= bbox1.y2
+        return bbox1_in_bbox2 or bbox2_in_bbox1
 
-        Args:
-            char: The character to check
-
-        Returns:
-            bool: True if the character is a bullet point
+    def fix_overlapping_paragraphs(self, page: Page):
         """
-        is_bullet = bool(self.BULLET_POINT_PATTERN.match(char.char_unicode))
-        return is_bullet
+        Adjusts the bounding boxes of paragraphs on a page to resolve vertical overlaps.
+
+        Iteratively checks pairs of paragraphs and adjusts their vertical boundaries
+        (y and y2) if they overlap, aiming to place the boundary at the midpoint
+        of the vertical overlap.
+        """
+        paragraphs = page.pdf_paragraph
+        if not paragraphs or len(paragraphs) < 2:
+            return
+
+        max_iterations = len(paragraphs) * len(paragraphs)  # Safety break
+        iterations = 0
+
+        while iterations < max_iterations:
+            iterations += 1
+            overlap_found_in_pass = False
+
+            for i in range(len(paragraphs)):
+                for j in range(i + 1, len(paragraphs)):
+                    para1 = paragraphs[i]
+                    para2 = paragraphs[j]
+
+                    if para1.box is None or para2.box is None:
+                        continue
+
+                    if para1.xobj_id != para2.xobj_id:
+                        continue
+
+                    # Check for overlap using the existing method
+                    if self.bbox_overlap(para1.box, para2.box):
+                        if self.is_bbox_contain_in_vertical(para1.box, para2.box):
+                            continue
+                        # Calculate vertical overlap details
+                        overlap_y_start = max(para1.box.y, para2.box.y)
+                        overlap_y_end = min(para1.box.y2, para2.box.y2)
+                        overlap_height = overlap_y_end - overlap_y_start
+
+                        # Calculate horizontal overlap details
+                        overlap_x_start = max(para1.box.x, para2.box.x)
+                        overlap_x_end = min(para1.box.x2, para2.box.x2)
+                        overlap_width = overlap_x_end - overlap_x_start
+
+                        # Ensure there's a real 2D overlap, focusing on vertical adjustment
+                        if overlap_height > 1e-6 and overlap_width > 1e-6:
+                            overlap_found_in_pass = True
+
+                            # Determine which paragraph is visually higher
+                            if para1.box.y2 > para2.box.y and para1.box.y < para2.box.y:
+                                lower_para = para1
+                                higher_para = para2
+                            # Handle cases where y values are identical (or very close)
+                            # Prefer the one with smaller y2 as the higher one, or break tie arbitrarily
+                            elif para1.box.y2 < para2.box.y2:
+                                lower_para = para1
+                                higher_para = para2
+                            else:
+                                lower_para = para2
+                                higher_para = para1
+
+                            # Calculate the midpoint of the vertical overlap
+                            mid_y = overlap_y_start + overlap_height / 2
+
+                            # Adjust boxes, ensuring they remain valid (y2 > y)
+                            if mid_y > higher_para.box.y and mid_y < lower_para.box.y2:
+                                higher_para.box.y = mid_y + 1
+                                lower_para.box.y2 = mid_y - 1
+                            else:
+                                # This might happen if one box is fully contained vertically
+                                # within another, or due to floating point issues.
+                                # Log a warning and skip adjustment for this pair in this iteration.
+                                # A more complex strategy might be needed for full containment.
+                                logger.warning(
+                                    "Could not resolve overlap between paragraphs"
+                                    f" {higher_para.debug_id} and {lower_para.debug_id}"
+                                    " using simple midpoint strategy."
+                                    f" Midpoint: {mid_y},"
+                                    f" Higher Box: {higher_para.box},"
+                                    f" Lower Box: {lower_para.box}"
+                                )
+
+            # If no overlaps were found and adjusted in this pass, we're done.
+            if not overlap_found_in_pass:
+                break
+
+        if iterations == max_iterations:
+            logger.warning(
+                f"Maximum iterations ({max_iterations}) reached in"
+                f" fix_overlapping_paragraphs for page {page.page_number}."
+                " Some overlaps might remain."
+            )

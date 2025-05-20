@@ -115,6 +115,7 @@ PDFParagraph =
     attribute FirstLineIndent { xsd:boolean }?,
     attribute debug_id { xsd:string }?,
     attribute layout_label { xsd:string }?,
+    attribute layout_id { xsd:int }?,
     Box,
     PDFStyle,
     PDFParagraphComposition*
@@ -148,5 +149,7 @@ PDFRectangle =
   element pdfRectangle {
     Box,
     GraphicState,
-    attribute debug_info { xsd:boolean }?
+    attribute debug_info { xsd:boolean }?,
+    attribute fill_background { xsd:boolean }?,
+    attribute xobjId { xsd:int }?
   }

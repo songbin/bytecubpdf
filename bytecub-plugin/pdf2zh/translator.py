@@ -7,7 +7,7 @@ import unicodedata
 from copy import copy
 from string import Template
 from typing import cast
-
+from config.ts_constants import  ENVDict 
 logger = logging.getLogger(__name__)
 
 try:
@@ -101,13 +101,13 @@ class BaseTranslator:
         :param text: text to translate
         :return: translated text
         """
-        if not (self.ignore_cache or ignore_cache):
-            cache = self.cache.get(text)
-            if cache is not None:
-                return cache
+        # if not (self.ignore_cache or ignore_cache):
+        #     cache = self.cache.get(text)
+        #     if cache is not None:
+        #         return cache
 
         translation = self.do_translate(text)
-        self.cache.set(text, translation)
+        # self.cache.set(text, translation)
         return translation
 
     def do_translate(self, text: str) -> str:
@@ -117,7 +117,43 @@ class BaseTranslator:
         :return: translated text
         """
         raise NotImplementedError
+    def pre_process(self, text, term_dict):
+        """术语预处理：长匹配优先 + 边界保护"""
+        mapping = {}
+        counter = 1
+        
+        # 按长度排序确保长术语优先匹配
+        sorted_terms = sorted(term_dict.items(), key=lambda x: (-len(x[0]), x[0]))
+        
+        for src, dst in sorted_terms:
+            pattern = fr'(?<!\w){re.escape(src)}(?!\w)'  # 单词边界保护
+            placeholder = f"[T{counter}]"
+            
+            if dst == src:  # 值等于键则保留原文
+                if re.search(pattern, text):
+                    mapping[placeholder] = src
+                    text = re.sub(pattern, placeholder, text)
+            else:  # 正常术语替换
+                if re.search(pattern, text):
+                    mapping[placeholder] = dst
+                    text = re.sub(pattern, placeholder, text)
+            counter += 1
+                    
+        return text, mapping
 
+    def post_process(self, translated_text, mapping):
+        """术语恢复 + 公式完整性校验"""
+        # 恢复术语
+        for placeholder, value in mapping.items():
+            translated_text = translated_text.replace(placeholder, value)
+        
+        # 公式标记校验
+        import re
+        formula_pattern = r"\{v\d+\}"
+        for match in re.finditer(formula_pattern, translated_text):
+            assert match.group() in translated_text, f"公式破坏检测: {match.group()}"
+        
+        return translated_text
     def prompt(
         self, text: str, prompt_template: Template | None = None
     ) -> list[dict[str, str]]:
@@ -138,24 +174,43 @@ class BaseTranslator:
             pass
         except Exception:
             logging.exception("Error parsing prompt, use the default prompt.")
-
-        return [
-            {
+           
+        term_dict = self.envs[ENVDict.TERM_DICT] if ENVDict.TERM_DICT in self.envs else {}
+        term_dict = {} if term_dict is None else term_dict
+        has_term_dict = len(term_dict) > 0
+        
+       # logging.info(f"glossary_str: {glossary_str}")
+        if has_term_dict:
+            return [{
                 "role": "user",
                 "content": (
-                    "You are a professional, authentic machine translation engine. "
-                    "Only Output the translated text, do not include any other text."
-                    "\n\n"
-                    f"Translate the following markdown source text to {self.lang_out}. "
-                    "Keep the formula notation {v*} unchanged. "
-                    "Output translation directly without any additional text."
-                    "\n\n"
-                    f"Source Text: {text}"
-                    "\n\n"
-                    "Translated Text:"
-                ),
-            },
-        ]
+                     "You are a professional translation engine.\n"
+                        "KEEP {v*} placeholders UNMODIFIED.\n"
+                        f"TRANSLATE all other content to {self.lang_out}.\n"
+                        "OUTPUT ONLY the translated text with NO explanations or formatting.\n\n"
+                        
+                        f"Source Text: {text}\n\n"
+                        "Translated Text:"
+                )
+            }]
+        else:
+            return [
+                {
+                    "role": "user",
+                    "content": (
+                        "You are a professional, authentic machine translation engine. "
+                        "Only Output the translated text, do not include any other text."
+                        "\n\n"
+                        f"Translate the following markdown source text to {self.lang_out}. "
+                        "Keep the formula notation {v*} unchanged. "
+                        "Output translation directly without any additional text."
+                        "\n\n"
+                        f"Source Text: {text}"
+                        "\n\n"
+                        "Translated Text:"
+                    ),
+                },
+            ]
 
     def __str__(self):
         return f"{self.name} {self.lang_in} {self.lang_out} {self.model}"
@@ -328,13 +383,23 @@ class OllamaTranslator(BaseTranslator):
     def do_translate(self, text: str) -> str:
         if (max_token := len(text) * 5) > self.options["num_predict"]:
             self.options["num_predict"] = max_token
-
+            term_dict = self.envs[ENVDict.TERM_DICT] if ENVDict.TERM_DICT in self.envs else {}
+            has_term_dict = len(term_dict) > 0
+            mapping = {}
+            if has_term_dict:
+                processed_text, mapping = self.pre_process(text, term_dict)
+                text = processed_text
         response = self.client.chat(
             model=self.model,
             messages=self.prompt(text, self.prompt_template),
             options=self.options,
         )
         content = self._remove_cot_content(response.message.content or "")
+         # 后处理阶段：恢复术语并校验
+        if has_term_dict:
+            translated = content
+            final_result = self.post_process(translated, mapping)
+            content = final_result
         return content.strip()
 
     @staticmethod
@@ -442,6 +507,15 @@ class OpenAITranslator(BaseTranslator):
         ),
     )
     def do_translate(self, text) -> str:
+        term_dict = self.envs[ENVDict.TERM_DICT] if ENVDict.TERM_DICT in self.envs else {}
+        if term_dict is None:
+            term_dict = {}
+        has_term_dict = len(term_dict) > 0
+        mapping = {}
+        if has_term_dict:
+            processed_text, mapping = self.pre_process(text, term_dict)
+            text = processed_text
+        
         response = self.client.chat.completions.create(
             model=self.model,
             **self.options,
@@ -452,6 +526,11 @@ class OpenAITranslator(BaseTranslator):
                 raise ValueError("Error response from Service", response.error)
         content = response.choices[0].message.content.strip()
         content = self.think_filter_regex.sub("", content).strip()
+         # 后处理阶段：恢复术语并校验
+        if has_term_dict:
+            translated = content
+            final_result = self.post_process(translated, mapping)
+            content = final_result
         return content
 
     def get_formular_placeholder(self, id: int):

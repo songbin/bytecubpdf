@@ -1,3 +1,4 @@
+from tkinter import NO
 from babeldoc.translation_config import TranslationConfig as YadtConfig
 from babeldoc.high_level import async_translate as yadt_translate
 from babeldoc.high_level import init as yadt_init
@@ -29,7 +30,12 @@ class PdfBabelSerive:
         base_url: str = "",
         thread: int = 4,
         callback = None,
-        cancellation_event=None
+        cancellation_event=None,
+        term_dict = None,
+        max_pages: int = 0,  # 新增每页最大页数字段
+        enable_ocr: bool = False,  # 新增OCR识别字段
+        disable_rich_text: bool = False,  # 新增禁用富文字段
+        enable_table: bool = False  # 新增表格翻译字段
     ):
         # 检查文件是否存在
         if not os.path.exists(file_path):
@@ -39,7 +45,10 @@ class PdfBabelSerive:
         service_name = service
         service_model = model_name
         untranlate_file = [file_path]
-        envs = PdfMathService._build_envs(service, model_name, api_key,base_url)
+        from config.ts_constants import TSCore
+        
+        envs = PdfMathService._build_envs(service, model_name, api_key,base_url, 
+        term_dict=term_dict, engine=TSCore.babeldoc)
         # 构建翻译器
         translator =  cls.__query_platform(service_name, lang_in, lang_out, service_model, envs, None)
         save_path = os.path.join(os.getcwd(), TSConstants.translate_folder)
@@ -48,6 +57,14 @@ class PdfBabelSerive:
             os.makedirs(save_path)
         for file in untranlate_file:
             file = file.strip("\"'")
+            from babeldoc.docvision.table_detection.rapidocr import RapidOCRModel
+            from babeldoc.translation_config import TranslationConfig
+            table_model = None
+            if enable_table:
+                table_model = RapidOCRModel()
+            split_strategy = None
+            if max_pages > 0:
+                split_strategy = TranslationConfig.create_max_pages_per_part_split_strategy(max_pages)
             
             yadt_config = YadtConfig(
                 input_file=file,
@@ -63,7 +80,12 @@ class PdfBabelSerive:
                 no_mono=False,
                 qps=thread,
                 watermark_output_mode = WatermarkOutputMode.NoWatermark,
-                use_rich_pbar = False
+                use_rich_pbar = False,
+                split_strategy=None,
+                disable_rich_text_translate = disable_rich_text,
+                ocr_workaround = False,
+                table_model = table_model,
+                skip_clean = True,
             )
             
             result_path = asyncio.run(cls.__yadt_translate_coro(

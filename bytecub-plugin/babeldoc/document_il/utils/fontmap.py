@@ -174,8 +174,24 @@ class FontMapper:
         )
         return None
 
+    def get_used_font_ids(self, il: il_version_1.Document) -> set[str]:
+        result = set()
+        for page in il.page:
+            for char in page.pdf_character:
+                if char.pdf_style and char.pdf_style.font_id:
+                    result.add(char.pdf_style.font_id)
+            for para in page.pdf_paragraph:
+                for comp in para.pdf_paragraph_composition:
+                    if char := comp.pdf_character:
+                        if char.pdf_style and char.pdf_style.font_id:
+                            result.add(char.pdf_style.font_id)
+        return result
+
     def add_font(self, doc_zh: pymupdf.Document, il: il_version_1.Document):
-        font_list = [(k, v) for k, v in self.fontid2fontpath.items()]
+        used_font_ids = self.get_used_font_ids(il)
+        font_list = [
+            (k, v) for k, v in self.fontid2fontpath.items() if k in used_font_ids
+        ]
 
         font_id = {}
         xreflen = doc_zh.xref_length()

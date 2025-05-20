@@ -1,6 +1,6 @@
 appId: com.bytecub.desktop
-productName: 字节立方
-copyright: Copyright © 2025 bytecub
+productName: 小书芽
+copyright: Copyright © 2025 DocFable
 asar: true
 directories:
   output: dist
@@ -38,7 +38,7 @@ win:
   target:
     - target: nsis
     - target: portable
-  icon: build/icon.ico
+  icon: build/icon2.ico
   extraFiles:           # 确保文件保持独立不被asar打包
     - "../bytecub-plugin/dist/bytecubplugin.exe"
     - "execute/*.bat"

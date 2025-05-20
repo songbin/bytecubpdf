@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import re
@@ -11,11 +12,13 @@ from babeldoc.document_il import Document
 from babeldoc.document_il import Page
 from babeldoc.document_il import PdfFont
 from babeldoc.document_il import PdfParagraph
+from babeldoc.document_il.midend import il_translator
 from babeldoc.document_il.midend.il_translator import DocumentTranslateTracker
 from babeldoc.document_il.midend.il_translator import ILTranslator
 from babeldoc.document_il.midend.il_translator import PageTranslateTracker
 from babeldoc.document_il.translator.translator import BaseTranslator
 from babeldoc.document_il.utils.fontmap import FontMapper
+from babeldoc.document_il.utils.paragraph_helper import is_cid_paragraph
 from babeldoc.document_il.utils.priority_thread_pool_executor import (
     PriorityThreadPoolExecutor,
 )
@@ -93,9 +96,11 @@ class ILTranslatorLLMOnly:
             # Try to find the first title paragraph
             title_paragraph = self.find_title_paragraph(docs)
             self.translation_config.shared_context_cross_split_part.first_paragraph = (
+                copy.deepcopy(title_paragraph)
+            )
+            self.translation_config.shared_context_cross_split_part.recent_title_paragraph = copy.deepcopy(
                 title_paragraph
             )
-            self.translation_config.shared_context_cross_split_part.recent_title_paragraph = title_paragraph
             if title_paragraph:
                 logger.info(f"Found first title paragraph: {title_paragraph.unicode}")
 
@@ -162,13 +167,17 @@ class ILTranslatorLLMOnly:
         for paragraph in page.pdf_paragraph:
             if paragraph.debug_id is None or paragraph.unicode is None:
                 continue
+            if is_cid_paragraph(paragraph):
+                continue
             # self.translate_paragraph(paragraph, pbar,tracker.new_paragraph(), page_font_map, page_xobj_font_map)
             total_token_count += self.calc_token_count(paragraph.unicode)
             paragraphs.append(paragraph)
             if paragraph.layout_label == "title":
-                self.shared_context_cross_split_part.recent_title_paragraph = paragraph
+                self.shared_context_cross_split_part.recent_title_paragraph = (
+                    copy.deepcopy(paragraph)
+                )
 
-            if total_token_count > 400 or len(paragraphs) > 5:
+            if total_token_count > 200 or len(paragraphs) > 5:
                 executor.submit(
                     self.translate_paragraph,
                     BatchParagraph(paragraphs, tracker),
@@ -214,7 +223,8 @@ class ILTranslatorLLMOnly:
         should_translate_paragraph = []
         try:
             inputs = []
-
+            llm_translate_trackers = []
+            paragraph_unicodes = []
             for i in range(len(batch_paragraph.paragraphs)):
                 paragraph = batch_paragraph.paragraphs[i]
                 tracker = batch_paragraph.trackers[i]
@@ -224,89 +234,187 @@ class ILTranslatorLLMOnly:
                 if text is None:
                     pbar.advance(1)
                     continue
+                llm_translate_tracker = tracker.new_llm_translate_tracker()
                 should_translate_paragraph.append(i)
-                inputs.append((text, translate_input, paragraph, tracker))
+                llm_translate_trackers.append(llm_translate_tracker)
+                inputs.append(
+                    (
+                        text,
+                        translate_input,
+                        paragraph,
+                        tracker,
+                        llm_translate_tracker,
+                        paragraph_unicodes,
+                    )
+                )
+                paragraph_unicodes.append(paragraph.unicode)
             if not inputs:
                 return
             json_format_input = []
 
             for id_, input_text in enumerate(inputs):
-                json_format_input.append(
-                    {
-                        "id": id_,
-                        "input": input_text[0],
-                        "layout_label": input_text[2].layout_label,
-                    }
-                )
-            json_format_input = json.dumps(
+                ti: il_translator.ILTranslator.TranslateInput = input_text[1]
+                placeholders_hint = ti.get_placeholders_hint()
+                obj = {
+                    "id": id_,
+                    "input": input_text[0],
+                    "layout_label": input_text[2].layout_label,
+                }
+                if (
+                    placeholders_hint
+                    and self.translation_config.add_formula_placehold_hint
+                ):
+                    obj["formula_placeholders_hint"] = placeholders_hint
+                json_format_input.append(obj)
+
+            json_format_input_str = json.dumps(
                 json_format_input, ensure_ascii=False, indent=2
             )
-            llm_input = [
-                "You are a professional, authentic machine translation engine."
-            ]
 
-            if title_paragraph:
-                llm_input.append(
-                    f"The first title in the full text: {title_paragraph.unicode}"
+            # Start building the new prompt
+            llm_prompt_parts = []
+
+            # 1. #role
+            llm_prompt_parts.append("#role")
+            if self.translation_config.custom_system_prompt:
+                llm_prompt_parts.append(self.translation_config.custom_system_prompt)
+            else:
+                llm_prompt_parts.append(
+                    f"You are a professional and reliable machine translation engine responsible for translating the input text into {self.translation_config.lang_out}."
                 )
-            if (
-                local_title_paragraph
-                and local_title_paragraph.debug_id != title_paragraph.debug_id
-            ):
-                llm_input.append(
-                    f"The most similar title in the full text: {local_title_paragraph.unicode}"
-                )
-            # Create a structured prompt template for LLM translation
-            prompt_template = (
-                f"""
-    You will be given a JSON formatted input containing entries with "id" and "input" fields. Here is the input:
-    
-    ```json
-    {json_format_input}
-    ```
-    
-    For each entry in the JSON, translate the contents of the "input" field into {self.translation_config.lang_out}.
-    Write the translation back into the "output" field for that entry.
-    
-    """
-                + """
-    Here is an example of the expected format:
-    
-    <example>
-    ```json
-    Input:
-    {
-        "id": 1,
-        "input": "Source",
-        "layout_label": "plain text"
-    }
-    ```
-    Output:
-    ```json
-    {
-        "id": 1,
-        "output": "Translation"
-    }
-    ```
-    </example>
-    
-    Please return the translated json directly without wrapping ```json``` tag or include any additional information.
-    """
+
+            # 2. ##rules
+            llm_prompt_parts.append("\n##rules")
+            # Dynamically get placeholder examples
+            rich_text_left_placeholder = (
+                self.translate_engine.get_rich_text_left_placeholder(1)
             )
-            llm_input.append(prompt_template)
+            if isinstance(rich_text_left_placeholder, tuple):
+                rich_text_left_placeholder = rich_text_left_placeholder[0]
+            rich_text_right_placeholder = (
+                self.translate_engine.get_rich_text_right_placeholder(2)
+            )
+            if isinstance(rich_text_right_placeholder, tuple):
+                rich_text_right_placeholder = rich_text_right_placeholder[0]
+            formula_placeholder = self.translate_engine.get_formular_placeholder(3)
+            if isinstance(formula_placeholder, tuple):
+                formula_placeholder = formula_placeholder[0]
 
-            final_input = "\n".join(llm_input).strip()
+            llm_prompt_parts.append(
+                f'1. Do not translate style tags, such as "{rich_text_left_placeholder}xxx{rich_text_right_placeholder}"'
+            )
+            llm_prompt_parts.append(
+                f'2. Do not translate formula placeholders, such as "{formula_placeholder}". The system will automatically replace the placeholders with the corresponding formulas.'
+            )
+            llm_prompt_parts.append(
+                "3. If there is no need to translate (such as proper nouns, codes, etc.), then return the original text."
+            )
+
+            # 3. ##Input
+            llm_prompt_parts.append("\n##Input")
+            llm_prompt_parts.append(
+                'You will be given a JSON formatted input containing entries with "id" and "input" fields.'
+            )
+
+            # 4. ##Output
+            llm_prompt_parts.append("\n##Output")
+            llm_prompt_parts.append(
+                f'For each entry in the JSON, translate the contents of the "input" field into {self.translation_config.lang_out}.'
+            )
+            llm_prompt_parts.append(
+                'Write the translation back into the "output" field for that entry.'
+            )
+            llm_prompt_parts.append(
+                "Please return the translated json directly without wrapping ```json``` tag or include any additional information."
+            )
+
+            # 5. ##example
+            llm_prompt_parts.append("\n##example")
+            llm_prompt_parts.append("Here is an example of the expected format:")
+            llm_prompt_parts.append("")  # Blank line
+            llm_prompt_parts.append("<example>")
+            llm_prompt_parts.append("```json")
+            llm_prompt_parts.append("Input:")
+            llm_prompt_parts.append("{")
+            llm_prompt_parts.append('    "id": 1,')
+            llm_prompt_parts.append('    "input": "Source",')
+            llm_prompt_parts.append('    "layout_label": "plain text",')
+            llm_prompt_parts.append("    // this is optional")
+            llm_prompt_parts.append('    "formula_placeholders_hint": {')
+            llm_prompt_parts.append('        "placeholder1": "hint1",')
+            llm_prompt_parts.append('        "placeholder2": "hint2"')
+            llm_prompt_parts.append("    }")
+            llm_prompt_parts.append("}")
+            llm_prompt_parts.append("```")
+            llm_prompt_parts.append("Output:")
+            llm_prompt_parts.append("```json")
+            llm_prompt_parts.append("{")
+            llm_prompt_parts.append('    "id": 1,')
+            llm_prompt_parts.append('    "output": "Translation"')
+            llm_prompt_parts.append("}")
+            llm_prompt_parts.append("```")
+            llm_prompt_parts.append("</example>")
+
+            # 6. ##Others (contextual hints)
+            other_hints = []
+            hint_idx = 0
+            if title_paragraph:
+                other_hints.append(
+                    f"{hint_idx}. The first title in the full text: {title_paragraph.unicode}"
+                )
+                hint_idx += 1
+
+            if local_title_paragraph:
+                # Check if it's different from the global title_paragraph before adding
+                is_different_from_global = True
+                if title_paragraph:
+                    if local_title_paragraph.debug_id == title_paragraph.debug_id:
+                        is_different_from_global = False
+
+                if is_different_from_global:
+                    other_hints.append(
+                        f"{hint_idx}. The most similar title in the full text: {local_title_paragraph.unicode}"
+                    )
+                    hint_idx += 1
+
+            if other_hints:
+                llm_prompt_parts.append("\n##Others")
+                llm_prompt_parts.append(
+                    "When translating, please refer to the following information to improve translation quality:"
+                )
+                llm_prompt_parts.extend(other_hints)
+
+            llm_prompt_parts.append("\n## Actual Input")
+
+            # Combine all parts for the main prompt
+            main_prompt_content = "\n".join(llm_prompt_parts)
+
+            # Append the actual JSON input string at the end, without markdown fence
+            final_input = main_prompt_content + "\n\n" + json_format_input_str
+
+            for llm_translate_tracker in llm_translate_trackers:
+                llm_translate_tracker.set_input(final_input)
             llm_output = self.translate_engine.llm_translate(
                 final_input,
                 rate_limit_params={"paragraph_token_count": paragraph_token_count},
             )
+            for llm_translate_tracker in llm_translate_trackers:
+                llm_translate_tracker.set_output(llm_output)
             llm_output = llm_output.strip()
 
             llm_output = self._clean_json_output(llm_output)
 
             parsed_output = json.loads(llm_output)
 
-            translation_results = {item["id"]: item["output"] for item in parsed_output}
+            if isinstance(parsed_output, dict) and parsed_output.get(
+                "output", parsed_output.get("input", False)
+            ):
+                parsed_output = [parsed_output]
+
+            translation_results = {
+                item["id"]: item.get("output", item.get("input"))
+                for item in parsed_output
+            }
 
             if len(translation_results) != len(inputs):
                 raise Exception(
@@ -332,6 +440,7 @@ class ILTranslatorLLMOnly:
 
                     # Get the original input for this translation
                     translate_input = inputs[id_][1]
+                    llm_translate_tracker = inputs[id_][4]
 
                     input_unicode = inputs[id_][2].unicode
                     output_unicode = translated_text
@@ -340,6 +449,9 @@ class ILTranslatorLLMOnly:
                     output_token_count = self.calc_token_count(output_unicode)
 
                     if not (0.3 < output_token_count / input_token_count < 3):
+                        llm_translate_tracker.set_error_message(
+                            f"Translation result is too long or too short. Input: {input_token_count}, Output: {output_token_count}"
+                        )
                         logger.warning(
                             f"Translation result is too long or too short. Input: {input_token_count}, Output: {output_token_count}"
                         )
@@ -347,6 +459,9 @@ class ILTranslatorLLMOnly:
 
                     edit_distance = Levenshtein.distance(input_unicode, output_unicode)
                     if edit_distance < 5 and input_token_count > 20:
+                        llm_translate_tracker.set_error_message(
+                            f"Translation result edit distance is too small. distance: {edit_distance}, input: {input_unicode}, output: {output_unicode}"
+                        )
                         logger.warning(
                             f"Translation result edit distance is too small. distance: {edit_distance}, input: {input_unicode}, output: {output_unicode}"
                         )
@@ -362,17 +477,23 @@ class ILTranslatorLLMOnly:
                     if pbar:
                         pbar.advance(1)
                 except Exception as e:
-                    logger.exception(f"Error translating paragraph. Error: {e}.")
+                    error_message = f"Error translating paragraph. Error: {e}."
+                    logger.exception(error_message)
                     # Ignore error and continue
+                    for llm_translate_tracker in llm_translate_trackers:
+                        llm_translate_tracker.set_error_message(error_message)
                     continue
                 finally:
                     if should_fallback:
+                        inputs[id_][4].set_fallback_to_translate()
                         logger.warning(
                             f"Fallback to simple translation. paragraph id: {inputs[id_][2].debug_id}"
                         )
                         paragraph_token_count = self.calc_token_count(
                             inputs[id_][2].unicode
                         )
+                        paragraph_unicodes = inputs[id_][5]
+                        inputs[id_][2].unicode = paragraph_unicodes[id_]
                         executor.submit(
                             self.il_translator.translate_paragraph,
                             inputs[id_][2],
@@ -382,10 +503,18 @@ class ILTranslatorLLMOnly:
                             xobj_font_map,
                             priority=1048576 - paragraph_token_count,
                             paragraph_token_count=paragraph_token_count,
+                            title_paragraph=title_paragraph,
+                            local_title_paragraph=local_title_paragraph,
                         )
 
         except Exception as e:
-            logger.warning(f"Error {e} during translation. try fallback")
+            error_message = f"Error {e} during translation. try fallback"
+            logger.warning(error_message)
+            for llm_translate_tracker in llm_translate_trackers:
+                llm_translate_tracker.set_error_message(error_message)
+                llm_translate_tracker.set_fallback_to_translate()
+            for input_ in inputs:
+                input_[2].unicode = input_[5]
             if not should_translate_paragraph:
                 should_translate_paragraph = list(
                     range(len(batch_paragraph.paragraphs))
@@ -405,6 +534,8 @@ class ILTranslatorLLMOnly:
                     xobj_font_map,
                     priority=1048576 - paragraph_token_count,
                     paragraph_token_count=paragraph_token_count,
+                    title_paragraph=title_paragraph,
+                    local_title_paragraph=local_title_paragraph,
                 )
 
     def _clean_json_output(self, llm_output: str) -> str:

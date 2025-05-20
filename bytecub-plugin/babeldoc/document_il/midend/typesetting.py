@@ -111,8 +111,47 @@ class TypesettingUnit:
             r"\uAB30-\uAB6F"  # Latin Extended E
             r"\u0250-\u02A0"  # IPA Extensions
             r"\u0400-\u04FF"  # Cyrillic
+            r"\u0300-\u036F"  # Combining Diacritical Marks
+            r"\u0500-\u052F"  # Cyrillic Supplement
+            r"\u0370-\u03FF"  # Greek and Coptic
+            r"\u2DE0-\u2DFF"  # Cyrillic Extended-A
+            r"\uA650-\uA69F"  # Cyrillic Extended-B
+            r"\u1200-\u137F"  # Ethiopic
+            r"\u1380-\u139F"  # Ethiopic Supplement
+            r"\u2D80-\u2DDF"  # Ethiopic Extended
+            r"\uAB00-\uAB2F"  # Ethiopic Extended-A
+            r"\U0001E7E0-\U0001E7FF"  # Ethiopic Extended-B
+            r"\u0E80-\u0EFF"  # Lao
+            r"\u0D00-\u0D7F"  # Malayalam
+            r"\u0A80-\u0AFF"  # Gujarati
+            r"\u0E00-\u0E7F"  # Thai
+            r"\u1000-\u109F"  # Myanmar
+            r"\uAA60-\uAA7F"  # Myanmar Extended-A
+            r"\uA9E0-\uA9FF"  # Myanmar Extended-B
+            r"\U000116D0-\U000116FF"  # Myanmar Extended-C
+            r"\u0B80-\u0BFF"  # Tamil
+            r"\u0C00-\u0C7F"  # Telugu
+            r"\u0B00-\u0B7F"  # Oriya
+            r"\u0530-\u058F"  # Armenian
+            r"\u10A0-\u10FF"  # Georgian
+            r"\u1C90-\u1CBF"  # Georgian Extended
+            r"\u2D00-\u2D2F"  # Georgian Supplement
+            r"\u1780-\u17FF"  # Khmer
+            r"\u19E0-\u19FF"  # Khmer Symbols
+            r"\U00010B00-\U00010B3F"  # Avestan
+            r"\u1D00-\u1D7F"  # Phonetic Extensions
+            r"\u1400-\u167F"  # Unified Canadian Aboriginal Syllabics
+            r"\u0B00-\u0B7F"  # Oriya
+            r"\u0780-\u07BF"  # Thaana
+            r"\U0001E900-\U0001E95F"  # Adlam
+            r"\u1C80-\u1C8F"  # Cyrillic Extended-C
+            r"\U0001E030-\U0001E08F"  # Cyrillic Extended-D
+            r"\uA000-\uA48F"  # Yi Syllables
+            r"\uA490-\uA4CF"  # Yi Radicals
             r"'"
             r"-"  # Hyphen
+            r"·"  # Middle Dot (U+00B7) For Català
+            r"ʻ"  # Spacing Modifier Letters U+02BB
             r"]+$",
             unicode,
         ):
@@ -120,7 +159,7 @@ class TypesettingUnit:
         return True
 
     @property
-    def is_chinese_char(self):
+    def is_cjk_char(self):
         if self.formular:
             return False
         unicode = self.try_get_unicode()
@@ -157,6 +196,30 @@ class TypesettingUnit:
         ]:
             return True
         if unicode:
+            if re.match(
+                r"^["
+                r"\u3000-\u303f"  # CJK Symbols and Punctuation
+                r"\u3040-\u309f"  # Hiragana
+                r"\u30a0-\u30ff"  # Katakana
+                r"\u3100-\u312f"  # Bopomofo
+                r"\uac00-\ud7af"  # Hangul Syllables
+                r"\u1100-\u11ff"  # Hangul Jamo
+                r"\u3130-\u318f"  # Hangul Compatibility Jamo
+                r"\ua960-\ua97f"  # Hangul Jamo Extended-A
+                r"\ud7b0-\ud7ff"  # Hangul Jamo Extended-B
+                r"\u3190-\u319f"  # Kanbun
+                r"\u3200-\u32ff"  # Enclosed CJK Letters and Months
+                r"\u3300-\u33ff"  # CJK Compatibility
+                r"\ufe30-\ufe4f"  # CJK Compatibility Forms
+                r"\u4e00-\u9fff"  # CJK Unified Ideographs
+                r"\u2e80-\u2eff"  # CJK Radicals Supplement
+                r"\u31c0-\u31ef"  # CJK Strokes
+                r"\u2f00-\u2fdf"  # Kangxi Radicals
+                r"\ufe10-\ufe1f"  # Vertical Forms
+                r"]+$",
+                unicode,
+            ):
+                return True
             try:
                 unicodedata_name = unicodedata.name(unicode)
                 return (
@@ -221,8 +284,8 @@ class TypesettingUnit:
                 # 连接号
                 "～",  # 全角波浪号
                 "-",  # 连字符减号
-                "–",  # 短破折号(EN DASH)
-                "—",  # 长破折号(EM DASH)
+                "–",  # 短破折号 (EN DASH)
+                "—",  # 长破折号 (EM DASH)
                 # 间隔号
                 "·",  # 中间点
                 "・",  # 片假名中间点
@@ -645,7 +708,7 @@ class Typesetting:
         current_x = box.x
         current_y = box.y2 - avg_height
         box = copy.deepcopy(box)
-        box.y -= avg_height * (line_spacing - 1)
+        # box.y -= avg_height * (line_spacing - 1.01)
         line_height = 0
         current_line_heights = []  # 存储当前行所有元素的高度
 
@@ -668,7 +731,7 @@ class Typesetting:
 
             if (
                 last_unit  # 有上一个单元
-                and last_unit.is_chinese_char ^ unit.is_chinese_char  # 中英文交界处
+                and last_unit.is_cjk_char ^ unit.is_cjk_char  # 中英文交界处
                 and (
                     last_unit.box
                     and last_unit.box.y
@@ -694,7 +757,7 @@ class Typesetting:
                 current_x += space_width * 0.5
             if use_english_line_break:
                 width_before_next_break_point = self._get_width_before_next_break_point(
-                    typesetting_units[i + 1 :], scale
+                    typesetting_units[i:], scale
                 )
             else:
                 width_before_next_break_point = 0
@@ -722,7 +785,8 @@ class Typesetting:
                 current_line_heights = []  # 清空当前行高度列表
 
                 # 检查是否超出底部边界
-                if current_y - unit_height < box.y:
+                # if current_y - unit_height < box.y:
+                if current_y < box.y:
                     all_units_fit = False
                     break
 
@@ -750,8 +814,9 @@ class Typesetting:
         # 处理最后一行的行高
         if current_line_heights:
             mode_height = statistics.mode(current_line_heights)
-            max_height = max(current_line_heights)
-            line_height = max(mode_height, max_height)
+            # max_height = max(current_line_heights)
+            # line_height = max(mode_height, max_height)
+            line_height = mode_height
 
         return typeset_units, all_units_fit
 
@@ -767,7 +832,7 @@ class Typesetting:
         line_spacing = 1.7  # 初始行距为 1.7
         min_scale = 0.1  # 最小缩放因子
         min_line_spacing = 1.4  # 最小行距
-        expand_space_flag = 0  # 0: 未扩展, 1: 已向下扩展, 2: 已向右扩展
+        expand_space_flag = 0  # 0: 未扩展，1: 已向下扩展，2: 已向右扩展
 
         while scale >= min_scale:
             # 尝试布局排版单元

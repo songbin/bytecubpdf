@@ -1,4 +1,5 @@
 <template>
+  <div>
     <n-card :title="t('settings.storage.title')" class="settings-card">
       <n-form ref="formRef" :model="storageForm">
         <n-form-item :label="t('settings.storage.pathLabel')" path="storagePath">
@@ -32,6 +33,8 @@
         </n-form-item>
       </n-form>
     </n-card>
+    <HelpFloatButton url="https://www.docfable.com/docs/usage/settingsmentor/system.html" />
+  </div>
   </template>
   
   <script lang="ts" setup>
@@ -40,7 +43,7 @@
   import { NButton, NCard, NForm, NFormItem, NInput, NIcon, useMessage } from 'naive-ui'
   import { configService } from '@/renderer/service/ConfigService'
  import { SearchLocate } from '@vicons/carbon'
-
+ import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue' 
 
   const { t } = useI18n()
   const message = useMessage()

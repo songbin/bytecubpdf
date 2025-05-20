@@ -19,11 +19,23 @@ export const useVersionCheck = () => {
 
   const checkForUpdates = async (): Promise<void> => {
     try {
-      const { data } = await axios.get<UpgradeInfo>('https://ts.bytecub.cn/version.json')
+      const timestamp = Date.now() // 添加时间戳防止缓存
+      const api_version = 'https://api.docfable.com/version/version.json' + '?t=' + timestamp // 添加时间戳参数
+      const { data } = await axios.get<UpgradeInfo>(api_version, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
+       
       if (data.build_number > VERSION.buildNumber) {
         upgradeInfo.value = data
         isModalVisible.value = true
         if (data.force_update) document.body.style.overflow = 'hidden'
+      }else if (data.build_number <= VERSION.buildNumber) {
+        // message.success(`当前已是最新版本 (${VERSION.version})`)
+        upgradeInfo.value = data // 设置最新版本信息用于显示
+        isModalVisible.value = true // 显示弹窗
       }
     } catch (error: any) {
       message.error('版本检查失败，请检查网络连接')

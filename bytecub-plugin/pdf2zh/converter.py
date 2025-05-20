@@ -14,6 +14,7 @@ from pdfminer.pdfinterp import PDFGraphicState, PDFResourceManager
 from pdfminer.utils import apply_matrix_pt, mult_matrix
 from pymupdf import Font
 from tenacity import retry, wait_fixed
+from config.ts_constants import  ENVDict,TSCore 
 
 from pdf2zh.translator import (
     AnythingLLMTranslator,
@@ -345,7 +346,8 @@ class TranslateConverter(PDFConverterEx):
         @retry(wait=wait_fixed(1))
         def worker(s: str):  # 多线程翻译
             if not s.strip() or re.match(r"^\{v\d+\}$", s):  # 空白和公式不翻译
-                return s
+                if ENVDict.ENGINE == TSCore.pdfmath:
+                    return s
             try:
                 new = self.translator.translate(s)
                 return new

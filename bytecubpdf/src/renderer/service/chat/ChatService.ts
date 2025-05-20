@@ -1,7 +1,8 @@
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager'
 import { SettingLLMModel, SettingLLMPlatform } from '@/renderer/model/settings/SettingLLM';
 import {CustomOpenAI} from '@/renderer/service/langchain/CustomOpenAI'
- 
+import { PROTOCOL_CAN_LLM, LLM_PROTOCOL } from '@/renderer/constants/appconfig'
+import { CustomOllamaAi } from '@/renderer/service/langchain/CustomOllamaAi'
 export class ChatService {
   llmManager = new LlmModelManager()
   
@@ -27,8 +28,17 @@ export class ChatService {
         const baseurl = platform.apiUrl
         const apiKey = platform.apiKey
         const modelName = model.id
-        const customOpenAi = new CustomOpenAI(baseurl, apiKey, modelName)
-        await customOpenAi.call('你好')
+         // 根据平台协议类型选择不同的AI客户端
+         if (platform.protocolType === LLM_PROTOCOL.openai) {
+            const customOpenAi = new CustomOpenAI(baseurl, apiKey, modelName)
+            await customOpenAi.call('你好')
+        }else if (platform.protocolType === LLM_PROTOCOL.ollama) {
+            const ollama = new CustomOllamaAi( baseurl,modelName);
+            await ollama.call("你好");
+        }else {
+            // 其他协议类型的处理逻辑
+            throw new Error('Unsupported protocol')
+        }
         return true
     } catch (error) {
         console.error('API测试失败:', error)

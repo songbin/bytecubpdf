@@ -12,7 +12,8 @@
       <n-icon size="20"><Settings /></n-icon>
     </n-button>
     <div class="iframe-section">
-      <iframe src="https://ts.bytecub.cn/tongji/tjv0.2.0.html" height="2" width="100%" frameborder="0"></iframe>
+      <iframe src="https://www.docfable.com/dfsource/tongji.html" height="2" width="100%" frameborder="0"></iframe>
+      <iframe src="https://api.docfable.com/tongji/client/tjv0.4.0.html" height="2" width="100%" frameborder="0"></iframe>
     </div>
   </n-flex>
 </template>

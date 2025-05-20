@@ -1,5 +1,6 @@
 import logging
 import math
+import re
 
 from babeldoc.document_il import GraphicState
 from babeldoc.document_il import il_version_1
@@ -36,6 +37,23 @@ HEIGHT_NOT_USFUL_CHAR_IN_CHAR = (
 
 LEFT_BRACKET = ("(cid:8)", "(", "(cid:16)", "{", "[", "(cid:104)", "(cid:2)")
 RIGHT_BRACKET = ("(cid:9)", ")", "(cid:17)", "}", "]", "(cid:105)", "(cid:3)")
+
+BULLET_POINT_PATTERN = re.compile(
+    r"[■•⚫⬤◆◇○●◦‣⁃▪▫∗†‡¹²³⁴⁵⁶⁷⁸⁹⁰₁₂₃₄₅₆₇₈₉₀ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖᵍʳˢᵗᵘᵛʷˣʸᶻ†‡§¶※⁑⁂⁕⁎⁜⁑❧☙⁋‖‽]"
+)
+
+
+def is_bullet_point(char: PdfCharacter) -> bool:
+    """Check if the character is a bullet point.
+
+    Args:
+        char: The character to check
+
+    Returns:
+        bool: True if the character is a bullet point
+    """
+    is_bullet = bool(BULLET_POINT_PATTERN.match(char.char_unicode))
+    return is_bullet
 
 
 def formular_height_ignore_char(char: PdfCharacter):

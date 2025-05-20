@@ -3,6 +3,9 @@
     <div class="title">{{ title }}</div>
       <div class="right-container">
         <div class="right-section">
+          <n-button type="primary"  @click="visitOfficialWebsite">
+              访问官网
+            </n-button>
           <n-dropdown
             :options="helpOptions"
             @select="handleHelpSelect"
@@ -64,7 +67,7 @@ const {
   closeModal
 } = useVersionCheck()
 const message = useMessage();
-const title = ref<string>('字节立方')
+const title = ref<string>('小书芽 - 专为学术而生 DocFable.com')
 const dialog = useDialog()
 const helpOptions = [
   { 
@@ -103,6 +106,11 @@ const handleLanguageSelect = (key: string) => {
   console.log('语言切换:', key)
   locale.value = key // 直接修改locale会触发全局更新
 }
+const visitOfficialWebsite = async (e: MouseEvent) => {
+  if ((window as any).window.electronAPI) {
+        await (window as any).window.electronAPI.openExternal('https://www.docfable.com/');
+  }
+} 
 const handleHelpSelect = async (key: string) => {
   switch(key) {
     case 'about':
@@ -161,7 +169,7 @@ const handleHelpSelect = async (key: string) => {
 const showAboutDialog = () => {
   dialog.info({
     title: '关于我们',
-    content: '字节立方 PDF 工具\n版本：1.0.0\n版权所有 © 2024',
+    content: '小书芽 PDF 工具\n版本：0.3.0\n版权所有 © 2025',
     positiveText: '确定'
   })
 }

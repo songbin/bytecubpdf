@@ -6,6 +6,8 @@ import { setupIPCHandlers } from './ipc'
 import { initialize } from './core/Initialize'
 import BuildPath from './core/BuildPath';
 import { pluginLogger } from './core/PluginLog';
+
+ 
 // 声明全局变量保存主窗口引用
 let mainWindow: BrowserWindow | null = null
 function getBatPath() {
@@ -137,7 +139,7 @@ function createWindow(): void {
 
   // 在窗口创建完成后执行 .bat 脚本
   try {
-    executeBatScript(mainWindow);
+      executeBatScript(mainWindow);
   } catch (error) {
     console.error('执行启动脚本时出错:', error);
   }

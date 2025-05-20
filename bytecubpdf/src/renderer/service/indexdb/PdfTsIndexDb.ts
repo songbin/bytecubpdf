@@ -7,6 +7,11 @@ export interface PdfTranslateConfig {
   modelId?: string;
   engine: string;
   threadCount: number;
+  enableTerms: boolean;
+  maxPages: number, // 新增每页最大页数字段
+  enableOCR: boolean,  // 新增OCR识别字段
+  disableRichText: boolean,  // 新增富文字段
+  enableTable: boolean,  // 新增表格翻译字段
 }
 
 export default class PdfTsIndexDb {

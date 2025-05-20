@@ -6,9 +6,17 @@ import ConfigService from './services/ConfigService'
 import { initialize } from './core/Initialize'
 import  BuildPath  from './core/BuildPath'
 import { pluginLogger } from './core/PluginLog';
+import { Logger,setupConsoleOverrides } from './core/log';
+
 let db: Database | null = null
 const configService = new ConfigService()
 export function setupIPCHandlers() {
+  const logger = Logger.getInstance();
+  setupConsoleOverrides(logger);
+   // 添加日志IPC监听
+   ipcMain.on('log-message', (event, { level, args }) => {
+    logger.log(level, ...args);
+  });
   // 窗口最小化
   ipcMain.handle('minimize-window', (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)
@@ -138,6 +146,7 @@ ipcMain.handle('openPath', async (_, path: string) => {
   ipcMain.handle('dir:upload', () => {
     return BuildPath.getUploadDirPath()
   });
+  
   ipcMain.handle('dir:translate', () => {
     return BuildPath.getTranslateDirPath() 
   })
@@ -176,4 +185,33 @@ ipcMain.handle('openPath', async (_, path: string) => {
       return [];
     }
   })
+
+  // OCR识别的上传图片文件存储路径
+  ipcMain.handle('dir:upload_ocr_image', () => {
+    return BuildPath.getupload_ocr_image_folderDirPath();
+  });
+
+  // OCR识别结果，markdown格式的存储路径
+  ipcMain.handle('dir:upload_ocr_result_md', () => {
+    return BuildPath.getupload_ocr_result_md_folderDirPath();
+  });
+
+  // OCR识别结果，docx格式的存储路径
+  ipcMain.handle('dir:upload_ocr_result_docx', () => {
+    return BuildPath.getupload_ocr_result_docx_folderDirPath();
+  });
+
+  //本地文件内容读取
+  ipcMain.handle('file:read', async (_, filePath: string) => {
+    try {
+      const fs = require('fs');
+      const data = fs.readFileSync(filePath, 'utf-8');
+      return data;  // 返回文件内容
+    }
+    catch (error) {
+      console.error('读取文件失败:', error);
+      return null;  // 返回null表示读取失败
+    }
+  });
+
 }

@@ -88,7 +88,17 @@ def build_executable():
         'werkzeug',
         'xsdata',
         'xinference_client',
-        'rapidocr_onnxruntime'
+        'rapidocr_onnxruntime',
+        'pyzstd',
+        'fastapi',
+        'uvicorn',
+        'sse-starlette',
+        'markdown',
+        'python-docx',
+        'beautifulsoup4',
+        'pylatexenc',
+        'matplotlib',
+        'pillow'
     ]
     
     # 添加所有必需的包作为hidden-imports

@@ -19,6 +19,8 @@ from pdfminer.pdftypes import resolve1 as pdftypes_resolve1
 from pdfminer.psparser import PSLiteral
 
 from babeldoc.document_il import il_version_1
+from babeldoc.document_il.utils import zstd_helper
+from babeldoc.document_il.utils.style_helper import BLACK
 from babeldoc.document_il.utils.style_helper import YELLOW
 from babeldoc.translation_config import TranslationConfig
 
@@ -48,8 +50,11 @@ def create_hook(func, hook):
 
 def hook_pdfminer_pdf_page_init(*args):
     attrs = args[3]
-    while isinstance(attrs["MediaBox"], PDFMinerPDFObjRef):
-        attrs["MediaBox"] = pdftypes_resolve1(attrs["MediaBox"])
+    try:
+        while isinstance(attrs["MediaBox"], PDFMinerPDFObjRef):
+            attrs["MediaBox"] = pdftypes_resolve1(attrs["MediaBox"])
+    except Exception:
+        logger.exception(f"try to fix mediabox failed: {attrs}")
 
 
 PDFMinerPDFPage.__init__ = create_hook(
@@ -342,6 +347,7 @@ def parse_font_file(doc, idx, encoding, differences):
     bbox_list = []
     data = doc.xref_stream(idx)
     face = freetype.Face(BytesIO(data))
+    scale = 1000 / face.units_per_EM
     for charmap in face.charmaps:
         if charmap.encoding_name == "FT_ENCODING_ADOBE_CUSTOM":
             face.select_charmap(freetype.FT_ENCODING_ADOBE_CUSTOM)
@@ -350,7 +356,8 @@ def parse_font_file(doc, idx, encoding, differences):
     if differences:
         for code, name in differences:
             bbox_list[code] = get_name_cbox(face, name.encode("U8"))
-    return bbox_list
+    norm_bbox_list = [[v * scale for v in box] for box in bbox_list]
+    return norm_bbox_list
 
 
 def parse_encoding(obj_str):
@@ -478,6 +485,7 @@ class ILCreater:
         self.current_page_font_name_id_map = {}
         self.current_page_font_char_bounding_box_map = {}
         self.mupdf_font_map: dict[int, pymupdf.Font] = {}
+        self.graphic_state_pool = {}
 
     def on_finish(self):
         self.progress.__exit__(None, None, None)
@@ -580,6 +588,7 @@ class ILCreater:
         self.pop_passthrough_per_char_instruction()
         self.pop_xobj()
         xobj = self.xobj_map[xobj_id]
+        base_op = zstd_helper.zstd_compress(base_op)
         xobj.base_operations = il_version_1.BaseOperations(value=base_op)
         self.xobj_inc += 1
 
@@ -629,6 +638,7 @@ class ILCreater:
         self.current_page.page_number = page_number
 
     def on_page_base_operation(self, operation: str):
+        operation = zstd_helper.zstd_compress(operation)
         self.current_page.base_operations = il_version_1.BaseOperations(value=operation)
 
     def on_page_resource_font(self, font: PDFFont, xref_id: int, font_id: str):
@@ -796,6 +806,21 @@ class ILCreater:
             f"{arg} {op}" for op, arg in gs.passthrough_instruction
         )
 
+        # 可能会影响部分 graphic state 准确度。不过 BabelDOC 仅使用 passthrough_per_char_instruction
+        # 所以应该是没啥影响
+        # 但是池化 graphic state 后可以减少内存占用
+        if (
+            graphic_state.passthrough_per_char_instruction
+            not in self.graphic_state_pool
+        ):
+            self.graphic_state_pool[graphic_state.passthrough_per_char_instruction] = (
+                graphic_state
+            )
+        else:
+            graphic_state = self.graphic_state_pool[
+                graphic_state.passthrough_per_char_instruction
+            ]
+
         return graphic_state
 
     def on_lt_char(self, char: LTChar):
@@ -834,8 +859,8 @@ class ILCreater:
             char_bounding_box = None
 
         char_unicode = char.get_text()
-        if "(cid:" not in char_unicode and len(char_unicode) > 1:
-            return
+        # if "(cid:" not in char_unicode and len(char_unicode) > 1:
+        #     return
         if space_regex.match(char_unicode):
             char_unicode = " "
         advance = char.adv
@@ -887,6 +912,8 @@ class ILCreater:
             xobj_id=char.xobj_id,
             visual_bbox=visual_bbox,
         )
+        if self.translation_config.ocr_workaround:
+            pdf_char.pdf_style.graphic_state = BLACK
         if pdf_style.font_size == 0.0:
             logger.warning(
                 "Font size is 0.0 for character %s. Skip it.",

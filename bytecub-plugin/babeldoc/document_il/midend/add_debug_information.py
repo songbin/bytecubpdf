@@ -34,7 +34,7 @@ class AddDebugInformation:
 
     def _create_text(self, text: str, color: GraphicState, box: il_version_1.Box):
         style = il_version_1.PdfStyle(
-            font_id="china-ss",
+            font_id="base",
             font_size=4,
             graphic_state=color,
         )

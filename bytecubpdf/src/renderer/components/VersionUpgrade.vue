@@ -54,6 +54,11 @@
   
   onMounted(async () => {
     await checkForUpdates()
+    if (upgradeInfo.value?.build_number !== undefined 
+      && upgradeInfo.value.build_number <= VERSION.buildNumber) {
+      isModalVisible.value = false
+    // message.success(`当前已是最新版本 (${VERSION.version})`)
+  }
   });
   
 
@@ -61,7 +66,11 @@
     if (newVal) {
       document.body.style.overflow = 'hidden';
       isModalVisible.value = true;
-    }
+    }else if (upgradeInfo.value?.build_number !== undefined 
+        && upgradeInfo.value.build_number <= VERSION.buildNumber) {
+    // 添加版本相同时的处理
+    isModalVisible.value = false;
+  }
   });
   
   const handleUpdate = async (): Promise<void> => {

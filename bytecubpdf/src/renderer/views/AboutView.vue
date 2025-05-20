@@ -2,7 +2,7 @@
   <div class="about-page">
     <n-layout>
       <n-layout-header class="hero-section">
-        <h1 class="title">🌟 欢迎来到字节立方PDF翻译 🌟</h1>
+        <h1 class="title">🌟 欢迎来到小书芽PDF翻译 🌟</h1>
         <p class="subtitle">完美保持排版的pdf翻译解决方案</p>
       </n-layout-header>
 
@@ -49,7 +49,7 @@
             <n-card title="💬 加入社群" size="small" class="custom-card">
               <div class="qr-wrapper">
                 <n-image 
-                  src="https://ts.bytecub.cn/imgs/wechat.jpg"
+                  src="https://www.docfable.com/images/wechat.jpg"
                   width="200"
                   preview-disabled
                   class="qr-image"
@@ -80,11 +80,11 @@ import {
 } from 'naive-ui'
 
 const quickLinks = [
-  { icon: '🏠', text: '官网首页', url: 'https://www.bytecub.cn/' },
-  { icon: '🚀', text: '立即下载', url: 'https://ts.bytecub.cn/down.html' },
-  { icon: '📖', text: '使用指南', url: 'https://kkrverrhzg.feishu.cn/wiki/GIX7wMCfXiYsLEkNuJgcJYWnnyf' },
-  { icon: '❓', text: '常见问题', url: 'https://kkrverrhzg.feishu.cn/wiki/WNkJw8xZFiyJB0kA3x5cTIuxnWd' },
-  { icon: '💡', text: '提问技巧', url: 'https://kkrverrhzg.feishu.cn/wiki/N2kswSUK9ibqfykzgXDc19M1n1c' }
+  { icon: '🏠', text: '官网首页', url: 'https://www.docfable.com/' },
+  { icon: '🚀', text: '立即下载', url: 'https://www.docfable.com/docs/introduction/download.html' },
+  { icon: '📖', text: '使用指南', url: 'https://www.docfable.com/docs/usage/mentor.html' },
+  { icon: '❓', text: '常见问题', url: 'https://www.docfable.com/docs/usage/errors.html' },
+  { icon: '💡', text: '提问技巧', url: 'https://www.docfable.com/docs/usage/howask.html' }
 ]
 
 const features = [

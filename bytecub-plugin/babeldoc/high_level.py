@@ -4,6 +4,8 @@ import hashlib
 import io
 import logging
 import pathlib
+import shutil
+import struct
 import threading
 import time
 from asyncio import CancelledError
@@ -11,6 +13,8 @@ from pathlib import Path
 from typing import Any
 from typing import BinaryIO
 
+import pymupdf
+from pdfminer.cmapdb import IdentityCMap
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfpage import PDFPage
@@ -26,6 +30,7 @@ from babeldoc.document_il import il_version_1
 from babeldoc.document_il.backend.pdf_creater import SAVE_PDF_STAGE_NAME
 from babeldoc.document_il.backend.pdf_creater import SUBSET_FONT_STAGE_NAME
 from babeldoc.document_il.backend.pdf_creater import PDFCreater
+from babeldoc.document_il.backend.pdf_creater import reproduce_cmap
 from babeldoc.document_il.frontend.il_creater import ILCreater
 from babeldoc.document_il.midend.add_debug_information import AddDebugInformation
 from babeldoc.document_il.midend.detect_scanned_file import DetectScannedFile
@@ -45,6 +50,17 @@ from babeldoc.split_manager import SplitManager
 from babeldoc.translation_config import TranslateResult
 from babeldoc.translation_config import TranslationConfig
 from babeldoc.translation_config import WatermarkOutputMode
+
+
+def decode(_, code: bytes) -> tuple[int, ...]:
+    n = len(code) // 2
+    if n:
+        return struct.unpack_from(f">{n}H", code)
+    else:
+        return ()
+
+
+IdentityCMap.decode = decode
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +89,26 @@ resfont_map = {
     "ja": "japan-s",
     "ko": "korea-s",
 }
+
+
+def fix_cmap(translate_result: TranslateResult, translate_config: TranslationConfig):
+    processed = []
+    for attr in (
+        "mono_pdf_path",
+        "dual_pdf_path",
+        "no_watermark_mono_pdf_path",
+        "no_watermark_dual_pdf_path",
+    ):
+        path = getattr(translate_result, attr)
+        if path in processed:
+            continue
+        processed.append(path)
+
+        temp_path = translate_config.get_working_file_path(f"{path.stem}.cmap.pdf")
+        pdf = pymupdf.open(path)
+        reproduce_cmap(pdf)
+        pdf.save(temp_path)
+        shutil.move(temp_path, path)
 
 
 def verify_file_hash(file_path: str, expected_hash: str) -> bool:
@@ -373,6 +409,26 @@ def fix_null_xref(doc: Document) -> None:
             doc.update_object(i, "[]")
 
 
+def fix_filter(doc):
+    page_contents = []
+    for page in doc:
+        page_contents.extend(page.get_contents())
+    for page_piece in page_contents:
+        f = doc.xref_get_key(page_piece, "Filter")
+        if f[0] == "xref":
+            data = doc.xref_stream(page_piece)
+            doc.update_stream(page_piece, data)
+
+    for page in doc:
+        contents = page.get_contents()
+        if len(contents) > 1:
+            page_streams = [doc.xref_stream(i) for i in contents]
+            r = doc.get_new_xref()
+            doc.update_object(r, "<<>>")
+            doc.update_stream(r, b" ".join(page_streams))
+            doc.xref_set_key(page.xref, "Contents", f"{r} 0 R")
+
+
 def do_translate(
     pm: ProgressMonitor, translation_config: TranslationConfig
 ) -> TranslateResult:
@@ -456,13 +512,23 @@ def do_translate(
                                 part_config.input_file = part_temp_input_path
 
                                 temp_doc = Document()
+                                for x in range(
+                                    split_point.start_page, split_point.end_page + 1
+                                ):
+                                    xref = original_doc[x].xref
+                                    if (
+                                        original_doc.xref_get_key(xref, "Annots")[0]
+                                        != "null"
+                                    ):
+                                        original_doc.xref_set_key(
+                                            xref, "Annots", "null"
+                                        )
                                 temp_doc.insert_pdf(
                                     original_doc,
                                     from_page=split_point.start_page,
                                     to_page=split_point.end_page,
                                 )
                                 temp_doc.save(part_temp_input_path)
-
                                 assert (
                                     temp_doc.page_count
                                     == split_point.end_page - split_point.start_page + 1
@@ -514,11 +580,21 @@ def do_translate(
         )
         result.original_pdf_path = translation_config.input_file
         result.peak_memory_usage = peak_memory_usage
+
+        # should fix macOS preview compatibility
+        # Although the issue of Windows Edge
+        # not being able to copy translated text can be fixed,
+        # the macOS preview is broken
+        # fix_cmap(result, translation_config)
         pm.translate_done(result)
         return result
 
     except Exception as e:
-        logger.exception(f"translate error: {e}")
+        if translation_config.debug:
+            logger.exception("translate error:")
+        else:
+            logger.error(f"translate error: {e}")
+        pm.disable = False
         pm.translate_error(e)
         raise
     finally:
@@ -530,11 +606,27 @@ def do_translate(
 def fix_media_box(doc: Document) -> None:
     mediabox_data = {}
     for page in doc:
+        page_box_data = {}
+        mediabox = doc.xref_get_key(page.xref, "MediaBox")
+        if mediabox[0] == "null":
+            mediabox = ("array", "[0 0 612 792]")
+            doc.xref_set_key(page.xref, "MediaBox", mediabox[1])
         if page.mediabox.x0 != 0 or page.mediabox.y0 != 0:
+            x0 = page.mediabox.x0
+            y0 = page.mediabox.y0
             x1 = page.mediabox.x1
             y1 = page.mediabox.y1
-            mediabox_data[page.number] = doc.xref_get_key(page.xref, "MediaBox")
-            doc.xref_set_key(page.xref, "MediaBox", f"[0 0 {x1} {y1}]")
+            page_box_data["MediaBox"] = doc.xref_get_key(page.xref, "MediaBox")[1]
+            doc.xref_set_key(page.xref, "MediaBox", f"[0 0 {x1 - x0} {y1 - y0}]")
+        if page.cropbox.x0 != 0 or page.cropbox.y0 != 0:
+            x0 = page.cropbox.x0
+            y0 = page.cropbox.y0
+            x1 = page.cropbox.x1
+            y1 = page.cropbox.y1
+            page_box_data["CropBox"] = doc.xref_get_key(page.xref, "CropBox")[1]
+            doc.xref_set_key(page.xref, "CropBox", f"[0 0 {x1 - x0} {y1 - x0}]")
+        if page_box_data:
+            mediabox_data[page.number] = page_box_data
     return mediabox_data
 
 
@@ -552,7 +644,11 @@ def _do_translate_single(
             "input.decompressed.pdf",
         )
         # Fix null xref in PDF file
-        fix_null_xref(doc_input)
+        try:
+            fix_filter(doc_input)
+            fix_null_xref(doc_input)
+        except Exception:
+            logger.exception("auto fix failed, please check the pdf file")
         doc_input.save(output_path, expand=True, pretty=True)
         del doc_input
 
@@ -562,12 +658,16 @@ def _do_translate_single(
     resfont = "china-ss"
 
     # Fix null xref in PDF file
-    fix_null_xref(doc_pdf2zh)
+    try:
+        fix_filter(doc_pdf2zh)
+        fix_null_xref(doc_pdf2zh)
+    except Exception:
+        logger.exception("auto fix failed, please check the pdf file")
 
     mediabox_data = fix_media_box(doc_pdf2zh)
 
-    for page in doc_pdf2zh:
-        page.insert_font(resfont, None)
+    # for page in doc_pdf2zh:
+    #     page.insert_font(resfont, None)
 
     resfont = None
     doc_pdf2zh.save(temp_pdf_path)
@@ -586,6 +686,7 @@ def _do_translate_single(
     logger.debug(f"finish parse il from {temp_pdf_path}")
     docs = il_creater.create_il()
     logger.debug(f"finish create il from {temp_pdf_path}")
+    del il_creater
     if translation_config.debug:
         xml_converter.write_json(
             docs,
@@ -650,13 +751,13 @@ def _do_translate_single(
             support_llm_translate = True
     except NotImplementedError:
         support_llm_translate = False
-    il_translator = None
     if support_llm_translate:
         il_translator = ILTranslatorLLMOnly(translate_engine, translation_config)
     else:
         il_translator = ILTranslator(translate_engine, translation_config)
 
     il_translator.translate(docs)
+    del il_translator
     logger.debug(f"finish ILTranslator from {temp_pdf_path}")
     if translation_config.debug:
         xml_converter.write_json(
@@ -675,7 +776,9 @@ def _do_translate_single(
     try:
         if translation_config.watermark_output_mode == WatermarkOutputMode.Both:
             mono_watermark_first_page_doc_bytes, dual_watermark_first_page_doc_bytes = (
-                generate_first_page_with_watermark(doc_pdf2zh, translation_config, docs)
+                generate_first_page_with_watermark(
+                    doc_pdf2zh, translation_config, docs, mediabox_data
+                )
             )
     except Exception:
         logger.warning(
@@ -725,6 +828,7 @@ def generate_first_page_with_watermark(
     mupdf: Document,
     translation_config: TranslationConfig,
     doc_il: il_version_1.Document,
+    mediabox_data: dict[int, Any] | None = None,
 ) -> (io.BytesIO, io.BytesIO):
     first_page_doc = Document()
     first_page_doc.insert_pdf(mupdf, from_page=0, to_page=0)
@@ -747,6 +851,7 @@ def generate_first_page_with_watermark(
             watermarked_temp_pdf_path.as_posix(),
             il_only_first_page_doc,
             watermarked_config,
+            mediabox_data,
         )
         result = pdf_creater.write(watermarked_config)
         mono_pdf_bytes = None

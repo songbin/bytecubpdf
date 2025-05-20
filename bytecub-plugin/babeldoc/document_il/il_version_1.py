@@ -364,6 +364,18 @@ class PdfRectangle:
             "type": "Attribute",
         },
     )
+    fill_background: bool | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
+    xobj_id: int | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
 
 
 @dataclass
@@ -751,6 +763,12 @@ class PdfParagraph:
         },
     )
     layout_label: str | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
+    layout_id: int | None = field(
         default=None,
         metadata={
             "type": "Attribute",

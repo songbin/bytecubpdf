@@ -25,6 +25,42 @@ class BuildPath {
         }
         return usePath;
     }
+     
+     
+     
+   
+    //# OCR识别的上传图片文件存储路径
+    static getOcrPdfUploadDirPath(): string {
+        const usePath = path.join(app.getPath('userData'), STORAGE_CONFIG.root, STORAGE_CONFIG.cachedir, STORAGE_CONFIG.file, STORAGE_CONFIG.ocruploaddir);
+        if (!fs.existsSync(usePath)) {
+            fs.mkdirSync(usePath, { recursive: true });
+        }
+        return usePath;
+    }
+   //# OCR识别的上传图片文件存储路径
+    static getupload_ocr_image_folderDirPath(): string {
+        const usePath = path.join(app.getPath('userData'), STORAGE_CONFIG.root, STORAGE_CONFIG.cachedir, STORAGE_CONFIG.file, STORAGE_CONFIG.upload_ocr_image_folder);
+        if (!fs.existsSync(usePath)) {
+            fs.mkdirSync(usePath, { recursive: true });
+        }
+        return usePath;
+    }
+     // upload_ocr_result_md_folder : 'upload_ocr_result_md', //# OCR识别结果，markdown格式的存储路径
+    static getupload_ocr_result_md_folderDirPath(): string {
+        const usePath = path.join(app.getPath('userData'), STORAGE_CONFIG.root, STORAGE_CONFIG.cachedir, STORAGE_CONFIG.file, STORAGE_CONFIG.upload_ocr_result_md_folder);
+        if (!fs.existsSync(usePath)) {
+            fs.mkdirSync(usePath, { recursive: true });
+        }
+        return usePath;
+    }
+     // upload_ocr_result_docx_folder : 'upload_ocr_result_docx', //# OCR识别结果，docx格式的存储路径
+    static getupload_ocr_result_docx_folderDirPath(): string {
+        const usePath = path.join(app.getPath('userData'), STORAGE_CONFIG.root, STORAGE_CONFIG.cachedir, STORAGE_CONFIG.file, STORAGE_CONFIG.upload_ocr_result_docx_folder);
+        if (!fs.existsSync(usePath)) {
+            fs.mkdirSync(usePath, { recursive: true });
+        }
+        return usePath;
+    }
     static getTranslateDirPath(): string {
         const usePath = path.join(app.getPath('userData'), STORAGE_CONFIG.root, STORAGE_CONFIG.cachedir, STORAGE_CONFIG.file, STORAGE_CONFIG.translatedir); 
         if (!fs.existsSync(usePath)) {
@@ -43,6 +79,22 @@ class BuildPath {
             basePath = process.cwd();
         }
 
+        const usePath = path.join(basePath, "execute", "logs");
+        if (!fs.existsSync(usePath)) {
+            fs.mkdirSync(usePath, { recursive: true }); 
+        }
+        return usePath;
+    }
+
+    static getAppLogDirPath(): string {
+        let basePath: string;
+        if (process.env.NODE_ENV === 'production') {
+            // 生产环境：exe所在目录/execute/logs
+            basePath = path.dirname(app.getPath('exe')); // 获取exe所在目录
+        } else {
+            // 开发环境：项目根目录/execute/logs
+            basePath = process.cwd();
+        }
         const usePath = path.join(basePath, "execute", "logs");
         if (!fs.existsSync(usePath)) {
             fs.mkdirSync(usePath, { recursive: true }); 

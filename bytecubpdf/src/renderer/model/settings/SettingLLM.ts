@@ -1,4 +1,5 @@
 export interface SettingLLMModel {
+    auto_id?: number;
     /** 模型唯一标识 */
     id: string;
     /** 平台ID */

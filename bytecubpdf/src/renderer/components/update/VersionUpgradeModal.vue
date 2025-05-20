@@ -3,7 +3,9 @@
         <p>当前版本：{{ currentVersion }}</p>
         <p v-if="upgradeInfo">最新版本：{{ upgradeInfo.version }}</p>
         <div v-if="upgradeInfo?.force_update" class="force-tip">⚠️ 本次为强制升级，必须立即更新</div>
-        
+        <div v-else-if="upgradeInfo?.build_number && upgradeInfo.build_number <= VERSION.buildNumber" class="latest-tip">
+          ✅ 当前已是最新版本
+        </div>
         <h4>更新内容：</h4>
         <ul v-if="upgradeInfo?.changelog.length">
           <li v-for="(item, index) in upgradeInfo.changelog" :key="index">{{ item }}</li>
@@ -13,6 +15,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { VERSION } from '@/renderer/constants/appconfig.js'
 interface UpgradeInfo {
   version: string
   build_number: number
