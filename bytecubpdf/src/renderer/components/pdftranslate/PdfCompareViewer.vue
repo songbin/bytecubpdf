@@ -1,7 +1,16 @@
 <template>
-  <div class="pdf-viewer" ref="viewerRef">
+  <div class="pdf-viewer" ref="viewerRef" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 1000;">
+    <div class="pdf-header">
+      <n-space>
+        <n-button @click="toggleFullscreen">最大化</n-button>
+        <n-button @click="emit('close')">退出阅读</n-button>
+      </n-space>
+      
+    </div>
+
+ 
     <div class="pdf-content">
-      <div class="pdf-columns">
+      <div class="pdf-columns" style="height: calc(100vh - 100px); overflow-y: auto;">
         <div class="pdf-column" ref="leftContainer" @scroll="syncScroll('left')">
           <div v-if="filePathLeft" class="canvas-container">
             <canvas ref="leftCanvas" class="pdf-canvas"></canvas>
@@ -21,7 +30,7 @@
           </div>
         </div>
       </div>
-      <div v-if="totalPagesLeft > 0 || totalPagesRight > 0" class="pdf-controls">
+      <div v-if="totalPagesLeft > 0 || totalPagesRight > 0" class="pdf-controls" style="background-color: white; position: fixed; bottom: 0; left: 0; right: 0; padding: 10px; z-index: 1000;">
         <button @click="changePage('both', 'prev')" :disabled="currentPageLeft <= 1 && currentPageRight <= 1">上一页</button>
         <span>{{ Math.max(currentPageLeft, currentPageRight) }} / {{ Math.max(totalPagesLeft, totalPagesRight) }}</span>
         <button @click="changePage('both', 'next')" :disabled="currentPageLeft >= totalPagesLeft && currentPageRight >= totalPagesRight">下一页</button>
@@ -32,6 +41,8 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, nextTick, shallowRef, onBeforeUnmount } from 'vue'
+import { NButton,NSpace } from 'naive-ui';
+
 
 interface Props {
   filePathLeft: string
@@ -40,10 +51,24 @@ interface Props {
   scale?: number
 }
 
+const emit = defineEmits(['close'])
+
 const props = withDefaults(defineProps<Props>(), {
   title: 'PDF 阅读器',
   scale: 100
 })
+
+const isFullscreen = ref(false)
+
+const toggleFullscreen = async () => {
+  
+  try {
+    console.log('最大化窗口');
+    await (window as any).window.electronAPI?.maximizeWindow();
+  } catch (error) {
+    console.error('最大化窗口失败:', error);
+  }
+}
 
 // DOM引用
 const viewerRef = ref(null)
@@ -290,6 +315,6 @@ onBeforeUnmount(() => {
   justify-content: center;
   align-items: center;
   gap: 10px;
-  margin-top: 10px;
+  /**margin-top: 10px;*/ 
 }
 </style>

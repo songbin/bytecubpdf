@@ -11,7 +11,7 @@
       content-style="padding: 0;"
     >
       <template #header>
-        <div style="display: flex; justify-content: space-between; width: 100%;">
+        <div style="display: flex; justify-content: space-between; width: 100%; position: fixed; top: 0; left: 0; right: 0; background: white; z-index: 1000; padding: 10px 16px; border-bottom: 1px solid #eee;">
           <span>PDF预览</span>
           <n-button-group>
             <n-button
@@ -88,6 +88,7 @@
         :file-path-left="currentPdfLeft"
         :file-path-right="currentPdfRight"
         style="width: 100%; height: 100%;"
+        @close="handleCloseCompareViewer"
       />
     </n-modal>
     <n-flex justify="end" style="margin-bottom: 12px" :size="8">
@@ -365,6 +366,7 @@ const handleCloseCompareViewer = () => {
 // 最大化窗口
 const maximizeWindow = async () => {
   try {
+    console.log('最大化窗口');
     await (window as any).window.electronAPI?.maximizeWindow();
   } catch (error) {
     console.error('最大化窗口失败:', error);
