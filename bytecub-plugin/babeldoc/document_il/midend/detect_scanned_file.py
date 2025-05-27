@@ -8,6 +8,7 @@ from skimage.metrics import structural_similarity
 from babeldoc.document_il import il_version_1
 from babeldoc.document_il.babeldoc_exception.BabelDOCException import ScannedPDFError
 from babeldoc.document_il.utils.style_helper import GREEN
+from babeldoc.document_il.utils.zstd_helper import zstd_decompress
 from babeldoc.translation_config import TranslationConfig
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class DetectScannedFile:
         # Note: PDF coordinates are from bottom-left,
         # so we use y2 for top position
         style = il_version_1.PdfStyle(
-            font_id="china-ss",
+            font_id="base",
             font_size=4,
             graphic_state=color,
         )
@@ -111,11 +112,15 @@ class DetectScannedFile:
         )[:, :, ::-1]
         new_xref = pdf.get_new_xref()
         pdf.update_object(new_xref, "<<>>")
-        pdf.update_stream(new_xref, page.base_operations.value.encode("utf-8"))
+        baseop = page.base_operations.value
+        baseop = zstd_decompress(baseop)
+        pdf.update_stream(new_xref, baseop.encode("utf-8"))
         pdf[page.page_number].set_contents(new_xref)
 
         for xobj in page.pdf_xobject:
-            pdf.update_stream(xobj.xref_id, xobj.base_operations.value.encode("utf-8"))
+            base_op = xobj.base_operations.value
+            base_op = zstd_decompress(base_op)
+            pdf.update_stream(xobj.xref_id, base_op.encode("utf-8"))
 
         after_page_image = pdf[page.page_number].get_pixmap()
         after_page_image = np.frombuffer(after_page_image.samples, np.uint8).reshape(
@@ -125,4 +130,4 @@ class DetectScannedFile:
         )[:, :, ::-1]
         before_page_image = cv2.cvtColor(before_page_image, cv2.COLOR_RGB2GRAY)
         after_page_image = cv2.cvtColor(after_page_image, cv2.COLOR_RGB2GRAY)
-        return structural_similarity(before_page_image, after_page_image) > 0.9
+        return structural_similarity(before_page_image, after_page_image) > 0.98

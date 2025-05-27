@@ -1,4 +1,5 @@
 <template>
+  <div>
     <n-card :title="t('settings.storage.title')" class="settings-card">
       <n-form ref="formRef" :model="storageForm">
         <n-form-item :label="t('settings.storage.pathLabel')" path="storagePath">
@@ -15,7 +16,7 @@
                 @click="handleSelectFolder"
                 :disabled="loading"
               >
-                {{ t('settings.storage.browse') }}
+                更改存储路径
               </n-button>
               <n-button
                 circle tertiary 
@@ -32,19 +33,21 @@
         </n-form-item>
       </n-form>
     </n-card>
+    <HelpFloatButton url="https://www.docfable.com/docs/usage/settingsmentor/system.html" />
+  </div>
   </template>
   
   <script lang="ts" setup>
   import { ref, onMounted } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { NButton, NCard, NForm, NFormItem, NInput, NIcon, useMessage } from 'naive-ui'
+  import { NButton, NCard, NForm, NFormItem, NInput, NIcon, useMessage,useDialog } from 'naive-ui'
   import { configService } from '@/renderer/service/ConfigService'
  import { SearchLocate } from '@vicons/carbon'
-
+ import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue' 
 
   const { t } = useI18n()
   const message = useMessage()
-
+  const dialog = useDialog(); // 添加对话框 hook
   // 表单状态
   const storageForm = ref({
     storagePath: ''
@@ -73,6 +76,12 @@
               storageForm.value.storagePath = path.replace(/\\/g, '/')
               await configService.saveFileStoragePath(storageForm.value.storagePath)
               await (window as any).electronAPI?.DbInitTables()
+              //来个弹窗，提示要重启应用
+              dialog.success({
+                  title: 'INFO',
+                  content: '更改路径后需重启应用才能生效',
+                   
+                });
           }
       } catch (error) {
           message.error(t('settings.storage.selectError'))

@@ -1,19 +1,8 @@
 <template>
   <div>
-    <n-upload
-      directory-dnd
-      action="http://localhost:8089/pdf/import"
-      :multiple="false"
-      :file-list="fileList"
-      :data="uploadData"
-      :disabled="isLoading" 
-      accept=".pdf,application/pdf"
-      class="upload-area"
-      @before-upload="beforeUpload"
-      @finish="handleUploadFinish"
-      @error="handleUploadError"
-      @change="handleFileChange"
-    >
+    <n-upload directory-dnd action="http://localhost:8089/pdf/import" :multiple="false" :file-list="fileList"
+      :data="uploadData" :disabled="isLoading" accept=".pdf,application/pdf" class="upload-area"
+      @before-upload="beforeUpload" @finish="handleUploadFinish" @error="handleUploadError" @change="handleFileChange">
       <n-upload-dragger class="upload-dragger">
         <div style="margin-bottom: 6px">
           <n-icon size="24" :depth="3">
@@ -28,103 +17,108 @@
         </n-p>
       </n-upload-dragger>
     </n-upload>
-    <n-form ref="formRef" label-placement="left" :label-width="80">
-      <n-flex vertical :style="{ gap: '12px' }">
+    <n-form ref="formRef" label-placement="left" :label-width="90">
+      <n-flex vertical :style="{ gap: '8px' }">
         <n-flex class="form-section">
           <n-form-item :label="t('pdfts.main.tsform.sourceLang')" :show-feedback="false" :style="{ marginBottom: 0 }">
-            <n-select
-              v-model:value="formData.sourceLang"
-              :options="languages"
-              :placeholder="t('pdfts.main.tsform.sourceLangPlaceholder')"
-              filterable
-            />
+            <n-select v-model:value="formData.sourceLang" :options="languages"
+              :placeholder="t('pdfts.main.tsform.sourceLangPlaceholder')" filterable size="small" />
           </n-form-item>
           <n-form-item :label="t('pdfts.main.tsform.targetLang')" :show-feedback="false" :style="{ marginBottom: 0 }">
-            <n-select
-              v-model:value="formData.targetLang"
-              :options="languages"
-              :placeholder="t('pdfts.main.tsform.targetLangPlaceholder')"
-              filterable
-            />
+            <n-select v-model:value="formData.targetLang" :options="languages"
+              :placeholder="t('pdfts.main.tsform.targetLangPlaceholder')" filterable size="small" />
           </n-form-item>
         </n-flex>
         <n-flex class="form-section">
           <n-form-item :label="t('pdfts.main.tsform.platform')" :show-feedback="false" :style="{ marginBottom: 0 }">
-            <n-select
-              v-model:value="formData.platformId"
-              :options="platforms"
-              :placeholder="t('pdfts.main.tsform.platformPlaceholder')"
-              filterable
-              @update:value="handlePlatformChange"
-            />
+            <n-select v-model:value="formData.platformId" :options="platforms"
+              :placeholder="t('pdfts.main.tsform.platformPlaceholder')" filterable @update:value="handlePlatformChange"
+              size="small" />
           </n-form-item>
           <n-form-item :label="t('pdfts.main.tsform.model')" :show-feedback="false" :style="{ marginBottom: 0 }">
-            <n-select
-              v-model:value="formData.modelId"
-              :options="models"
-              :placeholder="t('pdfts.main.tsform.modelPlaceholder')"
-              filterable
-            />
+            <n-select v-model:value="formData.modelId" :options="models"
+              :placeholder="t('pdfts.main.tsform.modelPlaceholder')" filterable size="small" />
           </n-form-item>
         </n-flex>
-        <n-flex class="form-section">
-          <n-form-item :label="t('pdfts.main.tsform.engine')" :show-feedback="false" :style="{ marginBottom: 0 }">
-            <n-select
-              v-model:value="formData.engine"
-              :options="translateEngines"
-              :placeholder="t('pdfts.main.tsform.enginePlaceholder')"
-              filterable
-            />
-          </n-form-item>
-          <n-form-item :label="t('pdfts.main.tsform.thread')" :show-feedback="false" :style="{ marginBottom: 0 }">
-            <n-input-number
-              v-model:value="formData.threadCount"
-              :placeholder="t('pdfts.main.tsform.threadPlaceholder')"
-            />
-          </n-form-item>
+        <n-flex class="form-section" vertical>
+          <n-flex>
+            <n-form-item :label="t('pdfts.main.tsform.engine')" :show-feedback="false" :style="{ marginBottom: 0 }">
+              <n-tooltip trigger="hover">
+                <template #trigger>
+                  <n-icon size="large">
+                    <HelpCircle />
+                  </n-icon>
+                </template>
+                BabelDoc质量更好,PDFMath速度更快
+              </n-tooltip>
+              <n-select v-model:value="formData.engine" :options="translateEngines"
+                :placeholder="t('pdfts.main.tsform.enginePlaceholder')" filterable @update:value="handleEngineChange"
+                size="small" />
+            </n-form-item>
+            <n-form-item :label="t('pdfts.main.tsform.thread')" :show-feedback="false" :style="{ marginBottom: 0 }">
+              <n-input-number v-model:value="formData.threadCount" style="width: 160px"
+                :placeholder="t('pdfts.main.tsform.threadPlaceholder')" size="small" />
+            </n-form-item>
+            <n-form-item label="启用术语" :show-feedback="false" :style="{ marginBottom: 0 }">
+              <n-switch v-model:value="formData.enableTerms" @update:value="handleTermsSwitchChange" size="small" />
+            </n-form-item>
+          </n-flex>
+          <n-flex  v-if="formData.engine === 'babeldoc'"
+            style="background-color: #f5f5ff; border-radius: 8px;">
+           
+           
+            <n-form-item label="翻译表格" :show-feedback="false" :style="{ marginBottom: 0 }">
+              <n-tooltip trigger="hover">
+                <template #trigger>
+                  <n-icon size="large">
+                    <HelpCircle />
+                  </n-icon>
+                </template>
+                翻译表格文本（实验性）
+              </n-tooltip>
+              <n-switch v-model:value="formData.enableTable" size="small" />
+            </n-form-item>
+            <n-form-item label="禁用富文本" :show-feedback="false" :style="{ marginBottom: 0 }">
+              <n-tooltip trigger="hover">
+                <template #trigger>
+                  <n-icon size="large">
+                    <HelpCircle />
+                  </n-icon>
+                </template>
+                是否禁用富文本翻译（可能有助于提高某些 PDF 的兼容性）
+              </n-tooltip>
+              <n-switch v-model:value="formData.disableRichText" size="small" />
+            </n-form-item>
+          </n-flex>
         </n-flex>
-        <n-flex  justify="end">
-          <n-text :type="backendReady ? 'success' : 'warning'">
+        <n-flex justify="end">
+          <n-text :type="backendReady ? 'success' : 'warning'" size="small">
             <n-icon v-if="!backendReady" :depth="1">
               <svg viewBox="0 0 24 24" width="14" height="14">
-                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                <path fill="currentColor"
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
               </svg>
             </n-icon>
             <n-icon v-else color="#19be6b">
               <CheckmarkCircle />
             </n-icon>
             <!-- {{ backendReady ? '服务已就绪' : '服务启动中...' }} -->
-          
+
             {{ backendReady ? `服务已就绪` : `服务启动中...（${formatDuration(duration)}）` }}
- 
+
           </n-text>
-          <n-button
-            attr-type="button"
-            type="success"
-            @click="handleTranslate"
-            :disabled="isLoading"
-          >
+          <n-button attr-type="button" size="small" type="success" @click="handleTranslate" :disabled="isLoading">
             {{ t('pdfts.main.tsform.buttons.translate') }}
           </n-button>
-          <n-button
-            attr-type="button"
-            type="error"
-            @click="handleAbort"
-            :disabled="!isLoading"
-          >
+          <n-button attr-type="button" size="small" type="error" @click="handleAbort" :disabled="!isLoading">
             {{ t('pdfts.main.tsform.buttons.stop') }}
           </n-button>
         </n-flex>
         <n-flex justify="center">
           <div class="status-message" :class="statusClass" v-if="statusMessage">
             <span>{{ statusMessage }}</span>
-            <n-progress
-              type="line"
-              :percentage="progressPercentage"
-              indicator-placement="inside"
-              :status="statusClass === 'error' ? 'error' : 'default'"
-              :processing="statusClass === 'processing'"
-            />
+            <n-progress type="line" :percentage="progressPercentage" indicator-placement="inside"
+              :status="statusClass === 'error' ? 'error' : 'default'" :processing="statusClass === 'processing'" />
           </div>
         </n-flex>
 
@@ -139,6 +133,11 @@
 
       </n-flex>
     </n-form>
+
+   
+     
+      <HelpFloatButton url="https://www.docfable.com/docs/usage/translatementor/translatepdf.html" />
+     
   </div>
 </template>
 
@@ -147,7 +146,10 @@ defineOptions({
   name: 'PdfTsMain'
 })
 import { useRouter } from 'vue-router';
+import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
 import {
+  NTooltip,
+  NSwitch,
   NLog,
   NInfiniteScroll,
   useDialog,
@@ -168,11 +170,13 @@ import {
 } from 'naive-ui';
 import { CloudUpload } from '@vicons/carbon';
 import { useI18n } from 'vue-i18n';
-import { CheckmarkCircle } from '@vicons/ionicons5';
-import { ref, onMounted, watch,nextTick } from 'vue';
+import { CheckmarkCircle,HelpCircle } from '@vicons/ionicons5';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
 import PdfTsIndexDb from '@/renderer/service/indexdb/PdfTsIndexDb';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
+import { translateTermManager } from '@/renderer/service/manager/TranslateTermManager';
+import { termsService } from '@/renderer/service/translate/TermsService';
 import { TranslateHistoryManager } from '@/renderer/service/manager/TranslateHistoryManager';
 const historyManager = new TranslateHistoryManager();
 const { t } = useI18n();
@@ -182,6 +186,7 @@ const llmManager = new LlmModelManager();
 const pdfTsIndexDb = new PdfTsIndexDb();
 const message = useMessage();
 const uploadData = ref<Record<string, any>>({});
+import { UPLOAD_BIZ } from '@/renderer/constants/appconfig'
 // 数据绑定
 const formData = ref({
   sourceLang: '',
@@ -190,6 +195,12 @@ const formData = ref({
   modelId: '',
   engine: 'babeldoc',
   threadCount: 4,
+  enableTerms: false, // 新增术语开关字段
+  maxPages: 0, // 新增每页最大页数字段
+  enableOCR: false,  // 新增OCR识别字段
+  disableRichText: false,  // 新增禁用富文字段
+  enableTable: false,  // 新增表格翻译字段
+
 });
 const fileList = ref<UploadFileInfo[]>([]);
 const translatedText = ref('');
@@ -202,49 +213,22 @@ const statusMessage = ref('');
 const abortController = ref<AbortController | null>(null);
 const statusClass = ref('');
 const startTime = ref<number>(Date.now());
+const startCheckTime = ref<number>(Date.now());
 
 // 平台和模型数据
 const platforms = ref<Array<{ value: string; label: string }>>([]);
 const models = ref<Array<{ value: string; label: string }>>([]);
-const backendReady = ref(false);
-let checkInterval = 3000; // 初始检测间隔3秒
-let statusCheckTimer: number | null = null;
-const duration = ref(0);
-const startCheckTime = ref(0);
-const checkBackendStatus = async () => {
-  try {
-    const response = await fetch('http://localhost:8089/pdf/echo');
-    if (response.status === 200 && !backendReady.value) {
-      duration.value = Date.now() - startCheckTime.value;
-      backendReady.value = true;
-      checkInterval = 60000;
-    }
-  } catch (error) {
-    if (!backendReady.value) {
-      duration.value = Date.now() - startCheckTime.value;
-    }
-    backendReady.value = false;
-  } finally {
-    statusCheckTimer = window.setTimeout(checkBackendStatus, checkInterval);
-  }
-};
+import { backendReady, startCheckingBackendStatus, duration, formatDuration } from '@/renderer/service/backendStatus';
 
-// 添加时间格式化方法
-const formatDuration = (ms: number) => {
-  const seconds = Math.floor(ms / 1000);
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0 ? `${mins}分${secs}秒` : `${seconds}秒`;
-};
 // 初始化平台数据
 onMounted(async () => {
   try {
     startCheckTime.value = Date.now();
-      // 初始化日志监听
+    // 初始化日志监听
     initLogListener();
     console.log('加载配置开始'); // 添加日志
     const cacheDir = await (window as any).window.electronAPI?.getCacheDirPath();
-    uploadData.value = { cache_dir: cacheDir };
+    uploadData.value = { cache_dir: cacheDir , biz: UPLOAD_BIZ.ocr};
     await pdfTsIndexDb;
     const config = await pdfTsIndexDb.getConfig();
     if (config) {
@@ -255,6 +239,11 @@ onMounted(async () => {
         modelId: config.modelId || '',
         engine: config.engine || '',
         threadCount: config.threadCount || 4,
+        enableTerms: config.enableTerms || false,
+        maxPages: config.maxPages || 0, // 新增每页最大页数字段
+        enableOCR: config.enableOCR || false,  // 新增OCR识别字段
+        disableRichText: config.disableRichText || false,  // 新增富文字段
+        enableTable: config.enableTable || false,  // 新增表格翻译字段
       };
       if (config.platformId) {
         await handlePlatformChange(config.platformId);
@@ -270,13 +259,13 @@ onMounted(async () => {
   } catch (error) {
     console.error('加载配置失败:', error);
   }
-  checkBackendStatus();
+  startCheckingBackendStatus();
 });
 const initLogListener = () => {
   try {
     pluginLogs.value = [];
     let timer: number;
-    
+
     const fetchLogs = async () => {
       try {
         const logs = await (window as any).window.electronAPI?.getPluginLogs();
@@ -290,11 +279,11 @@ const initLogListener = () => {
 
     // 立即获取一次日志
     fetchLogs();
-    
+
     // 设置定时器，每1秒获取一次日志
     timer = window.setInterval(fetchLogs, 1000);
-    
-    
+
+
   } catch (error) {
     console.error('初始化日志监听失败:', error);
   }
@@ -311,6 +300,11 @@ watch(
       modelId: newValue.modelId,
       engine: newValue.engine,
       threadCount: newValue.threadCount,
+      enableTerms: newValue.enableTerms, // 新增
+      maxPages: newValue.maxPages, // 新增
+      enableOCR: newValue.enableOCR, // 新增
+      disableRichText: newValue.disableRichText, // 新增
+      enableTable: newValue.enableTable, // 新增
     });
   },
   { deep: true }
@@ -411,12 +405,34 @@ const languages = [
   { value: 'ru', label: t('pdfts.main.languages.ru') },
   { value: 'es', label: t('pdfts.main.languages.es') },
   { value: 'it', label: t('pdfts.main.languages.it') },
+  { value: 'am', label: '阿姆哈拉语' },
+  { value: 'ar', label: '阿拉伯语' },
+  { value: 'bn', label: '孟加拉语' },
+  { value: 'bg', label: '保加利亚语' },
+  { value: 'chr', label: '切罗基语' },
+  { value: 'el', label: '希腊语' },
+  { value: 'gu', label: '古吉拉特语' },
+  { value: 'iw', label: '希伯来语' },
+  { value: 'hi', label: '印地语' },
+  { value: 'kn', label: '卡纳达语' },
+  { value: 'ml', label: '马拉雅拉姆语' },
+  { value: 'mr', label: '马拉地语' },
+  { value: 'sr', label: '塞尔维亚语' },
+  { value: 'ta', label: '泰米尔语' },
+  { value: 'te', label: '泰卢固语' },
+  { value: 'th', label: '泰语' },
+  { value: 'ur', label: '乌尔都语' },
+  { value: 'uk', label: '乌克兰语' }
 ];
 const translateEngines = [
   { value: 'pdfmath', label: 'PDFMath' },
   { value: 'babeldoc', label: 'BabelDoc' },
 ];
-
+const handleEngineChange = (value: string) => {
+  if (value === 'pdfmath') {
+     
+  }
+};
 // 格式化请求数据
 const formatRequestData = async () => {
   let apiKey = '';
@@ -430,7 +446,19 @@ const formatRequestData = async () => {
       protocolType = platform.protocolType || '';
     }
   }
+  
   const cacheDir = await (window as any).window.electronAPI?.getCacheDirPath()
+  // 获取术语列表并格式化
+  let termsResponse = null
+  if (formData.value.enableTerms) {
+    termsResponse = await termsService.getTerms().catch(err => {
+      console.error('获取术语列表失败:', err);
+      return new Map();
+    });
+  }
+
+  console.log('获取的术语列表:', termsResponse); // 打印获取的术语列表
+
   return {
     sourceLanguage: formData.value.sourceLang,
     targetLanguage: formData.value.targetLang,
@@ -442,37 +470,44 @@ const formatRequestData = async () => {
     file_path: LocalStorageUtil.getPendingTranslation(),
     base_url: baseUrl,
     cache_dir: cacheDir, // 添加缓存目录到请求数据中
+    term_dict: termsResponse,
+    max_pages: formData.value.maxPages, // 新增每页最大页数字段
+    enable_ocr: formData.value.enableOCR,  // 新增OCR识别字段
+    disable_rich_text: formData.value.disableRichText,  // 新增富文字段
+    enable_table: formData.value.enableTable,  // 新增表格翻译字段
   };
 };
 // 在 handleTranslate 方法之前添加
 const formatHistoryParams = async (resultData: any) => {
-// 获取平台和模型信息
-const platform = formData.value.platformId 
-? await llmManager.getPlatformBasicInfo(formData.value.platformId)
-: null;
+  // 获取平台和模型信息
+  const platform = formData.value.platformId
+    ? await llmManager.getPlatformBasicInfo(formData.value.platformId)
+    : null;
 
-const model = formData.value.modelId 
-? await llmManager.getModel(formData.value.modelId)
-: null;
-const params = {
-platformId: formData.value.platformId || '',
-platformName: platform?.platformName || '',
-modelId: formData.value.modelId || '',
-modelName: model?.name || '',
-sourceFile: resultData.source,
-targetFile: resultData.target,
-sourceLanguage: formData.value.sourceLang,
-targetLanguage: formData.value.targetLang,
-timeConsumed: resultData.time_used || Math.floor((Date.now() - startTime.value) / 1000),
-totalPages: resultData.total_pages || 0,
-translationEngine: resultData.core,
-ext1: '',  // 根据实际需求填写扩展字段
-ext2: '',
-ext3: '',
-ext4: '',
-ext5: ''
-};
-return params;
+  const model = formData.value.modelId
+    ? await llmManager.getModel(formData.value.modelId)
+    : null;
+
+  
+  const params = {
+    platformId: formData.value.platformId || '',
+    platformName: platform?.platformName || '',
+    modelId: formData.value.modelId || '',
+    modelName: model?.name || '',
+    sourceFile: resultData.source,
+    targetFile: resultData.target,
+    sourceLanguage: formData.value.sourceLang,
+    targetLanguage: formData.value.targetLang,
+    timeConsumed: resultData.time_used || Math.floor((Date.now() - startTime.value) / 1000),
+    totalPages: resultData.total_pages || 0,
+    translationEngine: resultData.core,
+    ext1: 'pdf',  // 用于业务识别，这里设置为ocr
+    ext2: '',
+    ext3: '',
+    ext4: '',
+    ext5: ''
+  };
+  return params;
 };
 
 // 修改翻译完成的处理逻辑
@@ -483,7 +518,7 @@ const handleTranslate = async () => {
     message.error('请先上传PDF文件');
     return;
   }
-   
+
   // 新增API Key检查
   if (formData.value.platformId) {
     const platform = await llmManager.getPlatformBasicInfo(formData.value.platformId);
@@ -565,7 +600,7 @@ const handleTranslate = async () => {
           statusMessage.value = `🎉 翻译完成 | 总耗时 ${serverTimeUsed}s | 均速 ${speed}页/秒 | 每页耗时 ${speedPerPage}s`;
           statusClass.value = 'success';
           abortController.value = null;
-          
+
           // 在翻译完成处理逻辑中修改为：
           formatHistoryParams(data.result).then(history => {
             historyManager.createHistory(history);
@@ -600,7 +635,21 @@ const handleAbort = () => {
     abortController.value = null;
   }
 };
-
+const handleTermsSwitchChange = async (value: boolean) => {
+  if (value) {
+    dialog.info({
+      title: '提示',
+      content: '术语管理功能测试中，体验性使用',
+      positiveText: '确定',
+      onPositiveClick: () => {
+        formData.value.enableTerms = true;
+      },
+      onNegativeClick: () => {
+        formData.value.enableTerms = false;
+      }
+    });
+  }
+};
 // 新增日志相关代码
 const pluginLogs = ref<string[]>([]);
 const logRef = ref<any>(null); // 新增日志组件引用
@@ -609,7 +658,7 @@ watch(pluginLogs, async () => {
   await nextTick();
   logRef.value?.scrollTo({ position: 'bottom' });
 });
- 
+
 </script>
 
 <style scoped>
@@ -618,25 +667,32 @@ watch(pluginLogs, async () => {
   border-radius: 4px;
   background-color: rgba(250, 250, 252, 0.8);
   width: 100%;
-  padding: 8px 12px;
+  padding: 5px 8px; /**内边距上下5px，左右8px*/
+  
+  
 }
+
 :deep(.n-form-item .n-form-item-feedback-wrapper) {
   min-height: 0 !important;
 }
+
 .upload-area {
   height: 40%;
 }
+
 .upload-dragger {
   padding: 2px;
   /* max-height: 40px; */
   min-height: 60px;
 }
+
 .status-message {
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 500;
   width: 100%;
 }
+
 .progress-container {
   margin-top: 5px;
 }

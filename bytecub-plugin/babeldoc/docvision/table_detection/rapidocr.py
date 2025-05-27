@@ -5,7 +5,8 @@ from collections.abc import Generator
 
 import cv2
 import numpy as np
-from babeldoc.assets.assets import get_table_detection_rapidocr_model_path
+from babeldoc.assets.assets import get_table_detection_rapidocr_model_path,get_table_detection_rapidocr_model_rec_path,get_table_detection_rapidocr_model_cls_path
+from babeldoc.document_il.utils.mupdf_helper import get_no_rotation_img
 from babeldoc.docvision.doclayout import YoloBox
 from babeldoc.docvision.doclayout import YoloResult
 from rapidocr_onnxruntime import RapidOCR
@@ -91,15 +92,32 @@ class RapidOCRModel:
                 self.use_dml = True
             elif re.match(r"cuda", provider, re.IGNORECASE):
                 self.use_cuda = True
-
+        self.use_dml = False  # force disable directml
+        config_path = self.build_config()
+        get_table_detection_rapidocr_model_rec_path()
+        get_table_detection_rapidocr_model_cls_path()
         self.model = RapidOCR(
             det_model_path=get_table_detection_rapidocr_model_path(),
             det_use_cuda=self.use_cuda,
             det_use_dml=self.use_dml,
+            config_path=config_path,
         )
         self.names = {0: "table_text"}
         self.lock = threading.Lock()
-
+    def build_config(self):
+        from babeldoc.const import get_cache_file_path
+        import os
+        import shutil
+        from babeldoc.docvision.table_detection.ripadocr_config import get_rapidocr_config
+        import yaml
+                 
+        config_path = get_cache_file_path("config.yaml", "models")
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        # 获取配置字典并写入文件(每次覆盖)
+        config = get_rapidocr_config()
+        with open(config_path, 'w', encoding='utf-8') as f:
+            yaml.dump(config, f, allow_unicode=True)
+        return config_path
     @property
     def stride(self):
         return 32
@@ -236,7 +254,8 @@ class RapidOCRModel:
         for page in pages:
             translate_config.raise_if_cancelled()
             with self.lock:
-                pix = mupdf_doc[page.page_number].get_pixmap(dpi=72)
+                # pix = mupdf_doc[page.page_number].get_pixmap(dpi=72)
+                pix = get_no_rotation_img(mupdf_doc[page.page_number])
             image = np.fromstring(pix.samples, np.uint8).reshape(
                 pix.height,
                 pix.width,

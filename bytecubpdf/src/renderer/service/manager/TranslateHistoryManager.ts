@@ -24,7 +24,11 @@ export class TranslateHistoryManager {
             this.sanitizeString(history.platformId),
             this.sanitizeString(history.platformName),
             this.sanitizeString(history.modelId),
-            this.sanitizeString(history.modelName)
+            this.sanitizeString(history.modelName),
+            this.sanitizeString(history.ext1),
+            this.sanitizeString(history.ext2),
+            this.sanitizeString(history.ext3),
+            this.sanitizeString(history.ext4)
         ];
 
         const result = await SqliteDbCore.executeQuery<{ lastInsertRowid: number }>(`
@@ -39,28 +43,34 @@ export class TranslateHistoryManager {
                 platformId,      
                 platformName,    
                 modelId,        
-                modelName      
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                modelName,
+                ext1,
+                ext2,
+                ext3,
+                ext4      
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         `, sanitizedValues);
         
         return 0; 
     }
 
-    async getPage(pageno = 1, pageSize = 20): Promise<TranslateHistory[]> {
+    async getPage(pageno = 1, pageSize = 20, biz = 'pdf'): Promise<TranslateHistory[]> {
         const offset = (Math.max(1, pageno) - 1) * pageSize;
         return SqliteDbCore.executeQuery<TranslateHistory>(`
             SELECT * 
             FROM ${this.tableName} 
+            WHERE (ext1 = ? OR (? = 'pdf' AND ext1 = ''))
             ORDER BY createdAt DESC 
             LIMIT ? OFFSET ?
-        `, [pageSize, offset]);
+        `, [biz, biz, pageSize, offset]);
     }
     // 获取翻译历史记录的总数
-    async getTotalCount(): Promise<number> {
+    async getTotalCount(biz = 'pdf'): Promise<number> {
         const result = await SqliteDbCore.executeQuery<{ count: number }>(`
             SELECT COUNT(*) as count
             FROM ${this.tableName}
-        `);
+            WHERE (ext1 = ? OR (? = 'pdf' AND ext1 = ''))
+        `, [biz, biz]);
         return result[0]?.count || 0;
     }
 

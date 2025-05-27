@@ -3,6 +3,26 @@
     <div class="title">{{ title }}</div>
       <div class="right-container">
         <div class="right-section">
+          
+          <n-button text  @click="toUpgrade" v-if="isLongTimeNotice">
+              <template #icon>
+              <n-icon color="#d91a1a">
+                <WarningFilled />
+              </n-icon>
+              </template>
+              你的系统太陈旧了，请点击更新到最新版本
+            </n-button>
+          <n-button text  @click="restartApp" v-if="isUpgradeReady">
+              <template #icon>
+              <n-icon>
+                <CloudDownload />
+              </n-icon>
+              </template>
+              新版本已就绪，点击重启以更新
+            </n-button>
+          <n-button type="primary"  @click="visitOfficialWebsite">
+              访问官网
+            </n-button>
           <n-dropdown
             :options="helpOptions"
             @select="handleHelpSelect"
@@ -45,15 +65,17 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted,computed,h } from 'vue' 
+import { ref, onMounted,computed,h,watchEffect } from 'vue' 
 import VersionUpgradeModal from '@/renderer/components/update/VersionUpgradeModal.vue'
 import { useVersionCheck } from '@/renderer/service/VersionCheck'
-import { VERSION } from '@/renderer/constants/appconfig.js'
+import { VERSION } from '@/shared/constants/dfconstants';
 import {NDropdown, NButton, useDialog, NIcon} from 'naive-ui'
+import { CloudDownload,WarningFilled } from '@vicons/carbon'
 import { DownOutlined } from '@vicons/antd'
 import { useI18n } from 'vue-i18n'
 import { useMessage } from 'naive-ui'
 import { useRouter } from 'vue-router'
+
 const router = useRouter()
 const { locale, t } = useI18n()
 const { 
@@ -64,7 +86,7 @@ const {
   closeModal
 } = useVersionCheck()
 const message = useMessage();
-const title = ref<string>('字节立方')
+const title = ref<string>('小书芽 - 专为学术而生 DocFable.com')
 const dialog = useDialog()
 const helpOptions = [
   { 
@@ -99,10 +121,41 @@ const languageOptions = [
 const currentLanguage = computed(() => {
   return languageOptions.find(opt => opt.key === locale.value)?.label || '中文'
 })
+const isUpgradeReady = ref(false);
+const isLongTimeNotice = ref(false);
+ 
 const handleLanguageSelect = (key: string) => {
   console.log('语言切换:', key)
   locale.value = key // 直接修改locale会触发全局更新
 }
+const restartApp = async (e: MouseEvent) => {
+  console.log('准备重启升级应用')
+  if ((window as any).window.electronAPI) {
+    await (window as any).window.electronAPI.updateLauchInstaller('');
+  }
+  console.log('重启升级应用成功')
+} 
+const toUpgrade = async (e: MouseEvent) => {
+  dialog.info({
+        title: '版本更新',
+        content: () => h(VersionUpgradeModal, {
+          currentVersion: VERSION?.version,
+          upgradeInfo: upgradeInfo.value,
+          onUpgrade: handleUpdate,
+          onClose: closeModal
+        }),
+        negativeText: '去下载',  // 修改为提醒按钮
+        positiveText: '稍后提醒',     // 新增下载按钮
+        showIcon: false,
+        onNegativeClick: handleUpdate  // 绑定下载事件
+      })
+      checkForUpdates()
+}
+const visitOfficialWebsite = async (e: MouseEvent) => {
+  if ((window as any).window.electronAPI) {
+        await (window as any).window.electronAPI.openExternal('https://www.docfable.com/');
+  }
+} 
 const handleHelpSelect = async (key: string) => {
   switch(key) {
     case 'about':
@@ -161,7 +214,7 @@ const handleHelpSelect = async (key: string) => {
 const showAboutDialog = () => {
   dialog.info({
     title: '关于我们',
-    content: '字节立方 PDF 工具\n版本：1.0.0\n版权所有 © 2024',
+    content: '小书芽 PDF 工具\n版本：0.3.0\n版权所有 © 2025',
     positiveText: '确定'
   })
 }
@@ -174,6 +227,17 @@ onMounted(() => {
   } else {
     console.warn('Electron API 不可用')
   }
+  
+  setInterval(async () => {
+    try {
+      isUpgradeReady.value = await (window as any).window.electronAPI.getUpgradeStatus();
+      isLongTimeNotice.value = await (window as any).window.electronAPI.getLongTimeNotice();
+      const downPath = await (window as any).window.electronAPI.getUpgradeDownPath();
+      console.log('检查升级状态:', isUpgradeReady.value  ,'升级路径:', downPath, '长时间未升级:', isLongTimeNotice.value)
+    } catch (error) {
+      console.error('升级状态检查失败:', error);
+    }
+  }, 10000);
 })
 const minimizeWindow = async (): Promise<void> => {
   try {
@@ -262,3 +326,15 @@ const closeWindow = async (): Promise<void> => {
   background-color: #2c3e50;
 }
 </style>
+
+<!-- <script setup>
+import { ref, watchEffect } from 'vue';
+import { UpgradeService } from '@/shared/services/UpgradeService';
+
+const isUpgradeReady = ref(UpgradeService.getUpgradeStatus());
+
+// 监听UpgradeService状态变化
+watchEffect(() => {
+  isUpgradeReady.value = UpgradeService.getUpgradeStatus();
+});
+</script> -->

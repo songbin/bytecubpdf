@@ -6,8 +6,12 @@ import { setupIPCHandlers } from './ipc'
 import { initialize } from './core/Initialize'
 import BuildPath from './core/BuildPath';
 import { pluginLogger } from './core/PluginLog';
+const { autoUpdater } = require('electron-updater');
+import { UpdateManager } from './core/updateManager';
+const { exec } = require('child_process');
 // 声明全局变量保存主窗口引用
 let mainWindow: BrowserWindow | null = null
+const updateManager = new UpdateManager();
 function getBatPath() {
   // 修改路径获取逻辑 <button class="citation-flag" data-index="8"><button class="citation-flag" data-index="9">
   let scriptPath;
@@ -57,10 +61,14 @@ function executeBatScript(mainWindow:any) {
   // 获取缓存目录路径
   const baseDir = BuildPath.getCacheDirPath();
   const { spawn } = require('child_process');
-  const batProcess = spawn(`"${batPath}"`,  [`"${baseDir}"`], {
-     shell: true, //选项确保能正确执行.bat文件
-    windowsHide: true, //隐藏命令行窗口
-    // detached: true
+  // const batProcess = spawn(`"${batPath}" "${baseDir}"`, [], {
+  //   shell: true, //选项确保能正确执行.bat文件
+  //  windowsHide: true, //隐藏命令行窗口
+  //  // detached: true
+  // });
+  const batProcess = spawn('cmd.exe', ['/c', batPath, baseDir], {
+    windowsHide: true, // 隐藏窗口
+    shell: false         // 关键：禁用 shell 模式
   });
   batProcess.stdout.on('data', (data:any) => {
     const stdout = iconv.decode(data, 'utf-8').trim(); // 转换编码并去除空白字符
@@ -88,6 +96,20 @@ function executeBatScript(mainWindow:any) {
         data: error
       });
     }
+  });
+}
+function killProcessOnWindows(procName:any) {
+  const cmd = `taskkill /F /IM ${procName}`;
+  exec(cmd, (error:any, stdout:any, stderr:any) => {
+    if (error) {
+      console.log(`[Error killing process] ${error.message}`);
+      return;
+    }
+    if (stderr) {
+      console.log(`[Stderr] ${stderr}`);
+      return;
+    }
+    console.log(`[Process killed] ${stdout}`);
   });
 }
 /**
@@ -124,6 +146,7 @@ function createWindow(): void {
     mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'))
     // mainWindow.webContents.openDevTools()
   }
+  
 
   // 窗口准备就绪后显示
   mainWindow.on('ready-to-show', () => {
@@ -137,17 +160,26 @@ function createWindow(): void {
 
   // 在窗口创建完成后执行 .bat 脚本
   try {
-    executeBatScript(mainWindow);
+      executeBatScript(mainWindow);
   } catch (error) {
     console.error('执行启动脚本时出错:', error);
   }
 }
-
+ 
 // 应用准备就绪后创建窗口
 app.whenReady().then(() => {
+  // const procName = 'bytecubplugin.exe'; // 替换为你要杀死的进程名
+
+  // if (process.platform === 'win32') {
+  //   killProcessOnWindows('小书芽.exe');
+  //   killProcessOnWindows('bytecubplugin.exe');
+  // } else {
+  //   //killProcessOnUnix(procName);
+  // }
   createWindow()
   setupIPCHandlers() // 初始化所有 IPC 处理器
   initialize() // 初始化应用
+  updateManager.checkForUpdates() // 启动时自动检查更新
   // macOS应用激活事件处理
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -181,6 +213,7 @@ app.on('before-quit', () => {
   
   try {
     executeStopScript()
+    updateManager.cleanupResources();
   } catch (error) {
     console.error('执行终止脚本时出错:', error);
   }

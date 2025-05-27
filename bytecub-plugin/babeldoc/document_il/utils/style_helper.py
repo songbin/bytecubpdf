@@ -1,7 +1,7 @@
 from babeldoc.document_il import il_version_1
 
 
-def create_pdf_style(r, g, b, font_id="china-ss", font_size=6):
+def create_pdf_style(r, g, b, font_id="base", font_size=6):
     """
     Create a PdfStyle object from RGB values.
 
@@ -24,6 +24,10 @@ def create_pdf_style(r, g, b, font_id="china-ss", font_size=6):
         ),
     )
 
+
+BLACK = il_version_1.GraphicState(passthrough_per_char_instruction="0 g 0 G")
+
+WHITE = il_version_1.GraphicState(passthrough_per_char_instruction="1 g 1 G")
 
 # Generate all color styles
 RED = il_version_1.GraphicState(

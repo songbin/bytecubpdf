@@ -1,14 +1,24 @@
-import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
+import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron'
 import sqlite3 from 'sqlite3'
 import path from 'path'
+import { UpgradeService } from '@/shared/services/UpgradeService';
+import { spawn } from 'child_process'; 
 import { open, Database } from 'sqlite'
 import ConfigService from './services/ConfigService'
 import { initialize } from './core/Initialize'
 import  BuildPath  from './core/BuildPath'
 import { pluginLogger } from './core/PluginLog';
+import { Logger,setupConsoleOverrides } from './core/log';
+
 let db: Database | null = null
 const configService = new ConfigService()
 export function setupIPCHandlers() {
+  const logger = Logger.getInstance();
+  setupConsoleOverrides(logger);
+   // 添加日志IPC监听
+   ipcMain.on('log-message', (event, { level, args }) => {
+    logger.log(level, ...args);
+  });
   // 窗口最小化
   ipcMain.handle('minimize-window', (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)
@@ -138,6 +148,7 @@ ipcMain.handle('openPath', async (_, path: string) => {
   ipcMain.handle('dir:upload', () => {
     return BuildPath.getUploadDirPath()
   });
+  
   ipcMain.handle('dir:translate', () => {
     return BuildPath.getTranslateDirPath() 
   })
@@ -176,4 +187,91 @@ ipcMain.handle('openPath', async (_, path: string) => {
       return [];
     }
   })
+
+  // OCR识别的上传图片文件存储路径
+  ipcMain.handle('dir:upload_ocr_image', () => {
+    return BuildPath.getupload_ocr_image_folderDirPath();
+  });
+
+  // OCR识别结果，markdown格式的存储路径
+  ipcMain.handle('dir:upload_ocr_result_md', () => {
+    return BuildPath.getupload_ocr_result_md_folderDirPath();
+  });
+
+  // 获取升级状态
+  ipcMain.handle('upgrade:getStatus', () => {
+    return UpgradeService.getUpgradeStatus();
+  });
+
+  // 获取升级状态
+  ipcMain.handle('upgrade:getLongTimeNotice', () => {
+    return UpgradeService.getLongTimeNoUpgrade();
+  });
+
+  // 获取下载路径
+  ipcMain.handle('upgrade:getDownPath', () => {
+    return UpgradeService.getDownPath();
+  });
+
+  // 设置升级状态和路径
+  ipcMain.handle('upgrade:setStatus', (_, status: boolean, filePath: string) => {
+    UpgradeService.setUpgradeStatus(status, filePath);
+  });
+
+  // OCR识别结果，docx格式的存储路径
+  ipcMain.handle('dir:upload_ocr_result_docx', () => {
+    return BuildPath.getupload_ocr_result_docx_folderDirPath();
+  });
+
+  //本地文件内容读取
+  ipcMain.handle('file:read', async (_, filePath: string) => {
+    try {
+      const fs = require('fs');
+      const data = fs.readFileSync(filePath, 'utf-8');
+      return data;  // 返回文件内容
+    }
+    catch (error) {
+      console.error('读取文件失败:', error);
+      return null;  // 返回null表示读取失败
+    }
+  });
 }
+//实现应用重启
+ipcMain.handle('app:restart', () => {
+  app.relaunch();
+  app.exit();
+})
+// 添加更新管理处理
+ipcMain.handle('update:launch-installer', async () => {
+  try {
+    const downPath = UpgradeService.getDownPath();
+    const childProcess = spawn(downPath, ['--relaunch'], {
+      shell: true,
+      detached: true,
+      stdio: 'ignore'
+    });
+
+    // 添加进程事件监听
+    childProcess.on('error', (err) => {
+      console.error('子进程启动失败:', err);
+    });
+
+    childProcess.on('exit', (code, signal) => {
+      console.log(`安装程序退出 代码: ${code}, 信号: ${signal}`);
+    });
+
+    console.log('启动安装程序 PID:', childProcess.pid);
+    childProcess.unref();
+
+    // 延长等待时间确保进程启动
+    setTimeout(() => {
+      console.log('准备退出主程序');
+      app.quit();
+    }, 3000);
+
+    return true;
+  } catch (error) {
+    console.error('启动安装程序失败:', error);
+    return false;
+  }
+});

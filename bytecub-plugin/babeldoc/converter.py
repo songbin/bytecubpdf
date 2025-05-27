@@ -92,7 +92,15 @@ class PDFConverterEx(PDFConverter):
         textwidth = font.char_width(cid)
         textdisp = font.char_disp(cid)
 
-        font_id = self.il_creater.current_page_font_name_id_map.get(font.xobj_id, None)
+        if not hasattr(font, "xobj_id"):
+            log.debug(
+                f"Font {font.fontname} does not have xobj_id attribute.",
+            )
+            font_id = "UNKNOW"
+        else:
+            font_id = self.il_creater.current_page_font_name_id_map.get(
+                font.xobj_id, None
+            )
 
         item = AWLTChar(
             matrix,

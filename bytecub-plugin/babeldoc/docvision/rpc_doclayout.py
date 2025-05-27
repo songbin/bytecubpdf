@@ -14,6 +14,7 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 import babeldoc
+from babeldoc.document_il.utils.mupdf_helper import get_no_rotation_img
 from babeldoc.docvision.doclayout import DocLayoutModel
 from babeldoc.docvision.doclayout import YoloBox
 from babeldoc.docvision.doclayout import YoloResult
@@ -43,10 +44,10 @@ def encode_image(image) -> bytes:
 
 
 @retry(
-    stop=stop_after_attempt(3),  # 最多重试3次
+    stop=stop_after_attempt(3),  # 最多重试 3 次
     wait=wait_exponential(
         multiplier=1, min=1, max=10
-    ),  # 指数退避策略，初始1秒，最大10秒
+    ),  # 指数退避策略，初始 1 秒，最大 10 秒
     retry=retry_if_exception_type((httpx.HTTPError, Exception)),  # 针对哪些异常重试
     before_sleep=lambda retry_state: logger.warning(
         f"Request failed, retrying in {retry_state.next_action.sleep} seconds... "
@@ -256,7 +257,8 @@ class RpcDocLayoutModel(DocLayoutModel):
     ):
         translate_config.raise_if_cancelled()
         with self.lock:
-            pix = mupdf_doc[page.page_number].get_pixmap(dpi=72)
+            # pix = mupdf_doc[page.page_number].get_pixmap(dpi=72)
+            pix = get_no_rotation_img(mupdf_doc[page.page_number])
         image = np.fromstring(pix.samples, np.uint8).reshape(
             pix.height,
             pix.width,

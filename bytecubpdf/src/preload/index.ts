@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import {LogLevel} from '@/shared/constants/dfconstants'
 // 添加点击事件监听器防止事件冒泡问题
 // document.addEventListener('click', (e) => {
 //   e.stopPropagation()
@@ -33,9 +34,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTranslateDirPath: () => ipcRenderer.invoke('dir:translate'),
   getLogDirPath: () => ipcRenderer.invoke('dir:log'),
   
+  // OCR相关路径
+  getUploadOcrImagePath: () => ipcRenderer.invoke('dir:upload_ocr_image'),
+  getUploadOcrResultMdPath: () => ipcRenderer.invoke('dir:upload_ocr_result_md'),
+  getUploadOcrResultDocxPath: () => ipcRenderer.invoke('dir:upload_ocr_result_docx'),
+  
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+  readFile: (filePath: string) => ipcRenderer.invoke('file:read', filePath),
+  updateLauchInstaller: () => ipcRenderer.invoke('update:launch-installer'),
+  //实现
+  // 升级状态相关
+ 
+  getLongTimeNotice: () => ipcRenderer.invoke('upgrade:getLongTimeNotice'),
+  getUpgradeStatus: () => ipcRenderer.invoke('upgrade:getStatus'),
+  getUpgradeDownPath: () => ipcRenderer.invoke('upgrade:getDownPath'),
+  setUpgradeStatus: (status: boolean, filePath: string) => ipcRenderer.invoke('upgrade:setStatus', status, filePath),
+  //重启应用
+  restartApp: () => ipcRenderer.invoke('app:restart'),
   // 系统信息
   platform: process.platform,
+
+  log: (level: LogLevel, ...args: any[]) => {
+    ipcRenderer.send('log-message', { level, args })
+  },
 
   //获取bytecubplugin执行日志
   getPluginLogs: () => ipcRenderer.invoke('plugin:log'),

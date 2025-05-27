@@ -104,6 +104,7 @@ def extract_fonts_from_paragraph(
                 same_style_unicode = comp["pdf_same_style_unicode_characters"]
                 if (
                     "pdf_style" in same_style_unicode
+                    and same_style_unicode["pdf_style"] is not None
                     and "font_id" in same_style_unicode["pdf_style"]
                 ):
                     font_id = same_style_unicode["pdf_style"]["font_id"]

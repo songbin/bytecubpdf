@@ -1,0 +1,11 @@
+/* 统计iframe样式 */
+.statistics-iframe {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  height: 2px;
+  width: 100%;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+}

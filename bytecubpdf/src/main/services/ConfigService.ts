@@ -1,14 +1,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron'; 
-import  BuildPath  from '@/main/core/BuildPath';
+// import  BuildPath  from '@/main/core/BuildPath';
+import {STORAGE_CONFIG, DB_CONFIG} from '@/shared/constants/dfconstants'
 class ConfigService {
     private configPath: string;
     private config: any;
 
     constructor() {
         // 构建配置文件的路径
-        this.configPath = BuildPath.getGolbalConfigPath();
+        const usePath =  path.join(app.getPath('userData'),  STORAGE_CONFIG.config);
+        const parentDir = path.dirname(usePath); 
+        if (!fs.existsSync(parentDir)) {
+            fs.mkdirSync(parentDir, { recursive: true });
+        }
+        this.configPath = usePath;
         // 初始化配置
         this.loadConfig();
     }

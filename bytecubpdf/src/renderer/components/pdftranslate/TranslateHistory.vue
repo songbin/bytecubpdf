@@ -137,6 +137,7 @@
         @update:page-size="handlePageSizeChange"
       />
     </n-space>
+    <HelpFloatButton url="https://www.docfable.com/docs/usage/translatementor/translatehistroy.html" />
   </div>
 </template>
 
@@ -150,7 +151,7 @@ import { TranslateHistoryManager } from '@/renderer/service/manager/TranslateHis
 import PdfViewer from './PdfViewer.vue';
 import PdfCompareViewer from './PdfCompareViewer.vue';
 import { Maximize, Close } from '@vicons/carbon';
-
+import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
 const historyManager = new TranslateHistoryManager();
 
 // 表格列定义

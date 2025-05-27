@@ -71,7 +71,7 @@ router.beforeEach((to, from, next) => {
 // 全局后置钩子
 router.afterEach((to) => {
   // 可以在这里设置页面标题
-  document.title = to.meta.title ? `${to.meta.title} | 字节立方` : '字节立方'
+  document.title = to.meta.title ? `${to.meta.title} | 小书芽` : '小书芽'
 })
 
 export default router

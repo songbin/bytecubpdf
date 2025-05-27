@@ -1,4 +1,5 @@
 <template>
+   
     <n-layout has-sider>
       <n-layout-sider 
         collapse-mode="width"
@@ -18,6 +19,7 @@
         />
       </n-layout-content>
     </n-layout>
+ 
 </template>
   
   <script lang="ts" setup>

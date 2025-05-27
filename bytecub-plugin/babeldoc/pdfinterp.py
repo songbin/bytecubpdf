@@ -19,19 +19,24 @@ from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfinterp import PDFStackT
 from pdfminer.pdfpage import PDFPage
+from pdfminer.pdftypes import LITERALS_ASCII85_DECODE
 from pdfminer.pdftypes import PDFObjRef
+from pdfminer.pdftypes import PDFStream
 from pdfminer.pdftypes import dict_value
 from pdfminer.pdftypes import list_value
 from pdfminer.pdftypes import resolve1
 from pdfminer.pdftypes import stream_value
 from pdfminer.psexceptions import PSEOF
+from pdfminer.psexceptions import PSTypeError
 from pdfminer.psparser import PSKeyword
+from pdfminer.psparser import PSLiteral
 from pdfminer.psparser import keyword_name
 from pdfminer.psparser import literal_name
 from pdfminer.utils import MATRIX_IDENTITY
 from pdfminer.utils import Matrix
 from pdfminer.utils import Rect
 from pdfminer.utils import apply_matrix_pt
+from pdfminer.utils import choplist
 from pdfminer.utils import mult_matrix
 
 from babeldoc.document_il.frontend.il_creater import ILCreater
@@ -44,6 +49,42 @@ def safe_float(o: Any) -> float | None:
         return float(o)
     except (TypeError, ValueError):
         return None
+
+
+class PDFContentParserEx(PDFContentParser):
+    def __init__(self, streams: Sequence[object]) -> None:
+        super().__init__(streams)
+
+    def do_keyword(self, pos: int, token: PSKeyword) -> None:
+        if token is self.KEYWORD_BI:
+            # inline image within a content stream
+            self.start_type(pos, "inline")
+        elif token is self.KEYWORD_ID:
+            try:
+                (_, objs) = self.end_type("inline")
+                if len(objs) % 2 != 0:
+                    error_msg = f"Invalid dictionary construct: {objs!r}"
+                    raise PSTypeError(error_msg)
+                d = {literal_name(k): resolve1(v) for (k, v) in choplist(2, objs)}
+                eos = b"EI"
+                filter_ = d.get("F", None)
+                if filter_:
+                    if isinstance(filter_, PSLiteral):
+                        filter_ = [filter_]
+                    if filter_[0] in LITERALS_ASCII85_DECODE:
+                        eos = b"~>"
+                (pos, data) = self.get_inline_data(pos + len(b"ID "), target=eos)
+                if eos != b"EI":  # it may be necessary for decoding
+                    data += eos
+                obj = PDFStream(d, data)
+                self.push((pos, obj))
+                if eos == b"EI":  # otherwise it is still in the stream
+                    self.push((pos, self.KEYWORD_EI))
+            except PSTypeError:
+                if settings.STRICT:
+                    raise
+        else:
+            self.push((pos, token))
 
 
 class PDFPageInterpreterEx(PDFPageInterpreter):
@@ -89,7 +130,11 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
             else:
                 name = literal_name(spec)
             if name == "ICCBased" and isinstance(spec, list) and len(spec) >= 2:
-                return PDFColorSpace(name, stream_value(spec[1])["N"])
+                val = stream_value(spec[1])
+                if "N" in val:
+                    return PDFColorSpace(name, val["N"])
+                elif "Alternate" in val:
+                    return PREDEFINED_COLORSPACE[val["Alternate"].name]
             elif name == "DeviceN" and isinstance(spec, list) and len(spec) >= 2:
                 return PDFColorSpace(name, len(list_value(spec[1])))
             else:
@@ -332,6 +377,11 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
             ctm = (0, 1, -1, 0, y1, -x0)
         else:
             ctm = (1, 0, 0, 1, -x0, -y0)
+        # ctm_for_ops = copy.copy(ctm)
+        ctm_for_ops = (1, 0, 0, 1, -x0, -y0)
+        ctm = (1, 0, 0, 1, -x0, -y0)
+        if page.rotate == 90 or page.rotate == 270:
+            (x0, y0, x1, y1) = (y0, x1, y1, x0)
         self.il_creater.on_page_start()
         self.il_creater.on_page_crop_box(x0, y0, x1, y1)
         self.device.begin_page(page, ctm)
@@ -346,7 +396,8 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
         # )
         # for obj in page.contents:
         #     self.obj_patch[obj.objid] = ""
-        return f"q {ops_base} Q 1 0 0 1 {x0} {y0} cm"
+        return f"q {ops_base} Q {' '.join(f'{x:f}' for x in ctm_for_ops)} cm"
+        # return f"q {ops_base} Q 1 0 0 1 {x0} {y0} cm"
 
     def render_contents(
         self,
@@ -388,6 +439,8 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
             if settings.STRICT:
                 raise PDFInterpreterError("No font specified!")
             return
+        if isinstance(seq, PSLiteral):
+            return
         assert self.ncs is not None
         gs = self.graphicstate.copy()
         gs.passthrough_instruction = (
@@ -406,7 +459,7 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
             self.il_creater.on_new_stream()
             # 重载返回指令流
             try:
-                parser = PDFContentParser([stream])
+                parser = PDFContentParserEx([stream])
             except PSEOF:
                 # empty page
                 return

@@ -9,7 +9,7 @@
       <div class="version-container">
         <p>当前版本：{{ VERSION.version }}</p>
         <p v-if="upgradeInfo">最新版本：{{ upgradeInfo.version }}</p>
-        <div v-if="upgradeInfo?.force_update" class="force-tip">⚠️ 本次为强制升级，必须立即更新</div>
+        <div v-if="upgradeInfo?.forceUpdate" class="force-tip">⚠️ 本次为强制升级，必须立即更新</div>
         
         <h4>更新内容：</h4>
         <ul v-if="upgradeInfo?.changelog.length">
@@ -27,7 +27,7 @@
             立即升级
           </n-button>
           <n-button
-            v-if="!upgradeInfo?.force_update"
+            v-if="!upgradeInfo?.forceUpdate"
             @click="closeModal"
             class="cancel-btn"
           >
@@ -41,27 +41,36 @@
   <script setup lang="ts">
   import { ref, computed, onMounted, watch } from 'vue';
   import axios from 'axios';
-  import {VERSION} from '@/renderer/constants/appconfig.js';
+  import { VERSION } from '@/shared/constants/dfconstants';
   import { NModal, NButton, useDialog,useMessage } from 'naive-ui'; // 添加 useDialog
   import {useVersionCheck} from '@/renderer/service/VersionCheck'
   const message = useMessage();
   const { checkForUpdates, upgradeInfo, isModalVisible } = useVersionCheck()
   
-  const modalTitle = computed(() => upgradeInfo.value?.force_update 
+  const modalTitle = computed(() => upgradeInfo.value?.forceUpdate 
     ? '强制版本升级' 
     : '版本升级提示'
   );
   
   onMounted(async () => {
-    await checkForUpdates()
+  //   await checkForUpdates()
+  //   if (upgradeInfo.value?.build_number !== undefined 
+  //     && upgradeInfo.value.build_number <= VERSION.buildNumber) {
+  //     isModalVisible.value = false
+  //   // message.success(`当前已是最新版本 (${VERSION.version})`)
+  // }
   });
   
 
-  watch(() => upgradeInfo.value?.force_update, (newVal) => {
+  watch(() => upgradeInfo.value?.forceUpdate, (newVal) => {
     if (newVal) {
       document.body.style.overflow = 'hidden';
       isModalVisible.value = true;
-    }
+    }else if (upgradeInfo.value?.buildNumber !== undefined 
+        && upgradeInfo.value.buildNumber <= VERSION.buildNumber) {
+    // 添加版本相同时的处理
+    isModalVisible.value = false;
+  }
   });
   
   const handleUpdate = async (): Promise<void> => {
@@ -69,9 +78,9 @@
     
     try {
       if ((window as any).window.electronAPI?.openExternal) {
-        await (window as any).window.electronAPI.openExternal(upgradeInfo.value.download_url);
+        await (window as any).window.electronAPI.openExternal(upgradeInfo.value.downloadUrl);
       } else {
-        window.open(upgradeInfo.value.download_url, '_blank');
+        window.open(upgradeInfo.value.downloadUrl, '_blank');
       }
     } catch (error: any) { 
       console.error('打开下载链接失败:', error);
@@ -82,7 +91,7 @@
   const dialog = useDialog(); // 添加对话框 hook
   
   const closeModal = (): void => {
-    if (upgradeInfo.value?.force_update) {
+    if (upgradeInfo.value?.forceUpdate) {
       // 强制更新时显示不可关闭提示
       dialog.warning({
         title: '强制升级提示',

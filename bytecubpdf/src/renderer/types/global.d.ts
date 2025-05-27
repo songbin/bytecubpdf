@@ -32,9 +32,31 @@ interface Window {
       getCacheDirPath: () => Promise<string>; // 获取缓存目录路径方法
       getUploadDirPath: () => Promise<string>; // 获取上传目录路径方法
       getTranslateDirPath: () => Promise<string>; // 获取翻译目录路径方法
+
+      
       getLogDirPath: () => Promise<string>;// 获取日志目录路径方法
+      
+      // OCR相关路径接口
+      getUploadOcrImagePath: () => Promise<string>; // 获取OCR上传图片路径
+      getUploadOcrResultMdPath: () => Promise<string>; // 获取OCR结果markdown路径
+      getUploadOcrResultDocxPath: () => Promise<string>; // 获取OCR结果docx路径
+      
       openExternal: (url: string) => Promise<boolean>;
+
+      readFile: (filePath: string) => Promise<string | null>; // 新增读取文件内容的方法，返回文件内容或null表示失败
        // 插件日志接口
        getPluginLogs: () => Promise<string[]>; // 新增获取插件日志方法
+
+       log: (level: LogLevel, ...args: any[]) => void; // 新增日志方法
+      //升级
+      updateLauchInstaller: () => Promise<boolean>; // 新增更新方法
+      // 升级状态相关
+      getUpgradeStatus: () => Promise<boolean>; // 获取升级状态方法
+      setUpgradeStatus: (status: boolean, filePath: string) => Promise<void>; // 设置升级状态方法
+      getUpgradeDownPath: () => Promise<string>; // 获取下载路径方法
+      getLongTimeNotice: () => Promise<boolean>; // 获取是否太久没升级了
+      //重启应用
+      restartApp: () => Promise<void>; // 新增重启应用方法
+      
     };
 }

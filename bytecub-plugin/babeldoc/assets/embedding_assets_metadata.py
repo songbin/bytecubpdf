@@ -1,3 +1,5 @@
+import itertools
+
 DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256 = (
     "60be061226930524958b5465c8c04af3d7c03bcb0beb66454f5da9f792e3cf2a"
 )
@@ -35,7 +37,19 @@ TABLE_DETECTION_RAPIDOCR_MODEL_URL = {
     "hf-mirror": "https://hf-mirror.com/spaces/RapidAI/RapidOCR/resolve/main/models/text_det/ch_PP-OCRv4_det_infer.onnx",
     "modelscope": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx/PP-OCRv4/det/ch_PP-OCRv4_det_infer.onnx",
 }
+#分类模型
+TABLE_DETECTION_RAPIDOCR_MODEL_CLS_URL = {
+    "modelscope": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx/PP-OCRv4/cls/ch_ppocr_mobile_v2.0_cls_infer.onnx",
+	"huggingface": "https://huggingface.co/spaces/RapidAI/TableStructureRec/resolve/main/models/ocr/ch_ppocr_mobile_v2.0_cls_infer.onnx",
+	"hf-mirror": "https://hf-mirror.com/spaces/RapidAI/TableStructureRec/resolve/main/models/ocr/ch_ppocr_mobile_v2.0_cls_infer.onnx",
+}
 
+#识别模型
+TABLE_DETECTION_RAPIDOCR_MODEL_REC_URL = {
+    "modelscope": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx/PP-OCRv4/rec/ch_PP-OCRv4_rec_infer.onnx",
+    "huggingface": "https://huggingface.co/spaces/RapidAI/RapidOCR/resolve/main/models/text_rec/ch_PP-OCRv4_rec_infer.onnx",
+	"hf-mirror": "https://hf-mirror.com/spaces/RapidAI/RapidOCR/resolve/main/models/text_rec/ch_PP-OCRv4_rec_infer.onnx",
+}
 # from https://github.com/funstory-ai/BabelDOC-Assets/blob/main/font_metadata.json
 EMBEDDING_FONT_METADATA = {
     "GoNotoKurrent-Bold.ttf": {
@@ -495,6 +509,7 @@ EMBEDDING_FONT_METADATA = {
     },
 }
 
+FONT_NAMES = {v["font_name"] for v in EMBEDDING_FONT_METADATA.values()}
 
 CN_FONT_FAMILY = {
     # 手写体
@@ -517,16 +532,12 @@ CN_FONT_FAMILY = {
 }
 
 HK_FONT_FAMILY = {
-    "script": ["LXGWWenKaiTC-Regular.ttf", "LXGWWenKaiGB-Regular.ttf"],
+    "script": ["LXGWWenKaiTC-Regular.ttf"],
     "normal": [
         "SourceHanSerifHK-Bold.ttf",
         "SourceHanSerifHK-Regular.ttf",
         "SourceHanSansHK-Bold.ttf",
         "SourceHanSansHK-Regular.ttf",
-        "SourceHanSerifCN-Bold.ttf",
-        "SourceHanSerifCN-Regular.ttf",
-        "SourceHanSansCN-Bold.ttf",
-        "SourceHanSansCN-Regular.ttf",
     ],
     "fallback": [
         "GoNotoKurrent-Regular.ttf",
@@ -536,16 +547,12 @@ HK_FONT_FAMILY = {
 }
 
 TW_FONT_FAMILY = {
-    "script": ["LXGWWenKaiTC-Regular.ttf", "LXGWWenKaiGB-Regular.ttf"],
+    "script": ["LXGWWenKaiTC-Regular.ttf"],
     "normal": [
         "SourceHanSerifTW-Bold.ttf",
         "SourceHanSerifTW-Regular.ttf",
         "SourceHanSansTW-Bold.ttf",
         "SourceHanSansTW-Regular.ttf",
-        "SourceHanSerifCN-Bold.ttf",
-        "SourceHanSerifCN-Regular.ttf",
-        "SourceHanSansCN-Bold.ttf",
-        "SourceHanSansCN-Regular.ttf",
     ],
     "fallback": [
         "GoNotoKurrent-Regular.ttf",
@@ -561,10 +568,6 @@ KR_FONT_FAMILY = {
         "SourceHanSerifKR-Regular.ttf",
         "SourceHanSansKR-Bold.ttf",
         "SourceHanSansKR-Regular.ttf",
-        "SourceHanSerifCN-Bold.ttf",
-        "SourceHanSerifCN-Regular.ttf",
-        "SourceHanSansCN-Bold.ttf",
-        "SourceHanSansCN-Regular.ttf",
     ],
     "fallback": [
         "GoNotoKurrent-Regular.ttf",
@@ -580,10 +583,6 @@ JP_FONT_FAMILY = {
         "SourceHanSerifJP-Regular.ttf",
         "SourceHanSansJP-Bold.ttf",
         "SourceHanSansJP-Regular.ttf",
-        "SourceHanSerifCN-Bold.ttf",
-        "SourceHanSerifCN-Regular.ttf",
-        "SourceHanSansCN-Bold.ttf",
-        "SourceHanSansCN-Regular.ttf",
     ],
     "fallback": [
         "GoNotoKurrent-Regular.ttf",
@@ -604,10 +603,6 @@ EN_FONT_FAMILY = {
         "NotoSerif-Bold.ttf",
         "NotoSans-Regular.ttf",
         "NotoSans-Bold.ttf",
-        "SourceHanSerifCN-Bold.ttf",
-        "SourceHanSerifCN-Regular.ttf",
-        "SourceHanSansCN-Bold.ttf",
-        "SourceHanSansCN-Regular.ttf",
     ],
     "fallback": [
         "GoNotoKurrent-Regular.ttf",
@@ -620,12 +615,30 @@ EN_FONT_FAMILY = {
 
 ALL_FONT_FAMILY = {
     "CN": CN_FONT_FAMILY,
-    "HK": HK_FONT_FAMILY,
     "TW": TW_FONT_FAMILY,
+    "HK": HK_FONT_FAMILY,
     "KR": KR_FONT_FAMILY,
     "JP": JP_FONT_FAMILY,
     "EN": EN_FONT_FAMILY,
 }
+
+
+def __add_fallback_to_font_family():
+    for lang1, family1 in ALL_FONT_FAMILY.items():
+        added_font = set()
+        for font in itertools.chain.from_iterable(family1.values()):
+            added_font.add(font)
+
+        for lang2, family2 in ALL_FONT_FAMILY.items():
+            if lang1 != lang2:
+                for type_ in family1:
+                    for font in family2[type_]:
+                        if font not in added_font:
+                            family1[type_].append(font)
+                            added_font.add(font)
+
+
+__add_fallback_to_font_family()
 
 
 def get_font_family(lang_code: str):

@@ -60,7 +60,7 @@ class TranslationConfig:
         enhance_compatibility: bool = False,
         report_interval: float = 0.1,
         min_text_length: int = 5,
-        use_side_by_side_dual: bool = True,  # Deprecated: 是否使用拼版式双语 PDF（并排显示原文和译文） 向下兼容选项，已停用。
+        use_side_by_side_dual: bool = True,  # Deprecated: 是否使用拼版式双语 PDF（并排显示原文和译文）向下兼容选项，已停用。
         use_alternating_pages_dual: bool = False,
         watermark_output_mode: WatermarkOutputMode = WatermarkOutputMode.Watermarked,
         # Add split-related parameters
@@ -68,6 +68,9 @@ class TranslationConfig:
         table_model=None,
         show_char_box: bool = False,
         skip_scanned_detection: bool = False,
+        ocr_workaround: bool = False,
+        custom_system_prompt: str | None = None,
+        add_formula_placehold_hint: bool = False,
     ):
         self.translator = translator
 
@@ -108,6 +111,10 @@ class TranslationConfig:
         self.report_interval = report_interval
         self.min_text_length = min_text_length
         self.use_alternating_pages_dual = use_alternating_pages_dual
+        self.ocr_workaround = ocr_workaround
+
+        if self.ocr_workaround:
+            self.skip_scanned_detection = True
 
         # for backward compatibility
         if use_side_by_side_dual is False and use_alternating_pages_dual is False:
@@ -123,6 +130,10 @@ class TranslationConfig:
             else:
                 working_dir = tempfile.mkdtemp()
                 self._is_temp_dir = True
+        else:
+            working_dir = Path(working_dir) / Path(input_file).stem
+            self._is_temp_dir = False
+
         self.working_dir = working_dir
 
         Path(working_dir).mkdir(parents=True, exist_ok=True)
@@ -148,6 +159,8 @@ class TranslationConfig:
 
         self.table_model = table_model
         self.show_char_box = show_char_box
+        self.custom_system_prompt = custom_system_prompt
+        self.add_formula_placehold_hint = add_formula_placehold_hint
 
     def parse_pages(self, pages_str: str | None) -> list[tuple[int, int]] | None:
         """解析页码字符串，返回页码范围列表
@@ -234,11 +247,14 @@ class TranslationConfig:
 
     def cleanup_temp_files(self):
         """Clean up all temporary files including part working directories"""
-        for part_index in list(self._part_working_dirs.keys()):
-            self.cleanup_part_working_dir(part_index)
-        if self._is_temp_dir:
-            logger.info(f"cleanup temp files: {self.working_dir}")
-            shutil.rmtree(self.working_dir)
+        try:
+            for part_index in list(self._part_working_dirs.keys()):
+                self.cleanup_part_working_dir(part_index)
+            if self._is_temp_dir:
+                logger.info(f"cleanup temp files: {self.working_dir}")
+                shutil.rmtree(self.working_dir)
+        except Exception:
+            logger.exception("Error cleaning up temporary files")
 
     def raise_if_cancelled(self):
         if self.progress_monitor is not None:
@@ -261,9 +277,8 @@ class TranslateResult:
     source_base_name: str | None
     mono_out_file_name: str | None
 
-    def __init__(self, mono_pdf_path: str | None, 
-    dual_pdf_path: str | None, 
-    total_pages: int  = 1,
+    def __init__(self, mono_pdf_path: str | None, dual_pdf_path: str | None,
+     total_pages: int  = 1,
     mono_out_file_name : str = '',
     source_base_name :str = ''):
         self.mono_pdf_path = mono_pdf_path

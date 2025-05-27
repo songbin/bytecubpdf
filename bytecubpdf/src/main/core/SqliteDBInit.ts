@@ -102,12 +102,38 @@ export class SqliteDBInit {
                 )
             `);
 
+            //创建翻译术语表
+            await this.db.exec(`
+                CREATE TABLE IF NOT EXISTS translate_terms (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sourceTerm TEXT NOT NULL DEFAULT '',
+                    translatedTerm TEXT NOT NULL DEFAULT '',
+                    ext1 TEXT NOT NULL DEFAULT '',
+                    ext2 TEXT NOT NULL DEFAULT '',
+                    ext3 TEXT NOT NULL DEFAULT '',
+                    ext4 TEXT NOT NULL DEFAULT '',
+                    ext5 TEXT NOT NULL DEFAULT '',
+                    ext6 TEXT NOT NULL DEFAULT '',
+                    ext7 TEXT NOT NULL DEFAULT '',
+                    ext8 TEXT NOT NULL DEFAULT '',
+                    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
             // 可选：添加触发器自动更新 updatedAt
             await this.db.exec(`
                 CREATE TRIGGER IF NOT EXISTS update_platform_timestamp 
                 AFTER UPDATE ON llm_platforms 
                 BEGIN
                     UPDATE llm_platforms SET updatedAt = CURRENT_TIMESTAMP WHERE id = OLD.id;
+                END
+            `);
+            
+            await this.db.exec(`
+                CREATE TRIGGER IF NOT EXISTS update_term_timestamp 
+                AFTER UPDATE ON translate_terms 
+                BEGIN
+                    UPDATE translate_terms SET updatedAt = CURRENT_TIMESTAMP WHERE id = OLD.id;
                 END
             `);
             
@@ -122,43 +148,35 @@ export class SqliteDBInit {
         if (!this.db) return;
 
         try {
-            // 检查是否已初始化过数据
-            const platformCount = await this.db.get<{count: number}>(
-                'SELECT COUNT(*) as count FROM llm_platforms'
-            );
-            const modelCount = await this.db.get<{count: number}>(
-                'SELECT COUNT(*) as count FROM llm_models'
-            );
-
-            // 如果已有数据则跳过初始化
-            if (platformCount && platformCount.count > 0 && modelCount && modelCount.count > 0) {
-                console.log('数据库已有初始化数据，跳过初始化');
-                return;
-            }
-
             await this.db.exec('BEGIN TRANSACTION');
 
-            // 初始化平台数据
-            await this.db.run(`
-                INSERT OR IGNORE INTO llm_platforms 
-                (id, platformName, protocolType, apiKey, apiUrl)
-                VALUES 
-                    ('zhipu', '智谱AI', 'openai', '', 'https://open.bigmodel.cn/api/paas/v4'),
-                    ('deepseek', 'DeepSeek', 'openai', '', 'https://api.deepseek.com/v1'),
-                    ('silicon', '硅基流动', 'openai', '', 'https://api.siliconflow.cn/v1')
-            `);
+            // 初始化平台数据 - 逐条检查并插入
+            const platforms = [
+                { id: 'zhipu', platformName: '智谱AI', protocolType: 'openai', apiKey: '', apiUrl: 'https://open.bigmodel.cn/api/paas/v4' },
+                { id: 'deepseek', platformName: 'DeepSeek', protocolType: 'openai', apiKey: '', apiUrl: 'https://api.deepseek.com/v1' },
+                { id: 'silicon', platformName: '硅基流动', protocolType: 'openai', apiKey: '', apiUrl: 'https://api.siliconflow.cn/v1' },
+                { id: 'ollama', platformName: 'Ollama', protocolType: 'ollama', apiKey: '', apiUrl: 'http://127.0.0.1:11434' }
+            ];
 
-            // 初始化模型数据
-            const stmt = await this.db.prepare(`
-                INSERT OR IGNORE INTO llm_models 
-                (id, platformId, name, types)
-                VALUES (?, ?, ?, ?)
-            `);
+            for (const platform of platforms) {
+                const exists = await this.db.get<{count: number}>(
+                    'SELECT COUNT(*) as count FROM llm_platforms WHERE id = ?',
+                    [platform.id]
+                );
+                if (!exists || exists.count === 0) {
+                    await this.db.run(
+                        'INSERT INTO llm_platforms (id, platformName, protocolType, apiKey, apiUrl) VALUES (?, ?, ?, ?, ?)',
+                        [platform.id, platform.platformName, platform.protocolType, platform.apiKey, platform.apiUrl]
+                    );
+                }
+            }
 
+            // 初始化模型数据 - 逐条检查并插入
             const models = [
                 // 智谱AI模型
                 { id: 'GLM-4-Flash', platformId: 'zhipu', name: 'GLM-4-Flash', type: '["text"]' },
                 { id: 'GLM-4-Plus', platformId: 'zhipu', name: 'GLM-4-Plus', type: '["text"]' },
+                { id: 'GLM-4V-Flash', platformId: 'zhipu', name: 'GLM-4V-Flash', type: '["vision"]' },
                 
                 // DeepSeek模型
                 { id: 'deepseek-chat', platformId: 'deepseek', name: 'deepseek-chat', type: '["text"]' },
@@ -168,14 +186,28 @@ export class SqliteDBInit {
                 { id: 'deepseek-ai/DeepSeek-V3', platformId: 'silicon', name: 'DeepSeek-V3', type: '["text"]' },
                 { id: 'deepseek-ai/DeepSeek-R1', platformId: 'silicon', name: 'DeepSeek-R1', type: '["text"]' },
                 { id: 'Pro/deepseek-ai/DeepSeek-V3', platformId: 'silicon', name: 'DeepSeek-V3(Pro)', type: '["text"]' },
-                { id: 'Pro/deepseek-ai/DeepSeek-R1', platformId: 'silicon', name: 'DeepSeek-R1(Pro)', type: '["text"]' }
+                { id: 'Pro/deepseek-ai/DeepSeek-R1', platformId: 'silicon', name: 'DeepSeek-R1(Pro)', type: '["text"]' },
+                { id: 'Qwen/Qwen2.5-VL-72B-Instruct', platformId: 'silicon', name: 'Qwen/Qwen2.5-VL-72B-Instruct', type: '["vision"]' },
+                
+                // Ollama模型
+                { id: 'qwen2.5:0.5b', platformId: 'ollama', name: 'qwen2.5:0.5b', type: '["text"]' },
+                { id: 'llama3-70b', platformId: 'ollama', name: 'Llama3-70B', type: '["text"]' },
+                { id: 'llama3-8b', platformId: 'ollama', name: 'Llama3-8B', type: '["text"]' },
+                { id: 'ZimaBlueAI/Qwen2.5-VL-7B-Instruct', platformId: 'ollama', name: 'ZimaBlueAI/Qwen2.5-VL-7B-Instruct', type: '["vision"]' },
             ];
 
             for (const model of models) {
-                await stmt.run(model.id, model.platformId, model.name, model.type);
+                const exists = await this.db.get<{count: number}>(
+                    'SELECT COUNT(*) as count FROM llm_models WHERE id = ? AND platformId = ?',
+                    [model.id, model.platformId]
+                );
+                if (!exists || exists.count === 0) {
+                    await this.db.run(
+                        'INSERT INTO llm_models (id, platformId, name, types) VALUES (?, ?, ?, ?)',
+                        [model.id, model.platformId, model.name, model.type]
+                    );
+                }
             }
-
-            await stmt.finalize();
             await this.db.exec('COMMIT');
             console.log('数据库初始化数据完成');
         } catch (err) {

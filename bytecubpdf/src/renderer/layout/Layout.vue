@@ -43,7 +43,7 @@ import { NFlex, NButton, NSpace, NIcon } from 'naive-ui'
 import FuncSide from './FuncSide.vue'
 import SettingsSide from './SettingsSide.vue'
 import TopSide from './TopSide.vue'
-import logo from '@/renderer/assets/images/bc.png'
+import logo from '@/renderer/assets/images/docfable.png'
 
 
 onMounted(() => {

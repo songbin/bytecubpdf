@@ -9,18 +9,43 @@ export class LlmModelManager {
     // 添加或更新平台
     public async savePlatform(platform: Omit<SettingLLMPlatform, 'models'>): Promise<void> {
         const platformId = platform.id || crypto.randomUUID().replace(/-/g, '');
-        await SqliteDbCore.executeQuery(`
-            INSERT OR REPLACE INTO ${this.platformTable} 
-            (id, platformName, protocolType, apiKey, apiUrl, isActive)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `, [
-            platformId, 
-            platform.platformName, 
-            platform.protocolType, 
-            platform.apiKey, 
-            platform.apiUrl,
-            platform.isActive ?? true  // 默认值为true
-        ]);
+        
+        // 先检查平台是否已存在
+        const existingPlatform = await this.getPlatformBasicInfo(platformId);
+        
+        if (existingPlatform) {
+            // 更新现有平台(保留createAt)
+            await SqliteDbCore.executeQuery(`
+                UPDATE ${this.platformTable} SET
+                    platformName = ?,
+                    protocolType = ?,
+                    apiKey = ?,
+                    apiUrl = ?,
+                    isActive = ?
+                WHERE id = ?
+            `, [
+                platform.platformName,
+                platform.protocolType,
+                platform.apiKey,
+                platform.apiUrl,
+                platform.isActive ?? true,
+                platformId
+            ]);
+        } else {
+            // 插入新平台
+            await SqliteDbCore.executeQuery(`
+                INSERT INTO ${this.platformTable} 
+                (id, platformName, protocolType, apiKey, apiUrl, isActive)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                platformId, 
+                platform.platformName, 
+                platform.protocolType, 
+                platform.apiKey, 
+                platform.apiUrl,
+                platform.isActive ?? true
+            ]);
+        }
     }
 
     // 获取平台下的所有模型
@@ -36,10 +61,22 @@ export class LlmModelManager {
         }));
     }
 
+    public async getVisonModelsByPlatform(platformId: string): Promise<SettingLLMModel[]> {
+        const models = await SqliteDbCore.executeQuery(
+            `SELECT * FROM ${this.modelTable} WHERE platformId = ? AND types LIKE '%"vision"%'`,
+            [platformId]
+        ) as unknown[] || [];
+        
+        return models.map(model => ({
+            ...(model as Omit<SettingLLMModel, 'types'> & { types: string }),
+            types: JSON.parse((model as any).types) as Array<'text' | 'vision' | 'embedded' | 'multi'>
+        }));
+    }
+
     // 获取所有平台
     public async getPlatforms(): Promise<SettingLLMPlatform[]> {
         const platforms = await SqliteDbCore.executeQuery(
-            `SELECT * FROM ${this.platformTable} ORDER BY createdAt DESC`
+            `SELECT * FROM ${this.platformTable} ORDER BY createdAt desc`
         ) as unknown[] || [];
         
         return Promise.all(platforms.map(async (platform) => {
@@ -79,6 +116,24 @@ export class LlmModelManager {
             name: model.name,
             types: JSON.stringify(model.types)
         });
+    }
+    
+    // 添加模型
+    public async addModel(model: SettingLLMModel): Promise<void> {
+        await this.saveModel(model.platformId, model);
+    }
+    
+    // 更新模型
+    public async updateModel(model: SettingLLMModel): Promise<void> {
+        console.log('updateModel', model);
+        await SqliteDbCore.executeQuery(
+            `UPDATE ${this.modelTable} SET 
+                id = ?,
+                name = ?, 
+                types = ? 
+            WHERE auto_id = ?`,
+            [model.id, model.name, JSON.stringify(model.types), model.auto_id]
+        );
     }
 
     // 获取单个模型

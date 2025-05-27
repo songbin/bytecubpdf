@@ -1,15 +1,21 @@
+import io
+import itertools
 import logging
 import os
 import re
 import time
+import unicodedata
 from multiprocessing import Process
 from pathlib import Path
 
+import freetype
 import pymupdf
 from bitstring import BitStream
 
+from babeldoc.assets.embedding_assets_metadata import FONT_NAMES
 from babeldoc.document_il import il_version_1
 from babeldoc.document_il.utils.fontmap import FontMapper
+from babeldoc.document_il.utils.zstd_helper import zstd_decompress
 from babeldoc.translation_config import TranslateResult
 from babeldoc.translation_config import TranslationConfig
 from babeldoc.translation_config import WatermarkOutputMode
@@ -18,6 +24,138 @@ logger = logging.getLogger(__name__)
 
 SUBSET_FONT_STAGE_NAME = "Subset font"
 SAVE_PDF_STAGE_NAME = "Save PDF"
+
+
+def to_int(src):
+    return int(re.search(r"\d+", src).group(0))
+
+
+def parse_mapping(text):
+    mapping = []
+    for x in re.finditer(rb"<(?P<num>[a-fA-F0-9]+)>", text):
+        mapping.append(int(x.group("num"), 16))
+    return mapping
+
+
+def apply_normalization(cmap, gid, code):
+    need = False
+    if 0x2F00 <= code <= 0x2FD5:  # Kangxi Radicals
+        need = True
+    if 0xF900 <= code <= 0xFAFF:  # CJK Compatibility Ideographs
+        need = True
+    if need:
+        norm = unicodedata.normalize("NFD", chr(code))
+        cmap[gid] = ord(norm)
+    else:
+        cmap[gid] = code
+
+
+def batched(iterable, n, *, strict=False):
+    # batched('ABCDEFG', 3) → ABC DEF G
+    if n < 1:
+        raise ValueError("n must be at least one")
+    iterator = iter(iterable)
+    while batch := tuple(itertools.islice(iterator, n)):
+        if strict and len(batch) != n:
+            raise ValueError("batched(): incomplete batch")
+        yield batch
+
+
+def update_tounicode_cmap_pair(cmap, data):
+    for start, stop, value in batched(data, 3):
+        for gid in range(start, stop + 1):
+            code = value + gid - start
+            apply_normalization(cmap, gid, code)
+
+
+def update_tounicode_cmap_code(cmap, data):
+    for gid, code in batched(data, 2):
+        apply_normalization(cmap, gid, code)
+
+
+def parse_tounicode_cmap(data):
+    cmap = {}
+    for x in re.finditer(
+        rb"\s+beginbfrange\s*(?P<r>(<[0-9a-fA-F]+>\s*)+)endbfrange\s+", data
+    ):
+        update_tounicode_cmap_pair(cmap, parse_mapping(x.group("r")))
+    for x in re.finditer(
+        rb"\s+beginbfchar\s*(?P<c>(<[0-9a-fA-F]+>\s*)+)endbfchar", data
+    ):
+        update_tounicode_cmap_code(cmap, parse_mapping(x.group("c")))
+    return cmap
+
+
+def parse_truetype_data(data):
+    glyph_in_use = []
+    face = freetype.Face(io.BytesIO(data))
+    for i in range(face.num_glyphs):
+        face.load_glyph(i)
+        if face.glyph.outline.contours:
+            glyph_in_use.append(i)
+    return glyph_in_use
+
+
+TOUNICODE_HEAD = """\
+/CIDInit /ProcSet findresource begin
+12 dict begin
+/CIDSystemInfo <</Registry(Adobe)/Ordering(UCS)/Supplement 0>> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange"""
+TOUNICODE_TAIL = """\
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end"""
+
+
+def make_tounicode(cmap, used):
+    short = []
+    for x in used:
+        if x in cmap:
+            short.append((x, cmap[x]))
+    line = [TOUNICODE_HEAD]
+    for block in batched(short, 100):
+        line.append(f"{len(block)} beginbfchar")
+        for glyph, code in block:
+            if code < 0x10000:
+                line.append(f"<{glyph:04x}><{code:04x}>")
+            else:
+                line.append(f"<{glyph:04x}><{code:08x}>")
+        line.append("endbfchar")
+    line.append(TOUNICODE_TAIL)
+    return "\n".join(line)
+
+
+def reproduce_one_font(doc, index):
+    m = doc.xref_get_key(index, "ToUnicode")
+    f = doc.xref_get_key(index, "DescendantFonts")
+    if m[0] == "xref" and f[0] == "array":
+        mi = to_int(m[1])
+        fi = to_int(f[1])
+        ff = doc.xref_get_key(fi, "FontDescriptor/FontFile2")
+        ms = doc.xref_stream(mi)
+        fs = doc.xref_stream(to_int(ff[1]))
+        cmap = parse_tounicode_cmap(ms)
+        used = parse_truetype_data(fs)
+        text = make_tounicode(cmap, used)
+        doc.update_stream(mi, bytes(text, "U8"))
+
+
+def reproduce_cmap(doc):
+    assert doc
+    font_set = set()
+    for page in doc:
+        font_list = page.get_fonts()
+        for font in font_list:
+            if font[1] == "ttf" and font[3] in FONT_NAMES and ".ttf" in font[4]:
+                font_set.add(font)
+    for font in font_set:
+        reproduce_one_font(doc, font[0])
+    return doc
 
 
 def _subset_fonts_process(pdf_path, output_path):
@@ -31,11 +169,11 @@ def _subset_fonts_process(pdf_path, output_path):
         pdf = pymupdf.open(pdf_path)
         pdf.subset_fonts(fallback=False)
         pdf.save(output_path)
-        # 返回0表示成功
+        # 返回 0 表示成功
         os._exit(0)
     except Exception as e:
         logger.error(f"Error in font subsetting subprocess: {e}")
-        # 返回1表示失败
+        # 返回 1 表示失败
         os._exit(1)
 
 
@@ -69,11 +207,11 @@ def _save_pdf_clean_process(
             deflate_fonts=deflate_fonts,
             linear=linear,
         )
-        # 返回0表示成功
+        # 返回 0 表示成功
         os._exit(0)
     except Exception as e:
         logger.error(f"Error in save PDF with clean=True subprocess: {e}")
-        # 返回1表示失败
+        # 返回 1 表示失败
         os._exit(1)
 
 
@@ -185,21 +323,25 @@ class PDFCreater:
         except Exception:
             return set()
 
-    def _debug_render_rectangle(
+    def _render_rectangle(
         self,
         draw_op: BitStream,
         rectangle: il_version_1.PdfRectangle,
+        line_width: float = 1,
     ):
-        """Draw a debug rectangle in PDF for visualization purposes.
+        """Draw a rectangle in PDF for visualization purposes.
 
         Args:
             draw_op: BitStream to append PDF drawing operations
             rectangle: Rectangle object containing position information
+            line_width: Line width
         """
         x1 = rectangle.box.x
         y1 = rectangle.box.y
         x2 = rectangle.box.x2
         y2 = rectangle.box.y2
+        width = x2 - x1
+        height = y2 - y1
         # Save graphics state
         draw_op.append(b"q ")
 
@@ -207,17 +349,13 @@ class PDFCreater:
         draw_op.append(
             rectangle.graphic_state.passthrough_per_char_instruction.encode(),
         )  # Green stroke
-        draw_op.append(b" 1 w ")  # Line width
-
-        # Draw four lines manually
-        # Bottom line
-        draw_op.append(f"{x1} {y1} m {x2} {y1} l S ".encode())
-        # Right line
-        draw_op.append(f"{x2} {y1} m {x2} {y2} l S ".encode())
-        # Top line
-        draw_op.append(f"{x2} {y2} m {x1} {y2} l S ".encode())
-        # Left line
-        draw_op.append(f"{x1} {y2} m {x1} {y1} l S ".encode())
+        if line_width > 0:
+            draw_op.append(f" {line_width} w ".encode())  # Line width
+        draw_op.append(f"{x1} {y1} {width} {height} re ".encode())
+        if rectangle.fill_background:
+            draw_op.append(b" f ")
+        else:
+            draw_op.append(b" S ")
 
         # Restore graphics state
         draw_op.append(b"Q\n")
@@ -248,20 +386,22 @@ class PDFCreater:
             # Get pages from both PDFs
             orig_page = original_pdf[page_id]
             trans_page = translated_pdf[page_id]
-
-            # Calculate total width and use max height
+            rotate_angle = orig_page.rotation
             total_width = orig_page.rect.width + trans_page.rect.width
             max_height = max(orig_page.rect.height, trans_page.rect.height)
-
-            # Create new page with combined width
-            dual_page = dual.new_page(width=total_width, height=max_height)
-
-            # Define rectangles for left and right sides
             left_width = (
                 orig_page.rect.width
                 if not translation_config.dual_translate_first
                 else trans_page.rect.width
             )
+
+            orig_page.set_rotation(0)
+            trans_page.set_rotation(0)
+
+            # Create new page with combined width
+            dual_page = dual.new_page(width=total_width, height=max_height)
+
+            # Define rectangles for left and right sides
             rect_left = pymupdf.Rect(0, 0, left_width, max_height)
             rect_right = pymupdf.Rect(left_width, 0, total_width, max_height)
 
@@ -276,6 +416,7 @@ class PDFCreater:
                     original_pdf,
                     page_id,
                     keep_proportion=True,
+                    rotate=-rotate_angle,
                 )
             except Exception as e:
                 logger.warning(
@@ -291,6 +432,7 @@ class PDFCreater:
                     translated_pdf,
                     page_id,
                     keep_proportion=True,
+                    rotate=-rotate_angle,
                 )
             except Exception as e:
                 logger.warning(
@@ -410,7 +552,7 @@ class PDFCreater:
             for rect in page.pdf_rectangle:
                 if not rect.debug_info:
                     continue
-                self._debug_render_rectangle(page_op, rect)
+                self._render_rectangle(page_op, rect)
             draw_op = page_op
             # Since this is a draw instruction container,
             # no additional information is needed
@@ -639,8 +781,12 @@ class PDFCreater:
             return False
 
     def restore_media_box(self, doc: pymupdf.Document, mediabox_data: dict) -> None:
-        for pageno, mediabox in mediabox_data.items():
-            doc.xref_set_key(doc[pageno].xref, "MediaBox", mediabox[1])
+        for pageno, page_box_data in mediabox_data.items():
+            for name, box in page_box_data.items():
+                try:
+                    doc.xref_set_key(doc[pageno].xref, name, box)
+                except Exception:
+                    logger.debug(f"Error restoring media box {name} from PDF")
 
     def write(
         self, translation_config: TranslationConfig, check_font_exists: bool = False
@@ -648,11 +794,7 @@ class PDFCreater:
         try:
             basename = Path(translation_config.input_file).stem
             debug_suffix = ".debug" if translation_config.debug else ""
-            # if (
-            #     translation_config.watermark_output_mode
-            #     != WatermarkOutputMode.Watermarked
-            # ):
-            #     debug_suffix += ".no_watermark"
+            
             from utils.time_util import TimeUtil
             time_str = TimeUtil.get_yyyymmddhhmmss()
             mono_out_file_name = f"{basename}{debug_suffix}.{time_str}{translation_config.lang_out}.mono.pdf"
@@ -660,8 +802,8 @@ class PDFCreater:
                 f"{mono_out_file_name}",
             )
             pdf = pymupdf.open(self.original_pdf_path)
-            total_pages:int = pdf.page_count
-            source_file_name = Path(translation_config.input_file).name
+            total_pages:int = pdf.page_count  
+            source_file_name = Path(translation_config.input_file).name 
             self.font_mapper.add_font(pdf, self.docs)
             with self.translation_config.progress_monitor.stage_start(
                 self.stage_name,
@@ -696,13 +838,17 @@ class PDFCreater:
                             page_encoding_length_map
                         )
                         xobj_op = BitStream()
-                        xobj_op.append(xobj.base_operations.value.encode())
+                        base_op = xobj.base_operations.value
+                        base_op = zstd_decompress(base_op)
+                        xobj_op.append(base_op.encode())
                         xobj_draw_ops[xobj.xobj_id] = xobj_op
 
                     page_op = BitStream()
                     # q {ops_base}Q 1 0 0 1 {x0} {y0} cm {ops_new}
                     # page_op.append(b"q ")
-                    page_op.append(page.base_operations.value.encode())
+                    base_op = page.base_operations.value
+                    base_op = zstd_decompress(base_op)
+                    page_op.append(base_op.encode())
                     page_op.append(b" \n")
                     # page_op.append(b" Q ")
                     # page_op.append(
@@ -716,7 +862,17 @@ class PDFCreater:
                     # 然后添加段落中的字符
                     for paragraph in page.pdf_paragraph:
                         chars.extend(self.render_paragraph_to_char(paragraph))
-
+                    for rect in page.pdf_rectangle:
+                        if (
+                            translation_config.ocr_workaround
+                            and not rect.debug_info
+                            and rect.fill_background
+                        ):
+                            if rect.xobj_id in xobj_available_fonts:
+                                draw_op = xobj_draw_ops[rect.xobj_id]
+                            else:
+                                draw_op = page_op
+                            self._render_rectangle(draw_op, rect, line_width=0.1)
                     # 渲染所有字符
                     for char in chars:
                         if char.char_unicode == "\n":
@@ -778,7 +934,9 @@ class PDFCreater:
                             )
                         # pdf.update_stream(xobj.xref_id, b'')
                     for rect in page.pdf_rectangle:
-                        self._debug_render_rectangle(page_op, rect)
+                        if translation_config.debug and rect.debug_info:
+                            self._render_rectangle(page_op, rect)
+
                     draw_op = page_op
                     op_container = pdf.get_new_xref()
                     # Since this is a draw instruction container,
@@ -788,6 +946,9 @@ class PDFCreater:
                     pdf[page.page_number].set_contents(op_container)
                     pbar.advance()
             translation_config.raise_if_cancelled()
+            gc_level = 1
+            if self.translation_config.ocr_workaround:
+                gc_level = 4
             with self.translation_config.progress_monitor.stage_start(
                 SUBSET_FONT_STAGE_NAME,
                 1,
@@ -798,7 +959,10 @@ class PDFCreater:
                     )
 
                 pbar.advance()
-            self.restore_media_box(pdf, self.mediabox_data)
+            try:
+                self.restore_media_box(pdf, self.mediabox_data)
+            except Exception:
+                logger.exception("restore media box failed")
             with self.translation_config.progress_monitor.stage_start(
                 SAVE_PDF_STAGE_NAME,
                 2,
@@ -816,7 +980,7 @@ class PDFCreater:
                         pdf,
                         mono_out_path,
                         translation_config,
-                        garbage=1,
+                        garbage=gc_level,
                         deflate=True,
                         clean=not translation_config.skip_clean,
                         deflate_fonts=True,
@@ -869,7 +1033,7 @@ class PDFCreater:
                         dual,
                         dual_out_path,
                         translation_config,
-                        garbage=1,
+                        garbage=gc_level,
                         deflate=True,
                         clean=not translation_config.skip_clean,
                         deflate_fonts=True,
@@ -886,10 +1050,12 @@ class PDFCreater:
                 pbar.advance()
             # return TranslateResult(mono_out_path, dual_out_path)
             return TranslateResult(mono_out_path, dual_out_path,total_pages,
-        mono_out_file_name,source_file_name)
+                    mono_out_file_name,source_file_name)
         except Exception:
             logger.exception(
                 "Failed to create PDF: %s",
                 translation_config.input_file,
             )
-            return self.write(translation_config, True)
+            if not check_font_exists:
+                return self.write(translation_config, True)
+            raise

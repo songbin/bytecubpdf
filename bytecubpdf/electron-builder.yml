@@ -1,6 +1,6 @@
 appId: com.bytecub.desktop
-productName: 字节立方
-copyright: Copyright © 2025 bytecub
+productName: 小书芽
+copyright: Copyright © 2025 DocFable
 asar: true
 directories:
   output: dist
@@ -19,6 +19,17 @@ files:
   - "node_modules/ms/**"
   - "node_modules/debug/**"
   - "node_modules/semver/**"
+  - "node_modules/electron-updater/**" 
+  - "node_modules/fs-extra/**"
+  - "node_modules/universalify/**"
+  - "node_modules/graceful-fs/**"
+  - "node_modules/jsonfile/**"
+  - "node_modules/builder-util-runtime/**"
+  - "node_modules/sax/**"
+  - "node_modules/js-yaml/**"
+  - "node_modules/lazy-val/**"
+  - "node_modules/lodash.isequal/**"
+  - "node_modules/lodash.escaperegexp/**"
   # - "index.html"  # 添加根目录的index.html
 npmRebuild: false
 extraResources:
@@ -37,13 +48,21 @@ extraResources:
 win:
   target:
     - target: nsis
-    - target: portable
-  icon: build/icon.ico
+    # - target: portable
+  icon: build/icon2.ico
   extraFiles:           # 确保文件保持独立不被asar打包
     - "../bytecub-plugin/dist/bytecubplugin.exe"
     - "execute/*.bat"
-
+nsis:
+  allowToChangeInstallationDirectory: true  # 允许用户选择安装目录
+  oneClick: false  # 禁用一键安装模式
+  createDesktopShortcut: always  # 始终创建桌面快捷方式
+  createStartMenuShortcut: true  # 创建开始菜单快捷方式
 mac:
   target: dmg
 linux:
   target: AppImage
+publish:
+  - provider: generic
+    url: http://api.docfable.com/upgrade/
+    channel: latest

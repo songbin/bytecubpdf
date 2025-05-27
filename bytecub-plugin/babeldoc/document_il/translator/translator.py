@@ -6,6 +6,7 @@ import unicodedata
 from abc import ABC
 from abc import abstractmethod
 
+import httpx
 import openai
 from tenacity import retry
 from tenacity import retry_if_exception_type
@@ -191,7 +192,15 @@ class OpenAITranslator(BaseTranslator):
     ):
         super().__init__(lang_in, lang_out, ignore_cache)
         self.options = {"temperature": 0}  # 随机采样可能会打断公式标记
-        self.client = openai.OpenAI(base_url=base_url, api_key=api_key)
+        self.client = openai.OpenAI(
+            base_url=base_url,
+            api_key=api_key,
+            http_client=httpx.Client(
+                limits=httpx.Limits(
+                    max_connections=None, max_keepalive_connections=None
+                )
+            ),
+        )
         self.add_cache_impact_parameters("temperature", self.options["temperature"])
         self.model = model
         self.add_cache_impact_parameters("model", self.model)
@@ -215,9 +224,7 @@ class OpenAITranslator(BaseTranslator):
             **self.options,
             messages=self.prompt(text),
         )
-        self.token_count.inc(response.usage.total_tokens)
-        self.prompt_token_count.inc(response.usage.prompt_tokens)
-        self.completion_token_count.inc(response.usage.completion_tokens)
+        self.update_token_count(response)
         return response.choices[0].message.content.strip()
 
     def prompt(self, text):
@@ -248,6 +255,7 @@ class OpenAITranslator(BaseTranslator):
         response = self.client.chat.completions.create(
             model=self.model,
             **self.options,
+            max_tokens=2048,
             messages=[
                 {
                     "role": "user",
@@ -255,17 +263,29 @@ class OpenAITranslator(BaseTranslator):
                 },
             ],
         )
-        self.token_count.inc(response.usage.total_tokens)
-        self.prompt_token_count.inc(response.usage.prompt_tokens)
-        self.completion_token_count.inc(response.usage.completion_tokens)
+        self.update_token_count(response)
         return response.choices[0].message.content.strip()
 
+    def update_token_count(self, response):
+        try:
+            if response.usage and response.usage.total_tokens:
+                self.token_count.inc(response.usage.total_tokens)
+            if response.usage and response.usage.prompt_tokens:
+                self.prompt_token_count.inc(response.usage.prompt_tokens)
+            if response.usage and response.usage.completion_tokens:
+                self.completion_token_count.inc(response.usage.completion_tokens)
+        except Exception as e:
+            logger.exception("Error updating token count")
+
     def get_formular_placeholder(self, placeholder_id: int):
-        return "{{v" + str(placeholder_id) + "}}"
+        return "{v" + str(placeholder_id) + "}", f"{{\\s*v\\s*{placeholder_id}\\s*}}"
         return "{{" + str(placeholder_id) + "}}"
 
     def get_rich_text_left_placeholder(self, placeholder_id: int):
-        return self.get_formular_placeholder(placeholder_id)
+        return (
+            f"<style id='{placeholder_id}'>",
+            f"<\\s*style\\s*id\\s*=\\s*'\\s*{placeholder_id}\\s*'\\s*>",
+        )
 
     def get_rich_text_right_placeholder(self, placeholder_id: int):
-        return self.get_formular_placeholder(placeholder_id + 1)
+        return "</style>", r"<\s*\/\s*style\s*>"

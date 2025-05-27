@@ -2,8 +2,10 @@
       <div class="version-container">
         <p>当前版本：{{ currentVersion }}</p>
         <p v-if="upgradeInfo">最新版本：{{ upgradeInfo.version }}</p>
-        <div v-if="upgradeInfo?.force_update" class="force-tip">⚠️ 本次为强制升级，必须立即更新</div>
-        
+        <div v-if="upgradeInfo?.forceUpdate" class="force-tip">⚠️ 本次为强制升级，必须立即更新</div>
+        <div v-else-if="upgradeInfo?.buildNumber && upgradeInfo.buildNumber <= VERSION.buildNumber" class="latest-tip">
+          ✅ 当前已是最新版本
+        </div>
         <h4>更新内容：</h4>
         <ul v-if="upgradeInfo?.changelog.length">
           <li v-for="(item, index) in upgradeInfo.changelog" :key="index">{{ item }}</li>
@@ -13,12 +15,20 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { VERSION } from '@/shared/constants/dfconstants';
 interface UpgradeInfo {
-  version: string
-  build_number: number
-  force_update: boolean
-  changelog: string[]
-  download_url: string
+  version: string;
+  buildNumber: number;
+  files: Array<{
+    url: string;
+  }>;
+  sha512: string;
+  size: number;
+  releaseDate: string;
+  minBuildNumber: number;
+  changelog: string[];
+  downloadUrl: string;
+  forceUpdate: boolean;
 }
 const props = defineProps({
   modelValue: Boolean,
@@ -29,7 +39,7 @@ const props = defineProps({
   }
 })
 
-const modalTitle = computed(() => props.upgradeInfo?.force_update 
+const modalTitle = computed(() => props.upgradeInfo?.forceUpdate 
   ? '强制版本升级' 
   : '版本升级提示'
 )
