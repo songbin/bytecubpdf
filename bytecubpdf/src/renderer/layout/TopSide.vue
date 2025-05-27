@@ -233,7 +233,7 @@ onMounted(() => {
       isUpgradeReady.value = await (window as any).window.electronAPI.getUpgradeStatus();
       isLongTimeNotice.value = await (window as any).window.electronAPI.getLongTimeNotice();
       const downPath = await (window as any).window.electronAPI.getUpgradeDownPath();
-      console.log('检查升级状态:', isUpgradeReady.value  ,'升级路径:', downPath, '长时间未升级:', isLongTimeNotice.value)
+      //console.log('检查升级状态:', isUpgradeReady.value  ,'升级路径:', downPath, '长时间未升级:', isLongTimeNotice.value)
     } catch (error) {
       console.error('升级状态检查失败:', error);
     }

@@ -3,7 +3,12 @@ import App from './App.vue'
 import router from './router'
 import { i18n } from '../shared/i18n'
 import { LogLevel } from '@/shared/constants/dfconstants'
-
+import * as pdfjsLib from "pdfjs-dist";
+// 配置 pdfjs-dist 的 worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
+  import.meta.url
+).href;
 // 初始化日志系统
 if ((window as any).window.electronAPI) {
   // 覆盖console方法
