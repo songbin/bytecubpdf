@@ -50,40 +50,13 @@
       v-model:show="showCompareViewer"
       preset="card"
       :mask-closable="false"
-      style="width: 100vw; height: 100vh; max-width: 100%;"
+      style="width: 100vw;z-index: 1000; height: 100vh; max-width: 100%;"
       :bordered="false"
       :closable="false"
       content-style="padding: 0;"
+       
     >
-      <template #header>
-        <div style="display: flex; justify-content: space-between; width: 100%;">
-          <span>PDF对比预览</span>
-          <n-button-group>
-            <n-button
-              tertiary
-              circle
-              @click="maximizeWindow"
-              aria-label="最大化窗口"
-              class="control-btn custom-btn"
-            >
-              <template #icon>
-                <n-icon style="font-size: 12px"><Maximize /></n-icon>
-              </template>
-            </n-button>
-            <n-button
-              circle
-              type="error"
-              @click="handleCloseCompareViewer"
-              aria-label="关闭窗口"
-              class="control-btn close-btn"
-            >
-              <template #icon>
-                <n-icon style="font-size: 14px"><Close /></n-icon>
-              </template>
-            </n-button>
-          </n-button-group>
-        </div>
-      </template>
+      
       <PdfCompareViewer
         :file-path-left="currentPdfLeft"
         :file-path-right="currentPdfRight"
