@@ -2,15 +2,13 @@
   <!-- 使用 Naive UI 布局容器 -->
   <n-layout class="pdf-compare-modal" position="absolute" style="height: 100vh;">
     <!-- 头部区域 -->
-    <n-layout-header bordered  >
+    <n-layout-header bordered style="background-color: #f5f5f5">
       <n-space justify="end" :style="{ padding: '10px' }">
-        <n-button size="small" @click="emit('close')">退出阅读</n-button>
-        <n-button size="small" @click="toggleFullscreen">最大化</n-button>
+        <n-button size="small" type="success" @click="emit('close')">退出阅读</n-button>
+        <n-button size="small" type="success" @click="toggleFullscreen">全屏(还原)窗口</n-button>
       </n-space>
     </n-layout-header>
-
     <!-- 内容区域 -->
-   
       <n-layout-content ref="contentRef" style="flex: 1; min-height: 0; position: relative; z-index: 2000;">
        
         <!-- PDF显示区域 -->
@@ -43,11 +41,19 @@
     
     <!-- 底部控制栏 -->
     <n-layout-footer 
-     position="absolute"
+    
     v-if="totalPagesLeft > 0 || totalPagesRight > 0" bordered style="flex-shrink: 0">
       <n-space justify="center" align="center" style="width: 100%; padding: 10px;">
         <n-button @click="changePage('both', 'prev')" :disabled="currentPageLeft <= 1 && currentPageRight <= 1">上一页</n-button>
         <span>{{ Math.max(currentPageLeft, currentPageRight) }} / {{ Math.max(totalPagesLeft, totalPagesRight) }}</span>
+        <n-input-number 
+          v-model:value="jumpPage" 
+          :min="1" 
+          :max="Math.max(totalPagesLeft, totalPagesRight)" 
+          style="width: 80px"
+          @keyup.enter="jumpToPage"
+        />
+        <n-button @click="jumpToPage">跳转</n-button>
         <n-button @click="changePage('both', 'next')" :disabled="currentPageLeft >= totalPagesLeft && currentPageRight >= totalPagesRight">下一页</n-button>
       </n-space>
     </n-layout-footer>
@@ -63,8 +69,7 @@ import {
   NLayoutHeader,
   NLayoutContent,
   NLayoutFooter,
-  NInput,
-  NSwitch
+  NInputNumber 
 } from 'naive-ui'
 
 interface Props {
@@ -101,6 +106,7 @@ const rightContainer = ref<HTMLElement | null>(null)
 // 页面状态
 const currentPageLeft = ref(1)
 const currentPageRight = ref(1)
+const jumpPage = ref(1)
 const totalPagesLeft = ref(0)
 const totalPagesRight = ref(0)
 
@@ -187,6 +193,27 @@ const loadPDF = async (filePath: string, canvas: HTMLCanvasElement, side: 'left'
 }
 
 // 页面切换
+const scrollToPage = async (pageNumber: number) => {
+  if (leftPdf.value && leftCanvas.value) {
+      currentPageLeft.value = Math.min(pageNumber, totalPagesLeft.value)
+      await loadPDF(props.filePathLeft, leftCanvas.value, 'left', currentPageLeft.value)
+  }
+  if (rightPdf.value && rightCanvas.value) {
+      currentPageRight.value = Math.min(pageNumber, totalPagesRight.value)
+      await loadPDF(props.filePathRight, rightCanvas.value, 'right', currentPageRight.value)
+    }
+  
+};
+
+const jumpToPage = () => {
+  if (jumpPage.value >= 1 && jumpPage.value <= Math.max(totalPagesLeft.value, totalPagesRight.value)) {
+    currentPageLeft.value = jumpPage.value;
+    currentPageRight.value = jumpPage.value;
+    scrollToPage(jumpPage.value);
+  }
+
+};
+
 const changePage = async (side: 'left' | 'right' | 'both', direction: 'prev' | 'next') => {
   const currentMax = Math.max(currentPageLeft.value, currentPageRight.value)
   const totalMax = Math.max(totalPagesLeft.value, totalPagesRight.value)
