@@ -46,6 +46,7 @@
       <n-space justify="center" align="center" style="width: 100%; padding: 10px;">
         <n-button @click="changePage('both', 'prev')" :disabled="currentPageLeft <= 1 && currentPageRight <= 1">上一页</n-button>
         <span>{{ Math.max(currentPageLeft, currentPageRight) }} / {{ Math.max(totalPagesLeft, totalPagesRight) }}</span>
+        <n-button @click="changePage('both', 'next')" :disabled="currentPageLeft >= totalPagesLeft && currentPageRight >= totalPagesRight">下一页</n-button>
         <n-input-number 
           v-model:value="jumpPage" 
           :min="1" 
@@ -54,7 +55,7 @@
           @keyup.enter="jumpToPage"
         />
         <n-button @click="jumpToPage">跳转</n-button>
-        <n-button @click="changePage('both', 'next')" :disabled="currentPageLeft >= totalPagesLeft && currentPageRight >= totalPagesRight">下一页</n-button>
+        
       </n-space>
     </n-layout-footer>
   </n-layout>
