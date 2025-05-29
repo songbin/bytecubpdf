@@ -9,48 +9,53 @@
       </n-space>
     </n-layout-header>
     <!-- 内容区域 -->
-    <n-layout-content ref="contentRef" style="flex: 1; min-height: 0; position: relative; z-index: 2000;">
-
-      <!-- PDF显示区域 -->
-      <div class="pdf-container">
-        <div class="pdf-columns">
-          <!-- 左侧 PDF 显示 -->
-          <div class="pdf-column" ref="leftContainer" @scroll="syncScroll('left')">
-            <div v-if="filePathLeft" class="canvas-container">
-              <canvas ref="leftCanvas" class="pdf-canvas"></canvas>
-              <div class="text-layer" ref="leftTextLayer"></div>
+      <n-layout-content ref="contentRef" style="flex: 1; min-height: 0; position: relative; z-index: 2000;">
+       
+        <!-- PDF显示区域 -->
+        <div class="pdf-container">
+          <div class="pdf-columns">
+            <!-- 左侧 PDF 显示 -->
+            <div class="pdf-column" ref="leftContainer" @scroll="syncScroll('left')">
+              <div v-if="filePathLeft" class="canvas-container">
+                <canvas ref="leftCanvas" class="pdf-canvas"></canvas>
+                <div class="text-layer" ref="leftTextLayer"></div>
+              </div>
+              <div v-else class="empty">
+                <p>左侧 PDF 未加载</p>
+              </div>
             </div>
-            <div v-else class="empty">
-              <p>左侧 PDF 未加载</p>
-            </div>
-          </div>
-
-          <!-- 右侧 PDF 显示 -->
-          <div class="pdf-column" ref="rightContainer" @scroll="syncScroll('right')">
-            <div v-if="filePathRight" class="canvas-container">
-              <canvas ref="rightCanvas" class="pdf-canvas"></canvas>
-              <div class="text-layer" ref="rightTextLayer"></div>
-            </div>
-            <div v-else class="empty">
-              <p>右侧 PDF 未加载</p>
+    
+            <!-- 右侧 PDF 显示 -->
+            <div class="pdf-column" ref="rightContainer" @scroll="syncScroll('right')">
+              <div v-if="filePathRight" class="canvas-container">
+                <canvas ref="rightCanvas" class="pdf-canvas"></canvas>
+                <div class="text-layer" ref="rightTextLayer"></div>
+              </div>
+              <div v-else class="empty">
+                <p>右侧 PDF 未加载</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </n-layout-content>
-
+      </n-layout-content>
+    
     <!-- 底部控制栏 -->
-    <n-layout-footer v-if="totalPagesLeft > 0 || totalPagesRight > 0" bordered style="flex-shrink: 0">
+    <n-layout-footer 
+    
+    v-if="totalPagesLeft > 0 || totalPagesRight > 0" bordered style="flex-shrink: 0">
       <n-space justify="center" align="center" style="width: 100%; padding: 10px;">
-        <n-button @click="changePage('both', 'prev')"
-          :disabled="currentPageLeft <= 1 && currentPageRight <= 1">上一页</n-button>
+        <n-button @click="changePage('both', 'prev')" :disabled="currentPageLeft <= 1 && currentPageRight <= 1">上一页</n-button>
         <span>{{ Math.max(currentPageLeft, currentPageRight) }} / {{ Math.max(totalPagesLeft, totalPagesRight) }}</span>
-        <n-button @click="changePage('both', 'next')"
-          :disabled="currentPageLeft >= totalPagesLeft && currentPageRight >= totalPagesRight">下一页</n-button>
-        <n-input-number v-model:value="jumpPage" :min="1" :max="Math.max(totalPagesLeft, totalPagesRight)"
-          style="width: 80px" @keyup.enter="jumpToPage" />
+        <n-button @click="changePage('both', 'next')" :disabled="currentPageLeft >= totalPagesLeft && currentPageRight >= totalPagesRight">下一页</n-button>
+        <n-input-number 
+          v-model:value="jumpPage" 
+          :min="1" 
+          :max="Math.max(totalPagesLeft, totalPagesRight)" 
+          style="width: 80px"
+          @keyup.enter="jumpToPage"
+        />
         <n-button @click="jumpToPage">跳转</n-button>
-
+        
       </n-space>
     </n-layout-footer>
   </n-layout>
@@ -58,24 +63,14 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, nextTick, shallowRef, onBeforeUnmount } from 'vue'
-import 'pdfjs-dist/web/pdf_viewer.css'
- 
-import { TextLayerBuilder } from 'pdfjs-dist/legacy/web/pdf_viewer.mjs';
- 
-import * as pdfjsLib from "pdfjs-dist"; 
-// 配置 pdfjs-dist 的 worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
-  import.meta.url
-).href;
-import {
+import { 
   NButton,
   NSpace,
   NLayout,
   NLayoutHeader,
   NLayoutContent,
   NLayoutFooter,
-  NInputNumber
+  NInputNumber 
 } from 'naive-ui'
 
 interface Props {
@@ -108,8 +103,6 @@ const leftCanvas = ref<HTMLCanvasElement | null>(null)
 const rightCanvas = ref<HTMLCanvasElement | null>(null)
 const leftContainer = ref<HTMLElement | null>(null)
 const rightContainer = ref<HTMLElement | null>(null)
-const leftTextLayer = ref<HTMLElement | null>(null)
-const rightTextLayer = ref<HTMLElement | null>(null)
 
 // 页面状态
 const currentPageLeft = ref(1)
@@ -118,14 +111,13 @@ const jumpPage = ref(1)
 const totalPagesLeft = ref(0)
 const totalPagesRight = ref(0)
 
-
-
-const leftPdf = shallowRef<pdfjsLib.PDFDocumentProxy | null>(null)
-const rightPdf = shallowRef<pdfjsLib.PDFDocumentProxy | null>(null)
+// PDF对象
+const leftPdf = shallowRef(null)
+const rightPdf = shallowRef(null)
 
 // 渲染任务
-const leftRenderTask = shallowRef<{ cancel: () => void } | null>(null)
-const rightRenderTask = shallowRef<{ cancel: () => void } | null>(null)
+const leftRenderTask = shallowRef<{cancel: () => void} | null>(null)
+const rightRenderTask = shallowRef<{cancel: () => void} | null>(null)
 
 // 事件处理
 let resizeHandler: (() => void) | null = null
@@ -133,7 +125,7 @@ let resizeHandler: (() => void) | null = null
 // 工具函数
 const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number): ((...args: Parameters<T>) => void) => {
   let timer: ReturnType<typeof setTimeout> | null = null
-  return function (this: unknown, ...args: Parameters<T>) {
+  return function(this: unknown, ...args: Parameters<T>) {
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => fn.apply(this, args), delay)
   }
@@ -150,7 +142,7 @@ const loadPDF = async (filePath: string, canvas: HTMLCanvasElement, side: 'left'
     }
 
     // 创建PDF加载任务
-    const loadingTask =  pdfjsLib.getDocument(filePath)
+    const loadingTask = (window as any).pdfjsLib.getDocument(filePath)
     const pdf = await loadingTask.promise
 
     // 更新状态
@@ -187,30 +179,6 @@ const loadPDF = async (filePath: string, canvas: HTMLCanvasElement, side: 'left'
       viewport: adjustedViewport
     })
 
-    // 渲染文本层 - 修正部分
-    const textContent = await page.getTextContent({
-      includeMarkedContent: true, // 包含标记内容
-     
-    });
-    
-    const textLayerDiv = side === 'left' ? leftTextLayer.value : rightTextLayer.value;
-
-    // 清空容器并设置尺寸
-    textLayerDiv!.innerHTML = '';
-    textLayerDiv!.style.width = `${canvas.width}px`;
-    textLayerDiv!.style.height = `${canvas.height}px`;
-    // 创建文本层实例 - 使用正确的参数
-    // const textLayer = new TextLayerBuilder(  {
-    //   pdfPage: page, 
-    //   enablePermissions: false,     // 禁用权限检查
-      
-    // });
-    // await textLayer.render({
-    //   viewport: adjustedViewport,
-    //   textContentParams: textContent,
-    // });
-   
-
     if (side === 'left') {
       leftRenderTask.value = renderTask
     } else {
@@ -219,7 +187,7 @@ const loadPDF = async (filePath: string, canvas: HTMLCanvasElement, side: 'left'
 
     await renderTask.promise
   } catch (error: unknown) {
-    if ((error as { message?: string })?.message !== 'Rendering cancelled') {
+    if ((error as {message?: string})?.message !== 'Rendering cancelled') {
       console.error(`PDF加载失败 (${side}):`, error)
     }
   }
@@ -228,19 +196,23 @@ const loadPDF = async (filePath: string, canvas: HTMLCanvasElement, side: 'left'
 // 页面切换
 const scrollToPage = async (pageNumber: number) => {
   if (leftPdf.value && leftCanvas.value) {
-    currentPageLeft.value = Math.min(pageNumber, totalPagesLeft.value)
-    await loadPDF(props.filePathLeft, leftCanvas.value, 'left', currentPageLeft.value)
+      currentPageLeft.value = Math.min(pageNumber, totalPagesLeft.value)
+      await loadPDF(props.filePathLeft, leftCanvas.value, 'left', currentPageLeft.value)
   }
   if (rightPdf.value && rightCanvas.value) {
-    currentPageRight.value = Math.min(pageNumber, totalPagesRight.value)
-    await loadPDF(props.filePathRight, rightCanvas.value, 'right', currentPageRight.value)
-  }
+      currentPageRight.value = Math.min(pageNumber, totalPagesRight.value)
+      await loadPDF(props.filePathRight, rightCanvas.value, 'right', currentPageRight.value)
+    }
+  
 };
 
 const jumpToPage = () => {
   if (jumpPage.value >= 1 && jumpPage.value <= Math.max(totalPagesLeft.value, totalPagesRight.value)) {
+    currentPageLeft.value = jumpPage.value;
+    currentPageRight.value = jumpPage.value;
     scrollToPage(jumpPage.value);
   }
+
 };
 
 const changePage = async (side: 'left' | 'right' | 'both', direction: 'prev' | 'next') => {
@@ -319,28 +291,28 @@ onBeforeUnmount(() => {
   if (rightRenderTask.value?.cancel) {
     rightRenderTask.value.cancel()
   }
-})
+  })
 </script>
 
 <style scoped>
 n-layout-header {
   position: fixed;
+  /* top: 64px; 匹配TopSide标题栏高度 */
   left: 0;
   right: 0;
   z-index: 2000;
   background: white;
 }
-
 .pdf-compare-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9999;
-  background: white;
-  isolation: isolate;
-}
+   position: fixed;
+   top: 0;
+   left: 0;
+   right: 0;
+   bottom: 0;
+   z-index: 9999;
+   background: white;
+   isolation: isolate;
+ }
 
 .pdf-columns {
   display: flex;
@@ -352,15 +324,15 @@ n-layout-header {
 .pdf-column {
   flex: 1;
   overflow-y: auto;
-  height: calc(100vh - 120px);
-  border: 1px solid #eee;
-  background: #f9f9f9;
-  border-radius: 4px;
+  height: calc(100vh - 120px); /* 计算实际可用高度 */
+  border: 1px solid #eee; /* 添加边框 */
+  background: #f9f9f9; /* 添加背景色 */
+  border-radius: 4px; /* 圆角 */
 }
 
 .canvas-container {
   position: relative;
-  min-height: 100%;
+  min-height: 100%; /* 确保最小高度 */
 }
 
 .pdf-canvas {
@@ -374,8 +346,9 @@ n-layout-header {
   position: absolute;
   left: 0;
   top: 0;
-  overflow: hidden;
-  opacity: 1;
+  right: 0;
+  bottom: 0;
+  opacity: 0.2;
   pointer-events: none;
   line-height: 1;
   z-index: 9999;
@@ -387,7 +360,6 @@ n-layout-header {
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
-  pointer-events: all;
 }
 
 .empty {
