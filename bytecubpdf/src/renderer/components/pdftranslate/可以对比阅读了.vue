@@ -1,15 +1,7 @@
 <script lang="ts" setup>
 import VuePdfEmbed from 'vue-pdf-embed'
 import { ref, watch, onMounted, nextTick, shallowRef, onBeforeUnmount } from 'vue'
-import {
-  NButton,
-  NSpace,
-  NLayout,
-  NLayoutHeader,
-  NLayoutContent,
-  NLayoutFooter,
-  NInputNumber, NSpin, NSwitch
-} from 'naive-ui'
+ 
 // optional styles
 import 'vue-pdf-embed/dist/styles/annotationLayer.css'
 import 'vue-pdf-embed/dist/styles/textLayer.css'
@@ -25,14 +17,12 @@ const props = withDefaults(defineProps<Props>(), {
   scale: 100
 })
 const pageCount = ref<number>(0)
-const page = ref<number | undefined>(1)
+const page = ref<number|undefined>(1)
 const isLoading = ref<boolean>(true)
 const showAllPages = ref<boolean>(false)
 const containerWidth = ref(0);
 const containerHeight = ref(0);
 const pdfContainer = ref<HTMLElement | null>(null);
-const leftLoading = ref<boolean>(true)
-const rightLoading = ref<boolean>(true)
 const emit = defineEmits(['close'])
 const updateDimensions = () => {
   if (pdfContainer.value) {
@@ -43,8 +33,8 @@ const updateDimensions = () => {
 watch(showAllPages, (newVal, oldVal) => {
   // 监听变化后的处理逻辑
   console.log('showAllPages changed:', newVal);
-  page.value = showAllPages.value ? undefined : 1
-  console.log('page.value -----', page.value)
+   page.value  =  showAllPages.value ? undefined : 1
+   console.log('page.value -----', page.value)
 });
 onMounted(() => {
   const observer = new ResizeObserver(updateDimensions);
@@ -58,21 +48,10 @@ onMounted(() => {
   const observer = new ResizeObserver(updateDimensions);
   observer.disconnect();
 });
-const handleLeftRender = () => {
-  leftLoading.value = false
-  console.log('left page:', page.value)
-}
-
-const handleRightRender = () => {
-  rightLoading.value = false
-  console.log('right page:', page.value)
-}
 const toggleFullscreen = async () => {
   try {
     console.log('最大化窗口');
     await (window as any).window.electronAPI?.maximizeWindow();
-    leftLoading.value = true
-    rightLoading.value = true
   } catch (error) {
     console.error('最大化窗口失败:', error);
   }
@@ -88,56 +67,75 @@ const handleDocumentRender = () => {
   // showAllPages.value = false
 }
 
-
+ 
 </script>
 
 <template>
+ 
+ <div class="app-header">
+    <template v-if="isLoading">Loading...</template>
 
-  <div class="app-header">
-    <n-space justify="end" :style="{ padding: '5px' }">
-      <n-button size="small" type="success" @click="emit('close')">退出阅读</n-button>
-      <n-button size="small" type="success" @click="toggleFullscreen">全屏(还原)窗口</n-button>
-    </n-space>
+    <template v-else>
+      <span v-if="showAllPages">{{ pageCount }} page(s)</span>
+
+      <span v-else>
+        <button :disabled="page! <= 1" @click="page!--">❮</button>
+        <span>{{ page }} / {{ pageCount }}</span>
+        <button :disabled="page! >= pageCount" @click="page!++">❯</button>
+      </span>
+
+      <label>
+        <input v-model="showAllPages" type="checkbox">
+        <span>Show all pages</span>
+      </label>
+    </template>
   </div>
   <div class="pdf-compare-container">
-    <div ref="pdfContainer" class="app-content left-pane">
-      <n-spin :show="leftLoading">
-      <vue-pdf-embed :source="props.filePathLeft" :page="page" annotation-layer text-layer :width="containerWidth"
-        :height="containerHeight" @loaded="handleDocumentLoad" @rendered="handleLeftRender" />
-      </n-spin>
-    </div>
-    <div ref="pdfContainer" class="app-content right-pane">
-      <n-spin :show="rightLoading">
-      <vue-pdf-embed :source="props.filePathRight" :page="page" annotation-layer text-layer :width="containerWidth"
-        :height="containerHeight" @loaded="handleDocumentLoad" @rendered="handleRightRender" />
-        </n-spin>
-    </div>
+  <div ref="pdfContainer" class="app-content left-pane">
+    <vue-pdf-embed
+      :source="props.filePathLeft"
+      :page="page"
+      annotation-layer
+      text-layer
+      :width="containerWidth"
+      :height="containerHeight"
+      @loaded="handleDocumentLoad"
+      @rendered="handleDocumentRender"
+    />
   </div>
-
-  <!-- <div class="app-footer">
-    <n-space   :style="{ padding: '10px' }">
-      <n-button size="small" type="success" @click="emit('close')">退出阅读</n-button>
-      <n-button size="small" type="success" @click="toggleFullscreen">全屏(还原)窗口</n-button>
-    </n-space>
-  </div> -->
+  <div ref="pdfContainer" class="app-content right-pane">
+    <vue-pdf-embed
+      :source="props.filePathRight"
+      :page="page"
+      annotation-layer
+      text-layer
+      :width="containerWidth"
+      :height="containerHeight"
+      @loaded="handleDocumentLoad"
+      @rendered="handleDocumentRender"
+    />
+  </div>
+  </div>
 </template>
 <style scoped>
 .app-header {
-
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
   box-shadow: 0 2px 8px 4px rgba(0, 0, 0, 0.1);
   background-color: #555;
   color: #ddd;
 }
 
-.app-header>* {
+.app-header > * {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .app-content {
-  padding: 24px 12px;
-  /* width: 48%; */
+  padding: 24px 16px;
+  width: 48%;
 }
 
 .vue-pdf-embed {
@@ -153,7 +151,6 @@ const handleDocumentRender = () => {
   display: flex;
   gap: 16px;
   width: 100%;
-  /* height: calc(100vh - 24px); */
   height: 100vh;
   overflow: auto;
 }
@@ -163,15 +160,6 @@ const handleDocumentRender = () => {
   flex: 1;
   min-width: 400px;
   border-right: 1px solid #eee;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
-
-:deep(.n-spin-container) {
-  height: 100%;
-  width: 100%;
-}
-
-:deep(.n-spin-content) {
-  opacity: 0.8;
-} 
 </style>
