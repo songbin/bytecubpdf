@@ -28,7 +28,7 @@ pikepdf
 pymupdf>=1.25.1
 python-dotenv
 python-levenshtein>=0.27.1
-pdfminer.six>=20240706
+pdfminer.six>=20250416
 pydantic>=2.10.6
 requests
 rich>=13.9.4

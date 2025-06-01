@@ -6,5 +6,9 @@
     "i18n-ally.keystyle": "nested",
     "i18n-ally.namespace": true,
     "i18n-ally.enabledParsers": ["json"],
-    "i18n-ally.localesPaths": "src/shared/i18n/locales"
+    "i18n-ally.localesPaths": "src/shared/i18n/locales",
+    "terminal.integrated.unicodeVersion": "11",
+    "terminal.integrated.fontFamily": "Consolas, 'Courier New', monospace, 'Microsoft YaHei'",
+    "files.encoding": "utf8",
+    "files.autoGuessEncoding": true
 }
