@@ -44,8 +44,15 @@ watch(showAllPages, (newVal, oldVal) => {
   // 监听变化后的处理逻辑
   console.log('showAllPages changed:', newVal);
   page.value = showAllPages.value ? undefined : 1
-  console.log('page.value -----', page.value)
+  leftLoading.value = true
+  rightLoading.value = true
 });
+watch(page, (newVal, oldVal) => {
+  if (newVal !== oldVal) {
+    leftLoading.value = true
+    rightLoading.value = true
+  }
+})
 onMounted(() => {
   const observer = new ResizeObserver(updateDimensions);
   if (pdfContainer.value) {
@@ -113,25 +120,15 @@ const handleDocumentRender = () => {
         </n-spin>
     </div>
   </div>
-  <!-- <n-space justify="center" align="center" style="width: 100%; padding: 10px;">
-        <n-button :disabled="page! <= 1" @click="page!--">❮ 上一页</n-button>
-        <span v-if="!showAllPages">{{ page }} / {{ pageCount }}</span>
-        <n-button :disabled="page! >= pageCount" @click="page!++">下一页 ❯</n-button>
-        <n-switch v-model:value="showAllPages">
-          <template #checked>
-            全部展开
-          </template>
-          <template #unchecked>
-            分页阅读
-          </template>
-        </n-switch>
-      </n-space> -->
+ 
   <div class="app-footer">
     <n-space justify="center" :style="{ padding: '5px' }">
+      <span v-if="!showAllPages">
       <n-button size="small" :disabled="page! <= 1" @click="page!--">❮ 上一页</n-button>
       <!-- <n-input-number v-model:value="page" :min="1" :max="pageCount" size="small" /> -->
-      <span v-if="!showAllPages">{{ page }} / {{ pageCount }}</span>
+     {{ page }} / {{ pageCount }}
       <n-button size="small" :disabled="page! >= pageCount" @click="page!++">下一页 ❯</n-button>
+    </span>
       <n-switch v-model:value="showAllPages">
         <template #checked>单页模式</template>
         <template #unchecked>全页模式</template>
