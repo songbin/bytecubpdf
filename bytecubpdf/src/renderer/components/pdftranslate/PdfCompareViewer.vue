@@ -28,16 +28,37 @@ const pageCount = ref<number>(0)
 const page = ref<number | undefined>(1)
 const isLoading = ref<boolean>(true)
 const showAllPages = ref<boolean>(false)
-const containerWidth = ref(0);
-const containerHeight = ref(0);
-const pdfContainer = ref<HTMLElement | null>(null);
+const containerLeftWidth = ref(0);
+const containerRightWidth = ref(0);
+const containerLeftHeight = ref(0);
+const containerRightHeight = ref(0);
+const leftPdfContainer = ref<HTMLElement | null>(null);
+const rightPdfContainer = ref<HTMLElement | null>(null);
 const leftLoading = ref<boolean>(true)
 const rightLoading = ref<boolean>(true)
+let leftObserver: ResizeObserver | null = null;
+  let rightObserver: ResizeObserver | null = null;
 const emit = defineEmits(['close'])
-const updateDimensions = () => {
-  if (pdfContainer.value) {
-    containerWidth.value = pdfContainer.value.offsetWidth;
-    containerHeight.value = pdfContainer.value.offsetHeight;
+// const updateDimensions = () => {
+//   if (leftPdfContainer.value && rightPdfContainer.value) {
+//     const leftWidth = leftPdfContainer.value.offsetWidth;
+//     const rightWidth = rightPdfContainer.value.offsetWidth;
+//     containerWidth.value = Math.min(leftWidth, rightWidth);
+//     containerHeight.value = Math.max(leftPdfContainer.value.offsetHeight, rightPdfContainer.value.offsetHeight);
+//   }
+// };
+
+const updateLeftDimensions = () => {
+  if (leftPdfContainer.value) {
+    containerLeftWidth.value = leftPdfContainer.value.offsetWidth;
+    containerLeftHeight.value = leftPdfContainer.value.offsetHeight;
+  }
+};
+
+const updateRightDimensions = () => {
+  if (rightPdfContainer.value) {
+    containerRightWidth.value = rightPdfContainer.value.offsetWidth;
+    containerRightHeight.value = rightPdfContainer.value.offsetHeight;
   }
 };
 watch(showAllPages, (newVal, oldVal) => {
@@ -53,17 +74,23 @@ watch(page, (newVal, oldVal) => {
     rightLoading.value = true
   }
 })
-onMounted(() => {
-  const observer = new ResizeObserver(updateDimensions);
-  if (pdfContainer.value) {
-    observer.observe(pdfContainer.value);
-    updateDimensions(); // 初始计算
-  }
-});
 
 onMounted(() => {
-  const observer = new ResizeObserver(updateDimensions);
-  observer.disconnect();
+  leftObserver = new ResizeObserver(updateLeftDimensions);
+  rightObserver = new ResizeObserver(updateRightDimensions);
+  
+  if (leftPdfContainer.value) leftObserver.observe(leftPdfContainer.value);
+  if (rightPdfContainer.value) rightObserver.observe(rightPdfContainer.value);
+  
+  updateLeftDimensions();
+  updateRightDimensions();
+});
+
+ 
+
+onBeforeUnmount(() => {
+  leftObserver?.disconnect();
+  rightObserver?.disconnect();
 });
 const handleLeftRender = () => {
   leftLoading.value = false
@@ -107,16 +134,16 @@ const handleDocumentRender = () => {
     </n-space>
   </div>
   <div class="pdf-compare-container">
-    <div ref="pdfContainer" class="app-content left-pane">
+    <div ref="leftPdfContainer" class="app-content left-panel">
       <n-spin :show="leftLoading">
-      <vue-pdf-embed :source="props.filePathLeft" :page="page" annotation-layer text-layer :width="containerWidth"
-        :height="containerHeight" @loaded="handleDocumentLoad" @rendered="handleLeftRender" />
+      <vue-pdf-embed :source="props.filePathLeft" :page="page" annotation-layer text-layer :width="containerLeftWidth"
+        :height="containerLeftHeight" @loaded="handleDocumentLoad" @rendered="handleLeftRender" />
       </n-spin>
     </div>
-    <div ref="pdfContainer" class="app-content right-pane">
+    <div ref="rightPdfContainer" class="app-content right-pane">
       <n-spin :show="rightLoading">
-      <vue-pdf-embed :source="props.filePathRight" :page="page" annotation-layer text-layer :width="containerWidth"
-        :height="containerHeight" @loaded="handleDocumentLoad" @rendered="handleRightRender" />
+      <vue-pdf-embed :source="props.filePathRight" :page="page" annotation-layer text-layer :width="containerRightWidth"
+        :height="containerRightHeight"  @rendered="handleRightRender" />
         </n-spin>
     </div>
   </div>
@@ -152,7 +179,7 @@ const handleDocumentRender = () => {
 
 .app-content {
   padding: 24px 12px;
-  /* width: 48%; */
+  width: 48%;
 }
 
 .vue-pdf-embed {
@@ -181,14 +208,24 @@ const handleDocumentRender = () => {
   box-shadow: 0 -2px 8px 4px rgba(0, 0, 0, 0.1);
   z-index: 1000;
 }
-
 .left-pane,
 .right-pane {
+  flex: 1;
+  border-right: 1px solid #eee;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+/* .left-panel {
+  flex-shrink: 0;
+  width: 400px;
+  min-width: 400px;  
+}
+
+.right-panel {
   flex: 1;
   min-width: 400px;
   border-right: 1px solid #eee;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
+} */
 
 :deep(.n-spin-container) {
   height: 100%;
