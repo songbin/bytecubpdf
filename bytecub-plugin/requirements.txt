@@ -25,10 +25,10 @@ opencv-python>=4.10.0.84
 orjson>=3.10.14
 peewee>=3.17.8
 pikepdf
-pymupdf>=1.25.1
+pymupdf==1.25.1
 python-dotenv
 python-levenshtein>=0.27.1
-pdfminer.six>=20250416
+pdfminer.six==20250416
 pydantic>=2.10.6
 requests
 rich>=13.9.4
