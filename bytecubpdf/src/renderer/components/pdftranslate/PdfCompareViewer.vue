@@ -113,13 +113,31 @@ const handleDocumentRender = () => {
         </n-spin>
     </div>
   </div>
-
-  <!-- <div class="app-footer">
-    <n-space   :style="{ padding: '10px' }">
-      <n-button size="small" type="success" @click="emit('close')">退出阅读</n-button>
-      <n-button size="small" type="success" @click="toggleFullscreen">全屏(还原)窗口</n-button>
+  <!-- <n-space justify="center" align="center" style="width: 100%; padding: 10px;">
+        <n-button :disabled="page! <= 1" @click="page!--">❮ 上一页</n-button>
+        <span v-if="!showAllPages">{{ page }} / {{ pageCount }}</span>
+        <n-button :disabled="page! >= pageCount" @click="page!++">下一页 ❯</n-button>
+        <n-switch v-model:value="showAllPages">
+          <template #checked>
+            全部展开
+          </template>
+          <template #unchecked>
+            分页阅读
+          </template>
+        </n-switch>
+      </n-space> -->
+  <div class="app-footer">
+    <n-space justify="center" :style="{ padding: '5px' }">
+      <n-button size="small" :disabled="page! <= 1" @click="page!--">❮ 上一页</n-button>
+      <!-- <n-input-number v-model:value="page" :min="1" :max="pageCount" size="small" /> -->
+      <span v-if="!showAllPages">{{ page }} / {{ pageCount }}</span>
+      <n-button size="small" :disabled="page! >= pageCount" @click="page!++">下一页 ❯</n-button>
+      <n-switch v-model:value="showAllPages">
+        <template #checked>单页模式</template>
+        <template #unchecked>全页模式</template>
+      </n-switch>
     </n-space>
-  </div> -->
+  </div>
 </template>
 <style scoped>
 .app-header {
@@ -153,9 +171,18 @@ const handleDocumentRender = () => {
   display: flex;
   gap: 16px;
   width: 100%;
-  /* height: calc(100vh - 24px); */
-  height: 100vh;
+  height: calc(100vh - 80px); /* 减去头部和底部高度 */
+  margin-top: 40px; /* 头部高度 */
   overflow: auto;
+}
+.app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fefdfd;
+  box-shadow: 0 -2px 8px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
 }
 
 .left-pane,
