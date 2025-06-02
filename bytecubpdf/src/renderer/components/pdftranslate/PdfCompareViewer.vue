@@ -39,14 +39,7 @@ const rightLoading = ref<boolean>(true)
 let leftObserver: ResizeObserver | null = null;
   let rightObserver: ResizeObserver | null = null;
 const emit = defineEmits(['close'])
-// const updateDimensions = () => {
-//   if (leftPdfContainer.value && rightPdfContainer.value) {
-//     const leftWidth = leftPdfContainer.value.offsetWidth;
-//     const rightWidth = rightPdfContainer.value.offsetWidth;
-//     containerWidth.value = Math.min(leftWidth, rightWidth);
-//     containerHeight.value = Math.max(leftPdfContainer.value.offsetHeight, rightPdfContainer.value.offsetHeight);
-//   }
-// };
+ 
 
 const updateLeftDimensions = () => {
   if (leftPdfContainer.value) {
@@ -128,7 +121,7 @@ const handleDocumentRender = () => {
 <template>
 
   <div class="app-header">
-    <n-space justify="end" :style="{ padding: '5px' }">
+    <n-space justify="end" :style="{ padding: '5px', 'flex-wrap': 'nowrap' }">
       <n-button size="small" type="success" @click="emit('close')">退出阅读</n-button>
       <n-button size="small" type="success" @click="toggleFullscreen">全屏(还原)窗口</n-button>
     </n-space>
@@ -149,13 +142,26 @@ const handleDocumentRender = () => {
   </div>
  
   <div class="app-footer">
-    <n-space justify="center" :style="{ padding: '5px' }">
-      <span v-if="!showAllPages">
-      <n-button size="small" :disabled="page! <= 1" @click="page!--">❮ 上一页</n-button>
-      <!-- <n-input-number v-model:value="page" :min="1" :max="pageCount" size="small" /> -->
-     {{ page }} / {{ pageCount }}
-      <n-button size="small" :disabled="page! >= pageCount" @click="page!++">下一页 ❯</n-button>
-    </span>
+    <n-space justify="center" :style="{ padding: '5px', 'flex-wrap': 'nowrap' }">
+      <span v-if="!showAllPages"  >
+        <n-button size="small" type="success" :disabled="page! <= 1" @click="page!--">❮ 上一页</n-button>
+        <!-- <n-input-number v-model:value="page" :min="1" :max="pageCount" size="small" /> -->
+       {{ page }} / {{ pageCount }}
+        <n-button size="small"  type="success"   :disabled="page! >= pageCount" @click="page!++">下一页 ❯</n-button>
+        <n-input-number 
+          v-model:value="page"
+          :min="1"
+          :max="pageCount"
+          size="small"
+          style="width: 140px; margin: 0 8px;
+          display: inline-block"
+          placeholder="跳转到"
+        >
+        <template #prefix>
+          转跳页码:
+          </template>
+        </n-input-number>
+      </span>
       <n-switch v-model:value="showAllPages">
         <template #checked>单页模式</template>
         <template #unchecked>全页模式</template>
@@ -214,18 +220,7 @@ const handleDocumentRender = () => {
   border-right: 1px solid #eee;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-/* .left-panel {
-  flex-shrink: 0;
-  width: 400px;
-  min-width: 400px;  
-}
 
-.right-panel {
-  flex: 1;
-  min-width: 400px;
-  border-right: 1px solid #eee;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-} */
 
 :deep(.n-spin-container) {
   height: 100%;
