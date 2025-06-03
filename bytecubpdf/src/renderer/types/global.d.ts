@@ -57,6 +57,6 @@ interface Window {
       getLongTimeNotice: () => Promise<boolean>; // 获取是否太久没升级了
       //重启应用
       restartApp: () => Promise<void>; // 新增重启应用方法
-      
+      listenDownloadProgress: (callback: (progress: number) => void) => void; // 新增监听下载进度方法
     };
 }

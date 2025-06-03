@@ -55,51 +55,57 @@ async function verifyFile(filePath: string, sha3_256_str: string | null): Promis
 }
 
 // 下载文件
-async function downloadFile(url: string, filePath: string, sha3_256_str: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const writer = createWriteStream(filePath);
-    console.log('下载文件:', url , 'filePath:', filePath);
-    axios.get(url, { responseType: 'stream' })
-      .then(response => {
-        response.data.pipe(writer);
-        
-        writer.on('finish', async () => {
-          try {
-            const fileBuffer = await fs.readFile(filePath);
-            const hash = sha3_256(fileBuffer); 
-            if (hash !== sha3_256_str) {
-              await fs.unlink(filePath);
-              console.error(`文件校验失败: ${url}`);
-              reject(new Error('文件校验失败'));
-            } else {
-              resolve();
-            }
-          } catch (err) {
-            reject(err);
-          }
-        });
-        
-        writer.on('error', (err) => {
-          fs.unlink(filePath).catch(() => {});
-          reject(err);
-        });
-        
-        response.data.on('error', (err: Error) => {
-          fs.unlink(filePath).catch(() => {});
-          reject(err);
-        });
-        
-      })
-      .catch(err => {
-        fs.unlink(filePath).catch(() => {});
-        reject(err);
-      });
+async function downloadFile(
+  url: string,
+  filePath: string,
+  sha3_256_str: string,
+  progressCallback?: (p: number) => void
+): Promise<void> {
+  const response = await axios.get(url, {
+    responseType: 'stream',
   });
+
+  const writer = createWriteStream(filePath);
+  const totalSize = Number(response.headers['content-length']) || 0;
+  let receivedSize = 0;
+
+  // 进度计算逻辑
+  response.data.on('data', (chunk: Buffer) => {
+    receivedSize += chunk.length;
+    
+    if (totalSize > 0) {
+      const progress = Math.min(100, Math.floor((receivedSize / totalSize) * 100));
+      progressCallback?.(progress);
+    } else {
+      // 无content-length时按数据块数量估算
+      progressCallback?.(Math.min(100, receivedSize / 1024));
+    }
+  });
+
+  // 保持原有管道传输
+  response.data.pipe(writer);
+
+  // 完成处理
+  await new Promise((resolve, reject) => {
+    writer.on('finish', () => {
+      progressCallback?.(100);
+      resolve(true);
+    });
+    writer.on('error', reject);
+  });
+
+  // 校验逻辑保持不变
+  const fileBuffer = fs.readFileSync(filePath);
+  const hash = sha3_256(fileBuffer);
+  if (hash !== sha3_256_str) {
+    fs.unlinkSync(filePath);
+    throw new Error('文件校验失败');
+  }
 }
 
 // 获取模型路径
 // RapidOCR模型路径获取
-async function getRapidOCRDetModelPath(): Promise<string> {
+async function getRapidOCRDetModelPath(progressCallback?: (p: number) => void): Promise<string> {
   const modelPath = getCacheFilePath('rapidocr_det.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256)) {
@@ -113,7 +119,7 @@ async function getRapidOCRDetModelPath(): Promise<string> {
     try {
       const url = TABLE_DETECTION_RAPIDOCR_MODEL_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载检测模型...`);
-      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256);
+      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256, progressCallback);
       logger.info(`${upstream} 下载成功`);
       return modelPath;
     } catch (error) {
@@ -126,7 +132,7 @@ async function getRapidOCRDetModelPath(): Promise<string> {
   throw new Error(`[检测模型] 所有上游下载失败: ${lastError?.message}`);
 }
 
-async function getRapidOCRRecModelPath(): Promise<string> {
+async function getRapidOCRRecModelPath(progressCallback?: (p: number) => void): Promise<string> {
   const modelPath = getCacheFilePath('rapidocr_rec.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256)) {
@@ -140,7 +146,7 @@ async function getRapidOCRRecModelPath(): Promise<string> {
     try {
       const url = TABLE_DETECTION_RAPIDOCR_MODEL_REC_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载识别模型 ${url}...`);
-      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256);
+      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256,progressCallback);
       logger.info(`${upstream} 下载成功`);
       return modelPath;
     } catch (error) {
@@ -154,7 +160,7 @@ async function getRapidOCRRecModelPath(): Promise<string> {
   return modelPath;
 }
 
-async function getRapidOCRClsModelPath(): Promise<string> {
+async function getRapidOCRClsModelPath(progressCallback?: (p: number) => void): Promise<string> {
   const modelPath = getCacheFilePath('rapidocr_cls.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256)) {
@@ -168,7 +174,7 @@ async function getRapidOCRClsModelPath(): Promise<string> {
     try {
       const url = TABLE_DETECTION_RAPIDOCR_MODEL_CLS_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载分类模型 ${url}...`);
-      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256);
+      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256,progressCallback);
       logger.info(`${upstream} 下载成功`);
       return modelPath;
     } catch (error) {
@@ -182,7 +188,7 @@ async function getRapidOCRClsModelPath(): Promise<string> {
   return modelPath;
 }
 
-async function getDoclayoutOnnxModelPath(): Promise<string> {
+async function getDoclayoutOnnxModelPath(progressCallback?: (p: number) => void): Promise<string> {
   const onnxPath = getCacheFilePath('doclayout_yolo_docstructbench_imgsz1024.onnx', 'models');
   
   if (await verifyFile(onnxPath, DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256)) {
@@ -196,7 +202,7 @@ async function getDoclayoutOnnxModelPath(): Promise<string> {
     try {
       const url = DOC_LAYOUT_ONNX_MODEL_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载文档布局模型 ${url}...`);
-      await downloadFile(url, onnxPath, DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256);
+      await downloadFile(url, onnxPath, DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256,progressCallback);
       logger.info(`${upstream} 下载成功`);
       return onnxPath;
     } catch (error) {
@@ -210,7 +216,7 @@ async function getDoclayoutOnnxModelPath(): Promise<string> {
 }
 
 // 获取字体和元数据
-async function getFontAndMetadata(fontFileName: string): Promise<{ path: string; metadata: any }> {
+async function getFontAndMetadata(fontFileName: string,progressCallback?: (p: number) => void): Promise<{ path: string; metadata: any }> {
   const cacheFilePath = getCacheFilePath(fontFileName, 'fonts');
   
   if (EMBEDDING_FONT_METADATA[fontFileName] && 
@@ -225,7 +231,7 @@ async function getFontAndMetadata(fontFileName: string): Promise<{ path: string;
   const fastestUpstream = 'modelscope';
   const url = FONT_URL_BY_UPSTREAM[fastestUpstream](fontFileName);
   console.log('下载字体地址是:', url);
-  await downloadFile(url, cacheFilePath, EMBEDDING_FONT_METADATA[fontFileName].sha3_256);
+  await downloadFile(url, cacheFilePath, EMBEDDING_FONT_METADATA[fontFileName].sha3_256,progressCallback);
   return {
     path: cacheFilePath,
     metadata: EMBEDDING_FONT_METADATA[fontFileName]
@@ -306,21 +312,24 @@ export const waitDownModelFileList: FileDownloadItem[] = [
     type: 'models'
   }
 ];
-export async function downloadTargetFile(target:FileDownloadItem) : Promise<string>{
+export async function downloadTargetFile(target:FileDownloadItem,progressCallback?: (progress: number) => void) {
   try {
     if(target.type === 'font'){
-      const fontInfo = await getFontAndMetadata(target.name);
+      const fontInfo = await getFontAndMetadata(target.name,progressCallback);
       return fontInfo.path;
     }else if(target.type === 'models'){
       if(target.name === 'rapidocr_det.onnx'){
-        return await getRapidOCRDetModelPath();
+        return await getRapidOCRDetModelPath(progressCallback);
       }else if(target.name === 'rapidocr_rec.onnx'){
-        return await getRapidOCRRecModelPath();
+        return await getRapidOCRRecModelPath(progressCallback);
       }else if(target.name === 'rapidocr_cls.onnx'){
-        return await getRapidOCRClsModelPath();
+        return await getRapidOCRClsModelPath(progressCallback);
       }else if(target.name === 'doclayout_yolo_docstructbench_imgsz1024.onnx'){
-        return await getDoclayoutOnnxModelPath();
+        return await getDoclayoutOnnxModelPath(progressCallback);
       }
+    }
+    if (progressCallback) {
+      progressCallback(currentProgress);
     }
   }catch (error) {
     console.error('下载文件失败:', error);

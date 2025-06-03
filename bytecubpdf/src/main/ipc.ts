@@ -9,6 +9,7 @@ import { initialize } from './core/Initialize'
 import  BuildPath  from './core/BuildPath'
 import { pluginLogger } from './core/PluginLog';
 import { Logger,setupConsoleOverrides } from './core/log';
+import {downloadTargetFile} from './core/assets'
 
 let db: Database | null = null
 const configService = new ConfigService()
@@ -274,4 +275,11 @@ ipcMain.handle('update:launch-installer', async () => {
     console.error('启动安装程序失败:', error);
     return false;
   }
+});
+
+ipcMain.handle('download-file', async (event, target) => {
+  const progressHandler = (progress: number) => {
+    event.sender.send('download-progress', progress);
+  };
+  return await downloadTargetFile(target, progressHandler);
 });

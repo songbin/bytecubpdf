@@ -49,6 +49,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getUpgradeStatus: () => ipcRenderer.invoke('upgrade:getStatus'),
   getUpgradeDownPath: () => ipcRenderer.invoke('upgrade:getDownPath'),
   setUpgradeStatus: (status: boolean, filePath: string) => ipcRenderer.invoke('upgrade:setStatus', status, filePath),
+  
+  
+  listenDownloadProgress: (callback: (progress: number) => void) => {
+    ipcRenderer.on('download-progress', (_, progress) => callback(progress));
+  },
   //重启应用
   restartApp: () => ipcRenderer.invoke('app:restart'),
   // 系统信息
@@ -67,4 +72,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   send: (channel: string, ...args: any[]) => {
     ipcRenderer.send(channel, ...args)
   }
+
+
 })
