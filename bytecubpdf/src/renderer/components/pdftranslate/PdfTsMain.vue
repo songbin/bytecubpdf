@@ -65,9 +65,23 @@
           </n-flex>
           <n-flex  v-if="formData.engine === 'babeldoc'"
             style="background-color: #f5f5ff; border-radius: 8px;">
+          
+          </n-flex>
+          <n-flex 
+            style="background-color: #f5f5ff; border-radius: 8px;">
            
-           
-            <n-form-item label="翻译表格" :show-feedback="false" :style="{ marginBottom: 0 }">
+            <n-form-item label="双语对照" :show-feedback="false" :style="{ marginBottom: 0 }">
+              <n-tooltip trigger="hover">
+                <template #trigger>
+                  <n-icon size="large">
+                    <HelpCircle />
+                  </n-icon>
+                </template>
+                启用后将额外生成双语对照pdf
+              </n-tooltip>
+              <n-switch v-model:value="formData.enableDual" size="small" />
+            </n-form-item>
+            <n-form-item  v-if="formData.engine === 'babeldoc'" label="翻译表格" :show-feedback="false" :style="{ marginBottom: 0 }">
               <n-tooltip trigger="hover">
                 <template #trigger>
                   <n-icon size="large">
@@ -78,7 +92,7 @@
               </n-tooltip>
               <n-switch v-model:value="formData.enableTable" size="small" />
             </n-form-item>
-            <n-form-item label="禁用富文本" :show-feedback="false" :style="{ marginBottom: 0 }">
+            <n-form-item  v-if="formData.engine === 'babeldoc'" label="禁用富文本" :show-feedback="false" :style="{ marginBottom: 0 }">
               <n-tooltip trigger="hover">
                 <template #trigger>
                   <n-icon size="large">
@@ -89,6 +103,7 @@
               </n-tooltip>
               <n-switch v-model:value="formData.disableRichText" size="small" />
             </n-form-item>
+          
           </n-flex>
         </n-flex>
         <n-flex justify="end">
@@ -200,6 +215,7 @@ const formData = ref({
   enableOCR: false,  // 新增OCR识别字段
   disableRichText: false,  // 新增禁用富文字段
   enableTable: false,  // 新增表格翻译字段
+  enableDual: false,  // 新增双语对照字段
 
 });
 const fileList = ref<UploadFileInfo[]>([]);
@@ -244,6 +260,7 @@ onMounted(async () => {
         enableOCR: config.enableOCR || false,  // 新增OCR识别字段
         disableRichText: config.disableRichText || false,  // 新增富文字段
         enableTable: config.enableTable || false,  // 新增表格翻译字段
+        enableDual: config.enableDual || false,  // 新增双语对照字段
       };
       if (config.platformId) {
         await handlePlatformChange(config.platformId);
@@ -282,8 +299,6 @@ const initLogListener = () => {
 
     // 设置定时器，每1秒获取一次日志
     timer = window.setInterval(fetchLogs, 1000);
-
-
   } catch (error) {
     console.error('初始化日志监听失败:', error);
   }
@@ -305,6 +320,7 @@ watch(
       enableOCR: newValue.enableOCR, // 新增
       disableRichText: newValue.disableRichText, // 新增
       enableTable: newValue.enableTable, // 新增
+      enableDual: newValue.enableDual, // 新增
     });
   },
   { deep: true }
@@ -475,6 +491,7 @@ const formatRequestData = async () => {
     enable_ocr: formData.value.enableOCR,  // 新增OCR识别字段
     disable_rich_text: formData.value.disableRichText,  // 新增富文字段
     enable_table: formData.value.enableTable,  // 新增表格翻译字段
+    enbale_dual: formData.value.enableDual,  // 新增双语对照字段
   };
 };
 // 在 handleTranslate 方法之前添加
@@ -502,7 +519,7 @@ const formatHistoryParams = async (resultData: any) => {
     totalPages: resultData.total_pages || 0,
     translationEngine: resultData.core,
     ext1: 'pdf',  // 用于业务识别，这里设置为ocr
-    ext2: '',
+    ext2: resultData.dual_file_name ? resultData.dual_file_name : '', //用户存储原生双语对照文件路径
     ext3: '',
     ext4: '',
     ext5: ''

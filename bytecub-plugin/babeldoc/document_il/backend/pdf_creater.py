@@ -991,7 +991,7 @@ class PDFCreater:
                 dual_out_path = None
                 if not translation_config.no_dual:
                     dual_out_path = translation_config.get_output_file_path(
-                        f"{basename}{debug_suffix}.{translation_config.lang_out}.dual.pdf",
+                        f"{basename}{debug_suffix}.{time_str}.{translation_config.lang_out}.dual.pdf",
                     )
                     translation_config.raise_if_cancelled()
                     original_pdf = pymupdf.open(self.original_pdf_path)

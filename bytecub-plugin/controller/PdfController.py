@@ -53,7 +53,8 @@ class TranslateRequestModel(BaseModel):
     max_pages: Optional[int] = 0
     enable_ocr: Optional[bool] = False
     disable_rich_text: Optional[bool] = False
-    enable_table: Optional[bool] = False
+    enable_table: Optional[bool] = False,
+    enbale_dual: Optional[bool] = False,
 
 class OcrRequestModel(BaseModel):
     file_path: str
@@ -252,7 +253,10 @@ class PdfController:
 
             def run_translate():
                 try:
-                    target_file_name, source_file_name, total_page = PdfMathService.translate(
+                    no_dual = True
+                    if request.enbale_dual:
+                        no_dual = False
+                    target_file_name, source_file_name,dual_file_name, total_page = PdfMathService.translate(
                         file_path=request.file_path,
                         lang_in=request.sourceLanguage,
                         lang_out=request.targetLanguage,
@@ -263,11 +267,14 @@ class PdfController:
                         base_url=request.base_url,
                         callback=on_page_callback,
                         cancellation_event=cancellation_event,
-                        term_dict=request.term_dict
+                        term_dict=request.term_dict,
+                        no_dual = no_dual,  # 新增禁用双页翻译字段
                     )
+                    dual_file_name = dual_file_name if dual_file_name else ''
                     final_result = {
                         "source": source_file_name,
                         "target": target_file_name,
+                        "dual_file_name": dual_file_name,
                         "total_pages": total_page,
                         "core": TSCore.pdfmath,
                     }
@@ -277,7 +284,10 @@ class PdfController:
                     progress_queue.put({"status": "error", "message": str(e)})
             def run_babel_translate():
                 try:
-                    file_url, target_file_name, source_base_name, total_page = PdfBabelSerive.translate(
+                    no_dual = True
+                    if request.enbale_dual:
+                        no_dual = False
+                    file_url, target_file_name, source_base_name, dual_file_name, total_page = PdfBabelSerive.translate(
                         file_path=request.file_path,
                         lang_in=request.sourceLanguage,
                         lang_out=request.targetLanguage,
@@ -292,13 +302,16 @@ class PdfController:
                         max_pages = request.max_pages,  # 新增每页最大页数字段
                         enable_ocr = request.enable_ocr,  # 新增OCR识别字段
                         disable_rich_text = request.disable_rich_text,  # 新增禁用富文字段
-                        enable_table = request.enable_table  # 新增表格翻译字段
+                        enable_table = request.enable_table,  # 新增表格翻译字段
+                        no_dual = no_dual
                     )
+                    dual_file_name = dual_file_name if dual_file_name else ''
                     final_result = {
                         "source": source_base_name,
                         "target": target_file_name,
                         "total_pages": total_page,
-                        "core": TSCore.babeldoc
+                        "core": TSCore.babeldoc,
+                        "dual_file_name": dual_file_name,
                     }
                     progress_queue.put({"status": "completed", "process": 100, "result": final_result, "msg": "翻译完成"})
                 except Exception as e:

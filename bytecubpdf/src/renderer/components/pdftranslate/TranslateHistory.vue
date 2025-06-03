@@ -186,7 +186,7 @@ const columns: TableColumn<TranslateHistory>[] = [
   {
     title: '操作',
     key: 'actions',
-    width: 180,
+    width: 200,
     fixed: 'right',
     render(row: TranslateHistory) {
       return h(NSpace, { justify: 'start', size: 'small' }, () => [
@@ -210,6 +210,16 @@ const columns: TableColumn<TranslateHistory>[] = [
           },
           () => '看译'
         ),
+        row.ext2 ? h(
+          NButton,
+          {
+            size: 'small',
+            type: 'success',
+            text: true,
+            onClick: () => handleViewTarget(row.ext2!),
+          },
+          () => '原生对照'
+        ) : null,
         h(
           NButton,
           {

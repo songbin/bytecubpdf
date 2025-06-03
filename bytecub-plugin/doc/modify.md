@@ -9,6 +9,8 @@
    font_path = ConfigManager.get("NOTO_FONT_PATH", Path("/app", font_name).as_posix())
    改成这样
    font_path = TSConstants.fonts_folder / font_name
+### 1.4 增加双语对照pdf生成
+    在high_level.py中增加create_side_by_side_dual_pdf方法，用于生成双语对照pdf。
 ### 1.4  babelDoc的修改
    
    #### 1,在pdf_creater.py中给输出文件加时间戳
@@ -16,6 +18,10 @@
    time_str = TimeUtil.get_yyyymmddhhmmss()
         mono_out_path = translation_config.get_output_file_path(
             f"{basename}{debug_suffix}.{time_str}{translation_config.lang_out}.mono.pdf",
+        )
+    给dual_out_path也加时间戳
+        dual_out_path = translation_config.get_output_file_path(
+            f"{basename}{debug_suffix}.{time_str}{translation_config.lang_out}.dual.pdf",
         )
         #增加获取总页数
       pdf = pymupdf.open(self.original_pdf_path)

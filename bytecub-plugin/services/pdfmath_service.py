@@ -78,6 +78,7 @@ class PdfMathService:
         callback = None,
         cancellation_event=None,
         term_dict = None,
+        no_dual: bool = True,  # 新增禁用双页翻译字段
     ):
         save_path = os.path.join(os.getcwd(), TSConstants.translate_folder)
             
@@ -103,6 +104,7 @@ class PdfMathService:
             "envs": envs,
             "prompt": None,
             "model": ModelInstance.value,
+            "no_dual": no_dual,
         }
         try:
             translate_pdf = translate(**param)

@@ -21,7 +21,7 @@ from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
 from pymupdf import Document, Font
-
+import pymupdf
 from pdf2zh.converter import TranslateConverter
 from pdf2zh.doclayout import OnnxModel
 from pdf2zh.pdfinterp import PDFPageInterpreterEx
@@ -182,6 +182,7 @@ def translate_stream(
     prompt: Template = None,
     skip_subset_fonts: bool = False,
     babeldoc: bool = False,
+    no_dual: bool = False,
     **kwarg: Any,
 ):
     font_list = [("tiro", None)]
@@ -237,6 +238,7 @@ def translate_stream(
         # print(ops_old)
         # print(ops_new.encode())
         doc_zh.update_stream(obj_id, ops_new.encode())
+  
 
     doc_en.insert_file(doc_zh)
     for id in range(page_count):
@@ -317,6 +319,7 @@ def translate(
     envs: Dict = None,
     prompt: Template = None,
     skip_subset_fonts: bool = False,
+    no_dual: bool = False,
     **kwarg: Any,
 ):
     if not files:
@@ -391,9 +394,18 @@ def translate(
         doc_mono = open(file_mono, "wb") 
         doc_mono.write(s_mono) 
         doc_mono.close()
+        file_dual_name = ''
+        if not no_dual: 
+            dual_pdf:pymupdf.Document = create_side_by_side_dual_pdf(file_path,file_mono )
+            dual_pdf.write(deflate=True, garbage=3, use_objstms=1),
+            file_dual_name = f"{filename}-{lang_out}-dual.pdf"
+            file_dual = Path(output) / f"{file_dual_name}"
+            dual_pdf.save(file_dual)
+            
+            dual_pdf.close()
         # result_files.append((str(file_mono), str(file_dual)))
 
-    return (str(target_file_name),str(source_file_name),total_pages)
+    return (str(target_file_name),str(source_file_name), str(file_dual_name), total_pages)
 
 
 def download_remote_fonts(lang: str):
@@ -427,4 +439,82 @@ def download_remote_fonts(lang: str):
 
     return font_path
 
+def create_side_by_side_dual_pdf(
+        # original_pdf: pymupdf.Document,
+        # translated_pdf: pymupdf.Document,
+        source_path: str,
+        target_path: str,
+    ) -> pymupdf.Document:
+        """Create a dual PDF with side-by-side pages (original and translation).
 
+        Args:
+            original_pdf: Original PDF document
+            translated_pdf: Translated PDF document
+            dual_out_path: Output path for the dual PDF
+           
+
+        Returns:
+            The created dual PDF document
+        """
+        original_pdf = pymupdf.open(source_path)
+        translated_pdf = pymupdf.open(target_path)
+        # Create a new PDF for side-by-side pages
+        dual = pymupdf.open()
+        page_count = min(original_pdf.page_count, translated_pdf.page_count)
+
+        for page_id in range(page_count):
+            # Get pages from both PDFs
+            orig_page = original_pdf[page_id]
+            trans_page = translated_pdf[page_id]
+            rotate_angle = orig_page.rotation
+            total_width = orig_page.rect.width + trans_page.rect.width
+            max_height = max(orig_page.rect.height, trans_page.rect.height)
+            left_width = (
+                orig_page.rect.width
+            )
+
+            orig_page.set_rotation(0)
+            trans_page.set_rotation(0)
+
+            # Create new page with combined width
+            dual_page = dual.new_page(width=total_width, height=max_height)
+
+            # Define rectangles for left and right sides
+            rect_left = pymupdf.Rect(0, 0, left_width, max_height)
+            rect_right = pymupdf.Rect(left_width, 0, total_width, max_height)
+
+            # Show pages according to dual_translate_first setting
+            # if translation_config.dual_translate_first:
+            #     # Show translated page on left and original on right
+            #     rect_left, rect_right = rect_right, rect_left
+            try:
+                # Show original page on left and translated on right (default)
+                dual_page.show_pdf_page(
+                    rect_left,
+                    original_pdf,
+                    page_id,
+                    keep_proportion=True,
+                    rotate=-rotate_angle,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to show original page on left and translated on right (default). "
+                    f"Page ID: {page_id}. ",
+                   
+                    exc_info=e,
+                )
+            try:
+                dual_page.show_pdf_page(
+                    rect_right,
+                    translated_pdf,
+                    page_id,
+                    keep_proportion=True,
+                    rotate=-rotate_angle,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to show translated page on left and original on right. "
+                    f"Page ID: {page_id}. ",
+                    exc_info=e,
+                )
+        return dual

@@ -11,6 +11,7 @@ import os
 from babeldoc.translation_config import WatermarkOutputMode
 import asyncio
 from functools import partial
+from pathlib import Path
 class PdfBabelSerive:
     def __init__(self, pdf_file):
         self.pdf_file = pdf_file
@@ -35,7 +36,8 @@ class PdfBabelSerive:
         max_pages: int = 0,  # 新增每页最大页数字段
         enable_ocr: bool = False,  # 新增OCR识别字段
         disable_rich_text: bool = False,  # 新增禁用富文字段
-        enable_table: bool = False  # 新增表格翻译字段
+        enable_table: bool = False,  # 新增表格翻译字段
+        no_dual: bool = True,  # 新增禁用双页翻译字段
     ):
         # 检查文件是否存在
         if not os.path.exists(file_path):
@@ -76,7 +78,7 @@ class PdfBabelSerive:
                 debug=False,
                 lang_in=lang_in,
                 lang_out=lang_out,
-                no_dual=True,
+                no_dual=no_dual,
                 no_mono=False,
                 qps=thread,
                 watermark_output_mode = WatermarkOutputMode.NoWatermark,
@@ -123,9 +125,13 @@ class PdfBabelSerive:
                             result = event["translate_result"]
                             logger.info(f"###########Translation finished: {result}")
                             logger.info(f"#############Translation finished: {result.mono_pdf_path}")
+                            dual_out_file_name = None
+                            if result.dual_pdf_path:
+                                dual_out_file_name =  Path(result.dual_pdf_path).name 
                             return (str(result.mono_pdf_path), 
                             result.mono_out_file_name,
                             result.source_base_name,
+                            dual_out_file_name,
                              result.total_pages)
                             #break
 

@@ -12,6 +12,7 @@ export interface PdfTranslateConfig {
   enableOCR: boolean,  // 新增OCR识别字段
   disableRichText: boolean,  // 新增富文字段
   enableTable: boolean,  // 新增表格翻译字段
+  enableDual: boolean,  // 新增双栏翻译字段
 }
 
 export default class PdfTsIndexDb {
