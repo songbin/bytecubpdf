@@ -6,6 +6,7 @@ import path from 'path';
 import { mkdirSync } from 'fs';
 import { existsSync } from 'fs';
 import BuildPath from '@/main/core/BuildPath';
+import {warmup} from '@/main/core/assets';
 const configService = new ConfigService();
 export async function initialize() {
   let storagePath = configService.getFileStoragePath();
@@ -19,4 +20,5 @@ export async function initialize() {
     storagePath = defaultStoragePath;
   }
    await sqliteDBInit.initTables();
+   await warmup();
 }
