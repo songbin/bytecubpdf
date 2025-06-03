@@ -85,7 +85,7 @@ class PdfBabelSerive:
                 use_rich_pbar = False,
                 split_strategy=None,
                 disable_rich_text_translate = disable_rich_text,
-                ocr_workaround = False,
+                ocr_workaround = enable_ocr,
                 table_model = table_model,
                 skip_clean = True,
             )

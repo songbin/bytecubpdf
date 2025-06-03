@@ -81,6 +81,17 @@
               </n-tooltip>
               <n-switch v-model:value="formData.enableDual" size="small" />
             </n-form-item>
+            <n-form-item  v-if="formData.engine === 'babeldoc'" label="消除重影" :show-feedback="false" :style="{ marginBottom: 0 }">
+              <n-tooltip trigger="hover">
+                <template #trigger>
+                  <n-icon size="large">
+                    <HelpCircle />
+                  </n-icon>
+                </template>
+                如果翻译后的文档有重影，可以开启这个试一试
+              </n-tooltip>
+              <n-switch v-model:value="formData.enableOCR" size="small" />
+            </n-form-item>
             <n-form-item  v-if="formData.engine === 'babeldoc'" label="翻译表格" :show-feedback="false" :style="{ marginBottom: 0 }">
               <n-tooltip trigger="hover">
                 <template #trigger>
