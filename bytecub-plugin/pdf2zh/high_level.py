@@ -25,14 +25,14 @@ import pymupdf
 from pdf2zh.converter import TranslateConverter
 from pdf2zh.doclayout import OnnxModel
 from pdf2zh.pdfinterp import PDFPageInterpreterEx
-
+from utils.chatlog import logger
 from pdf2zh.config import ConfigManager
 # from babeldoc.assets import get_font_and_metadata
 from babeldoc.assets import assets
 
 NOTO_NAME = "noto"
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 noto_list = [
     "am",  # Amharic
@@ -244,8 +244,12 @@ def translate_stream(
     for id in range(page_count):
         doc_en.move_page(page_count + id, id * 2 + 1)
     if not skip_subset_fonts:
-        doc_zh.subset_fonts(fallback=True)
-        doc_en.subset_fonts(fallback=True)
+        try:
+            doc_zh.subset_fonts(fallback=True)
+            doc_en.subset_fonts(fallback=True)
+        except Exception as e:
+            logger.warning_ext(f"subset_fonts error: {e}")
+        
     return (
         doc_zh.write(deflate=True, garbage=3, use_objstms=1),
         doc_en.write(deflate=True, garbage=3, use_objstms=1),
