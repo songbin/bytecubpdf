@@ -12,6 +12,8 @@ export const STORAGE_CONFIG = {
     cachedir: 'cachedata', //root/cachedir 缓存目录名称,字体啊 模型啊 文件啊 都存在这里
     file: 'files', // root/cachedir/files文件目录名称
     uploaddir: 'upload', // root/cachedir/files/upload上传目录名称
+    models: 'models',// root/cachedir/files/models模型目录名称, 模型下载目录
+    fonts:'fonts',// root/cachedir/files/fonts字体目录名称, 字体下载目录 
     
     translatedir: 'translate', // root/cachedir/files/translate翻译目录名称
     ocruploaddir: 'upload_ocr', // root/cachedir/files/upload上传目录名称
@@ -31,7 +33,11 @@ export const VERSION = {
     "version" : 'v0.5.0', //以后版本号前面要加个v，和version文件保持一致
     "buildNumber" : 20250052701
 }
-
+export type FileDownloadItem = {
+    name: string;
+    expectedSha: string;
+    type: 'font' | 'models';
+  };
 // export const APP_CONFIG = {
 //     appName: 'bytecub', // 应用名称
 //     version: '0.2.0',

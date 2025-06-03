@@ -129,6 +129,21 @@ class BuildPath {
         }
         return usePath;
     } 
+
+    static getModelDownDir(): string {
+        const usePath = path.join(BuildPath.getRootPath(), STORAGE_CONFIG.cachedir, STORAGE_CONFIG.models);
+        if (!fs.existsSync(usePath)) {
+            fs.mkdirSync(usePath, { recursive: true });
+        }
+       return usePath;
+    }
+    static getFontDownDir(): string {
+        const usePath = path.join(BuildPath.getRootPath(), STORAGE_CONFIG.cachedir, STORAGE_CONFIG.fonts);
+        if (!fs.existsSync(usePath)) {
+            fs.mkdirSync(usePath, { recursive: true });
+        }
+       return usePath;
+    }
 }
 
 export default BuildPath;

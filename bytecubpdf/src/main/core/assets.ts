@@ -1,11 +1,11 @@
 import fs from 'fs/promises';
 import { mkdirSync } from 'fs';
 import { createWriteStream } from 'fs';
-import crypto from 'crypto';
 import path from 'path';
 import { sha3_256 } from 'js-sha3';
-import { app } from 'electron';
+import { FileDownloadItem } from '@/shared/constants/dfconstants';
 import axios from 'axios';
+import BuildPath from './BuildPath';
 import {
   DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256,
   TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256,
@@ -25,8 +25,16 @@ const logger = console;
 
 // 获取缓存文件路径
 function getCacheFilePath(fileName: string, type: 'fonts' | 'models' | 'assets' | 'tiktoken') {
-  const userDataPath = app.getPath('userData');
-  const targetDir = path.join(userDataPath, 'babeldoc-cache', type);
+  let targetDir = '';
+  if (type === 'fonts') {
+    targetDir =  path.join(BuildPath.getFontDownDir(), fileName);
+  }else if (type === 'models') {
+    targetDir =   path.join(BuildPath.getModelDownDir(), fileName);
+  }else{
+    console.error('无效的下载类型', type, 'fileName', fileName);
+    throw new Error('无效的类型');
+  }
+  
   mkdirSync(targetDir, { recursive: true });
   return path.join(targetDir, fileName);
 }
@@ -246,9 +254,6 @@ async function downloadAllResources() {
       getFontAndMetadata(fontFileName)
         .catch(err => logger.error(`字体${fontFileName}下载失败:`, err))
     ),
-    
-    // 下载其他类型资源（可根据需要扩展）
-    // getOtherResources()
   ];
 
   const results = await Promise.allSettled(downloadTasks);
@@ -269,6 +274,89 @@ async function warmup() {
   return downloadAllResources();
 }
 
+ 
+export const waitDownFontList: FileDownloadItem[] = Object.keys(EMBEDDING_FONT_METADATA).map(fontFileName => {
+  
+  return {
+    name: fontFileName,
+    expectedSha: EMBEDDING_FONT_METADATA[fontFileName].sha3_256,
+    type: 'font'
+  };
+});
+export const waitDownModelFileList: FileDownloadItem[] = [
+ 
+  {
+    name: 'rapidocr_det.onnx',
+    expectedSha: TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256,
+    type: 'models'
+  },
+  {
+    name: 'rapidocr_rec.onnx',
+    expectedSha: TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256,
+    type: 'models'
+  },
+  {
+    name: 'rapidocr_cls.onnx',
+    expectedSha: TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256,
+    type: 'models'
+  },
+  {
+    name: 'doclayout_yolo_docstructbench_imgsz1024.onnx',
+    expectedSha: DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256,
+    type: 'models'
+  }
+];
+export async function downloadTargetFile(target:FileDownloadItem) : Promise<string>{
+  try {
+    if(target.type === 'font'){
+      const fontInfo = await getFontAndMetadata(target.name);
+      return fontInfo.path;
+    }else if(target.type === 'models'){
+      if(target.name === 'rapidocr_det.onnx'){
+        return await getRapidOCRDetModelPath();
+      }else if(target.name === 'rapidocr_rec.onnx'){
+        return await getRapidOCRRecModelPath();
+      }else if(target.name === 'rapidocr_cls.onnx'){
+        return await getRapidOCRClsModelPath();
+      }else if(target.name === 'doclayout_yolo_docstructbench_imgsz1024.onnx'){
+        return await getDoclayoutOnnxModelPath();
+      }
+    }
+  }catch (error) {
+    console.error('下载文件失败:', error);
+  }
+  return '';
+}
+export async function verifyFileDownloads(): Promise<FileDownloadItem[]> {
+  const waitDownFileList = [...waitDownModelFileList, ...waitDownFontList ];
+  const fileList: FileDownloadItem[] = waitDownFileList;
+  console.log('正在验证文件列表：', fileList.map(f => f.name));
+
+  const failedFiles = [];
+  
+  for (const item of fileList) {
+    try {
+      let path = getCacheFilePath(item.name, 'models');
+      if(item.name.startsWith('fonts')){
+        path = getCacheFilePath(item.name,'fonts');
+      }
+      // 检查文件是否存在
+      await fs.access(path);
+      
+      // 计算文件SHA256
+      const fileBuffer = await fs.readFile(path);
+      const hash = sha3_256(fileBuffer); 
+      
+      if (hash !== item.expectedSha.toLowerCase()) {
+        failedFiles.push(item);
+      }
+    } catch (error) {
+      failedFiles.push(item);
+    }
+  }
+  
+  return failedFiles;
+}
 export {
   getCacheFilePath,
   verifyFile,
@@ -282,3 +370,4 @@ export {
   downloadAllResources,
   getFontFamily
 };
+
