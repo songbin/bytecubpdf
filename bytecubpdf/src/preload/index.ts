@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import {LogLevel} from '@/shared/constants/dfconstants'
+import {LogLevel,FileDownloadItem} from '@/shared/constants/dfconstants'
 // 添加点击事件监听器防止事件冒泡问题
 // document.addEventListener('click', (e) => {
 //   e.stopPropagation()
@@ -27,6 +27,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getFileStoragePath: () => ipcRenderer.invoke('config:getFileStoragePath'),
   saveFileStoragePath: (path: string) => ipcRenderer.invoke('config:saveFileStoragePath', path),
   DbInitTables: () => ipcRenderer.invoke('db:initTables'),
+  // 在暴露的electronAPI对象中添加
+  downloadFile: (target: FileDownloadItem) => ipcRenderer.invoke('download-file', target),
+
+  // 添加进度监听事件处理
+  onDownloadProgress: (callback: (progress: number) => void) => {
+    ipcRenderer.on('download-progress', (_, progress) => callback(progress));
+    return () => ipcRenderer.removeAllListeners('download-progress');
+  },
   //系统路径
   getRootPath: () => ipcRenderer.invoke('dir:root'),
   getCacheDirPath: () => ipcRenderer.invoke('dir:cachedata'),

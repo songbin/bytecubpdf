@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import { get } from "http";
-
+import {LogLevel,FileDownloadItem} from '@/shared/constants/dfconstants'
 interface Window {
     electronAPI?: {
       platform: NodeJS.Platform;
@@ -58,5 +58,10 @@ interface Window {
       //重启应用
       restartApp: () => Promise<void>; // 新增重启应用方法
       listenDownloadProgress: (callback: (progress: number) => void) => void; // 新增监听下载进度方法
+      
+      downloadFile: (target: FileDownloadItem) => Promise<boolean>;
+      onDownloadProgress: (callback: (progress: number) => void) => void;
+  
+    
     };
 }

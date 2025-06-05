@@ -3,7 +3,7 @@ import { mkdirSync } from 'fs';
 import { createWriteStream } from 'fs';
 import path from 'path';
 import { sha3_256 } from 'js-sha3';
-import { FileDownloadItem } from '@/shared/constants/dfconstants';
+import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
 import axios from 'axios';
 import BuildPath from './BuildPath';
 import {
@@ -55,11 +55,13 @@ async function verifyFile(filePath: string, sha3_256_str: string | null): Promis
 }
 
 // 下载文件
-async function downloadFile(
+async function  downloadFile(
   url: string,
   filePath: string,
   sha3_256_str: string,
-  progressCallback?: (p: number) => void
+  name: string,
+  type: 'font' | 'models',
+  progressCallback?: (p: DownloadProgress) => void
 ): Promise<void> {
   const response = await axios.get(url, {
     responseType: 'stream',
@@ -68,44 +70,104 @@ async function downloadFile(
   const writer = createWriteStream(filePath);
   const totalSize = Number(response.headers['content-length']) || 0;
   let receivedSize = 0;
+  let startTime = Date.now();
+  let lastUpdate = 0;
 
-  // 进度计算逻辑
   response.data.on('data', (chunk: Buffer) => {
     receivedSize += chunk.length;
+    const currentTime = Date.now();
     
-    if (totalSize > 0) {
-      const progress = Math.min(100, Math.floor((receivedSize / totalSize) * 100));
-      progressCallback?.(progress);
-    } else {
-      // 无content-length时按数据块数量估算
-      progressCallback?.(Math.min(100, receivedSize / 1024));
+    // 计算进度
+    const progress = Math.round((receivedSize / totalSize) * 100);
+    
+    // 计算下载速度 (字节/秒)
+    const elapsed = (currentTime - startTime) / 1000;
+    const speed = elapsed > 0 ? receivedSize / elapsed : 0;
+    
+    // 计算剩余时间 (秒)
+    const remainingBytes = totalSize - receivedSize;
+    const eta = speed > 0 ? remainingBytes / speed : 0;
+    
+    // 限制更新频率 (至少100ms更新一次)
+    if (currentTime - lastUpdate > 100 || progress === 100) {
+      progressCallback?.({
+        progress,
+        speed,
+        eta,
+        name,
+        type,
+        status: 'downloading'
+      });
+      lastUpdate = currentTime;
     }
   });
 
+  response.data.on('end', () => {
+    progressCallback?.({
+      progress: 99,
+      speed: 0,
+      eta: 0,
+      name,
+      type,
+      status: 'completed'
+    });
+  });
+
+  response.data.on('error', (err: Error) => {
+    progressCallback?.({
+      progress: Math.round((receivedSize / totalSize) * 100),
+      speed: 0,
+      eta: 0,
+      name,
+      type,
+      status: 'failed'
+    });
+    // ... existing error handling ...
+  });
+  
   // 保持原有管道传输
   response.data.pipe(writer);
 
   // 完成处理
   await new Promise((resolve, reject) => {
     writer.on('finish', () => {
-      progressCallback?.(100);
+      // 修改所有progressCallback调用为DownloadProgress结构体
+      progressCallback?.({
+        progress: 100,
+        speed: 0,
+        eta: 0,
+        name,
+        type,
+        status: 'completed'
+      });
+      
+      // 在downloadFile回调中保持统一适配
+      (progress: DownloadProgress) => {
+        if (progressCallback) {
+          progressCallback(progress);
+        }
+      }
       resolve(true);
     });
     writer.on('error', reject);
   });
+  
+  // 其他函数中的progressCallback调用已统一适配
+  // 例如：
+  // progressCallback?.({percentage: progress.percentage});
 
   // 校验逻辑保持不变
-  const fileBuffer = fs.readFileSync(filePath);
+  const fileBuffer = await fs.readFile(filePath);
   const hash = sha3_256(fileBuffer);
   if (hash !== sha3_256_str) {
-    fs.unlinkSync(filePath);
+    fs.unlink(filePath);
     throw new Error('文件校验失败');
   }
 }
 
 // 获取模型路径
 // RapidOCR模型路径获取
-async function getRapidOCRDetModelPath(progressCallback?: (p: number) => void): Promise<string> {
+async function getRapidOCRDetModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
   const modelPath = getCacheFilePath('rapidocr_det.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256)) {
@@ -119,7 +181,11 @@ async function getRapidOCRDetModelPath(progressCallback?: (p: number) => void): 
     try {
       const url = TABLE_DETECTION_RAPIDOCR_MODEL_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载检测模型...`);
-      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256, progressCallback);
+      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256, 'rapidocr_det.onnx', 'models', (progress: DownloadProgress) => {
+        if (progressCallback) {
+          progressCallback(progress.percentage);
+        }
+      });
       logger.info(`${upstream} 下载成功`);
       return modelPath;
     } catch (error) {
@@ -132,7 +198,7 @@ async function getRapidOCRDetModelPath(progressCallback?: (p: number) => void): 
   throw new Error(`[检测模型] 所有上游下载失败: ${lastError?.message}`);
 }
 
-async function getRapidOCRRecModelPath(progressCallback?: (p: number) => void): Promise<string> {
+async function getRapidOCRRecModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
   const modelPath = getCacheFilePath('rapidocr_rec.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256)) {
@@ -146,7 +212,11 @@ async function getRapidOCRRecModelPath(progressCallback?: (p: number) => void): 
     try {
       const url = TABLE_DETECTION_RAPIDOCR_MODEL_REC_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载识别模型 ${url}...`);
-      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256,progressCallback);
+      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256, 'rapidocr_rec.onnx', 'models', (progress: DownloadProgress) => {
+        if (progressCallback) {
+          progressCallback(progress.percentage);
+        }
+      });
       logger.info(`${upstream} 下载成功`);
       return modelPath;
     } catch (error) {
@@ -160,7 +230,7 @@ async function getRapidOCRRecModelPath(progressCallback?: (p: number) => void): 
   return modelPath;
 }
 
-async function getRapidOCRClsModelPath(progressCallback?: (p: number) => void): Promise<string> {
+async function getRapidOCRClsModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
   const modelPath = getCacheFilePath('rapidocr_cls.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256)) {
@@ -174,7 +244,11 @@ async function getRapidOCRClsModelPath(progressCallback?: (p: number) => void): 
     try {
       const url = TABLE_DETECTION_RAPIDOCR_MODEL_CLS_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载分类模型 ${url}...`);
-      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256,progressCallback);
+      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256, 'rapidocr_cls.onnx', 'models', (progress: DownloadProgress) => {
+        if (progressCallback) {
+          progressCallback(progress.percentage);
+        }
+      });
       logger.info(`${upstream} 下载成功`);
       return modelPath;
     } catch (error) {
@@ -188,7 +262,7 @@ async function getRapidOCRClsModelPath(progressCallback?: (p: number) => void): 
   return modelPath;
 }
 
-async function getDoclayoutOnnxModelPath(progressCallback?: (p: number) => void): Promise<string> {
+async function getDoclayoutOnnxModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
   const onnxPath = getCacheFilePath('doclayout_yolo_docstructbench_imgsz1024.onnx', 'models');
   
   if (await verifyFile(onnxPath, DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256)) {
@@ -202,7 +276,11 @@ async function getDoclayoutOnnxModelPath(progressCallback?: (p: number) => void)
     try {
       const url = DOC_LAYOUT_ONNX_MODEL_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载文档布局模型 ${url}...`);
-      await downloadFile(url, onnxPath, DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256,progressCallback);
+      await downloadFile(url, onnxPath, DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256, 'doclayout_yolo_docstructbench_imgsz1024.onnx', 'models', (progress: DownloadProgress) => {
+        if (progressCallback) {
+          progressCallback(progress.percentage);
+        }
+      });
       logger.info(`${upstream} 下载成功`);
       return onnxPath;
     } catch (error) {
@@ -216,7 +294,7 @@ async function getDoclayoutOnnxModelPath(progressCallback?: (p: number) => void)
 }
 
 // 获取字体和元数据
-async function getFontAndMetadata(fontFileName: string,progressCallback?: (p: number) => void): Promise<{ path: string; metadata: any }> {
+async function getFontAndMetadata(fontFileName: string,progressCallback?: (p: DownloadProgress) => void): Promise<{ path: string; metadata: any }> {
   const cacheFilePath = getCacheFilePath(fontFileName, 'fonts');
   
   if (EMBEDDING_FONT_METADATA[fontFileName] && 
@@ -231,7 +309,12 @@ async function getFontAndMetadata(fontFileName: string,progressCallback?: (p: nu
   const fastestUpstream = 'modelscope';
   const url = FONT_URL_BY_UPSTREAM[fastestUpstream](fontFileName);
   console.log('下载字体地址是:', url);
-  await downloadFile(url, cacheFilePath, EMBEDDING_FONT_METADATA[fontFileName].sha3_256,progressCallback);
+  await downloadFile(url, cacheFilePath, EMBEDDING_FONT_METADATA[fontFileName].sha3_256, fontFileName, 'font', (progress: DownloadProgress) => {
+    if (progressCallback) {
+      // 假设DownloadProgress对象包含percentage属性
+      progressCallback(progress.percentage);
+    }
+  });
   return {
     path: cacheFilePath,
     metadata: EMBEDDING_FONT_METADATA[fontFileName]
@@ -312,7 +395,7 @@ export const waitDownModelFileList: FileDownloadItem[] = [
     type: 'models'
   }
 ];
-export async function downloadTargetFile(target:FileDownloadItem,progressCallback?: (progress: number) => void) {
+export async function downloadTargetFile(target:FileDownloadItem,progressCallback?: (progress: DownloadProgress) => void) {
   try {
     if(target.type === 'font'){
       const fontInfo = await getFontAndMetadata(target.name,progressCallback);
@@ -328,11 +411,17 @@ export async function downloadTargetFile(target:FileDownloadItem,progressCallbac
         return await getDoclayoutOnnxModelPath(progressCallback);
       }
     }
-    if (progressCallback) {
-      progressCallback(currentProgress);
-    }
+     
   }catch (error) {
     console.error('下载文件失败:', error);
+    progressCallback?.({
+      progress: progress.progress,
+      speed: 0,
+      eta: 0,
+      name:progress.name,
+      type:progress.type,
+      status: 'failed'
+    });
   }
   return '';
 }

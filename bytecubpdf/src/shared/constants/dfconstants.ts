@@ -33,10 +33,20 @@ export const VERSION = {
     "version" : 'v0.5.0', //以后版本号前面要加个v，和version文件保持一致
     "buildNumber" : 20250052701
 }
+//下载模型字体等资源文件的请求参数格式
 export type FileDownloadItem = {
     name: string;
     expectedSha: string;
     type: 'font' | 'models';
+  };
+//下载模型字体等资源文件的下载过程中返回的进度格式
+export type DownloadProgress = {
+    progress: number; // 下载进度，0-100
+    speed: number; // 下载速度，单位：字节/秒
+    eta: number; // 预计剩余时间，单位：秒
+    name: string; // 下载的文件名称
+    type: 'font' |'models'; // 下载的文件类型
+    status: 'downloading' | 'completed' | 'failed'; // 下载状态
   };
 // export const APP_CONFIG = {
 //     appName: 'bytecub', // 应用名称
