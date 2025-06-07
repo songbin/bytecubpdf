@@ -36,19 +36,19 @@ async def lifespan(app: FastAPI):
         ConfigDir.init(base_dir=global_basedir)
         
         # 并发获取路径
-        cls_path_task = asyncio.to_thread(get_table_detection_rapidocr_model_cls_path)
-        rec_path_task = asyncio.to_thread(get_table_detection_rapidocr_model_rec_path)
-        cls_path, rec_path = await asyncio.gather(cls_path_task, rec_path_task)
-        logger.info(f"模型路径: CLS={cls_path}, REC={rec_path}")
+        # cls_path_task = asyncio.to_thread(get_table_detection_rapidocr_model_cls_path)
+        # rec_path_task = asyncio.to_thread(get_table_detection_rapidocr_model_rec_path)
+        # cls_path, rec_path = await asyncio.gather(cls_path_task, rec_path_task)
+        # logger.info(f"模型路径: CLS={cls_path}, REC={rec_path}")
         
         # 并发加载模型
-        doc_layout_task = asyncio.to_thread(DocLayoutModel.load_available)
-        onnx_model_task = asyncio.to_thread(OnnxModel.load_available)
-        doc_layout_model, onnx_model = await asyncio.gather(doc_layout_task, onnx_model_task)
+        # doc_layout_task = asyncio.to_thread(DocLayoutModel.load_available)
+        # onnx_model_task = asyncio.to_thread(OnnxModel.load_available)
+        # doc_layout_model, onnx_model = await asyncio.gather(doc_layout_task, onnx_model_task)
         
         # 设置全局模型实例
-        ModelInstance.value = onnx_model
-        logger.info("模型加载完成")
+        # ModelInstance.value = onnx_model
+        # logger.info("模型加载完成")
     except Exception as e:
         logger.error(f"模型初始化失败: {e}", exc_info=True)
         raise

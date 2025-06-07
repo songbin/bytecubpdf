@@ -549,6 +549,9 @@ const formatHistoryParams = async (resultData: any) => {
 const handleTranslate = async () => {
   console.log('开始翻译任务'); // 添加日志
   filesToDownload.value = await (window as any).window.electronAPI.verifyFileDownloads();
+  if (filesToDownload.value.length > 0) {
+    return
+  }
   if (fileList.value.length === 0) {
     message.error('请先上传PDF文件');
     return;
