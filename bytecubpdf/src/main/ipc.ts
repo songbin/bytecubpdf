@@ -9,7 +9,8 @@ import { initialize } from './core/Initialize'
 import  BuildPath  from './core/BuildPath'
 import { pluginLogger } from './core/PluginLog';
 import { Logger,setupConsoleOverrides } from './core/log';
-import {downloadTargetFile} from './core/assets'
+import {downloadTargetFile,verifyFileDownloads} from './core/assets'
+import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
 
 let db: Database | null = null
 const configService = new ConfigService()
@@ -277,9 +278,15 @@ ipcMain.handle('update:launch-installer', async () => {
   }
 });
 
-ipcMain.handle('download-file', async (event, target) => {
-  const progressHandler = (progress: number) => {
+ipcMain.handle('download-file', async (event, target:FileDownloadItem) => {
+  const progressHandler = (progress: DownloadProgress) => {
     event.sender.send('download-progress', progress);
   };
   return await downloadTargetFile(target, progressHandler);
 });
+
+ipcMain.handle('verify-file-downloads', async () => {
+  return await verifyFileDownloads();
+});
+
+

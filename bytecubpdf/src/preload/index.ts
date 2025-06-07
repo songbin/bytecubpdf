@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import {LogLevel,FileDownloadItem} from '@/shared/constants/dfconstants'
+import {LogLevel,FileDownloadItem,DownloadProgress} from '@/shared/constants/dfconstants'
 // 添加点击事件监听器防止事件冒泡问题
 // document.addEventListener('click', (e) => {
 //   e.stopPropagation()
@@ -27,14 +27,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getFileStoragePath: () => ipcRenderer.invoke('config:getFileStoragePath'),
   saveFileStoragePath: (path: string) => ipcRenderer.invoke('config:saveFileStoragePath', path),
   DbInitTables: () => ipcRenderer.invoke('db:initTables'),
-  // 在暴露的electronAPI对象中添加
+  // 下载目标资源文件
   downloadFile: (target: FileDownloadItem) => ipcRenderer.invoke('download-file', target),
 
-  // 添加进度监听事件处理
-  onDownloadProgress: (callback: (progress: number) => void) => {
+ 
+  listenDownloadProgress: (callback: (progress: number) => void) => {
     ipcRenderer.on('download-progress', (_, progress) => callback(progress));
-    return () => ipcRenderer.removeAllListeners('download-progress');
   },
+  // 移除进度监听事件处理
+  removeDownloadProgressListener: () => {
+    ipcRenderer.removeAllListeners('download-progress');
+  },
+ //校验哪些资源文件需要下载
+  verifyFileDownloads: () => ipcRenderer.invoke('verify-file-downloads'),
+
   //系统路径
   getRootPath: () => ipcRenderer.invoke('dir:root'),
   getCacheDirPath: () => ipcRenderer.invoke('dir:cachedata'),
@@ -58,10 +64,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getUpgradeDownPath: () => ipcRenderer.invoke('upgrade:getDownPath'),
   setUpgradeStatus: (status: boolean, filePath: string) => ipcRenderer.invoke('upgrade:setStatus', status, filePath),
   
-  
-  listenDownloadProgress: (callback: (progress: number) => void) => {
-    ipcRenderer.on('download-progress', (_, progress) => callback(progress));
-  },
+
   //重启应用
   restartApp: () => ipcRenderer.invoke('app:restart'),
   // 系统信息

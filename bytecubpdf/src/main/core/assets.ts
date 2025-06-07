@@ -183,7 +183,7 @@ async function getRapidOCRDetModelPath(progressCallback?: (p: DownloadProgress) 
       logger.info(`尝试从 ${upstream} 下载检测模型...`);
       await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256, 'rapidocr_det.onnx', 'models', (progress: DownloadProgress) => {
         if (progressCallback) {
-          progressCallback(progress.percentage);
+          progressCallback(progress);
         }
       });
       logger.info(`${upstream} 下载成功`);
@@ -214,7 +214,7 @@ async function getRapidOCRRecModelPath(progressCallback?: (p: DownloadProgress) 
       logger.info(`尝试从 ${upstream} 下载识别模型 ${url}...`);
       await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256, 'rapidocr_rec.onnx', 'models', (progress: DownloadProgress) => {
         if (progressCallback) {
-          progressCallback(progress.percentage);
+          progressCallback(progress);
         }
       });
       logger.info(`${upstream} 下载成功`);
@@ -246,7 +246,7 @@ async function getRapidOCRClsModelPath(progressCallback?: (p: DownloadProgress) 
       logger.info(`尝试从 ${upstream} 下载分类模型 ${url}...`);
       await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256, 'rapidocr_cls.onnx', 'models', (progress: DownloadProgress) => {
         if (progressCallback) {
-          progressCallback(progress.percentage);
+          progressCallback(progress);
         }
       });
       logger.info(`${upstream} 下载成功`);
@@ -278,7 +278,7 @@ async function getDoclayoutOnnxModelPath(progressCallback?: (p: DownloadProgress
       logger.info(`尝试从 ${upstream} 下载文档布局模型 ${url}...`);
       await downloadFile(url, onnxPath, DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256, 'doclayout_yolo_docstructbench_imgsz1024.onnx', 'models', (progress: DownloadProgress) => {
         if (progressCallback) {
-          progressCallback(progress.percentage);
+          progressCallback(progress);
         }
       });
       logger.info(`${upstream} 下载成功`);
@@ -312,7 +312,7 @@ async function getFontAndMetadata(fontFileName: string,progressCallback?: (p: Do
   await downloadFile(url, cacheFilePath, EMBEDDING_FONT_METADATA[fontFileName].sha3_256, fontFileName, 'font', (progress: DownloadProgress) => {
     if (progressCallback) {
       // 假设DownloadProgress对象包含percentage属性
-      progressCallback(progress.percentage);
+      progressCallback(progress);
     }
   });
   return {
@@ -415,11 +415,11 @@ export async function downloadTargetFile(target:FileDownloadItem,progressCallbac
   }catch (error) {
     console.error('下载文件失败:', error);
     progressCallback?.({
-      progress: progress.progress,
+      progress: 0,
       speed: 0,
       eta: 0,
-      name:progress.name,
-      type:progress.type,
+      name:target.name,
+      type:target.type,
       status: 'failed'
     });
   }

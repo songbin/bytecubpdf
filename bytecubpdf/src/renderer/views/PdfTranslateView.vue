@@ -18,6 +18,7 @@
       <keep-alive include="PdfTsMain">
         <component :is="activeTab === 'function' ? activeFunctionComponent : activeSettingsComponent" />
       </keep-alive>
+      <DownloadComponent />
     </n-layout-content>
   </n-layout>
 </template>
@@ -32,6 +33,8 @@ import TermsManager from '@/renderer/components/pdftranslate/TermsManager.vue'
 import TranslateHistory from '@/renderer/components/pdftranslate/TranslateHistory.vue'
 import OcrRec from '@/renderer/components/pdftranslate/ocr/OcrRec.vue'
 import OcrHistory from '@/renderer/components/pdftranslate/ocr/OcrHistory.vue'
+// 导入组件DownloadComponent
+import DownloadComponent from '@/renderer/components/update/DownloadComponent.vue'
 // 定义组件映射
 type ViewComponent = DefineComponent<{}, {}, any>
 const functionComponents: Record<string, Component> = {
