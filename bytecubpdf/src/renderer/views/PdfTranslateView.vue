@@ -18,13 +18,15 @@
       <keep-alive include="PdfTsMain">
         <component :is="activeTab === 'function' ? activeFunctionComponent : activeSettingsComponent" />
       </keep-alive>
-      <DownloadComponent />
+      <DlTranslateResourceModal 
+        :filesToDownload= filesToDownload
+       />
     </n-layout-content>
   </n-layout>
 </template>
 
 <script lang="ts" setup>
-import { ref, shallowRef,type Component,nextTick } from 'vue'
+import { ref, shallowRef,type Component,nextTick,onMounted } from 'vue'
 import type { DefineComponent } from 'vue'
 import { NLayout, NLayoutSider, NLayoutContent } from 'naive-ui'
 import PdfTsLeftSide from '@/renderer/components/pdftranslate/PdfTsLeftSide.vue' 
@@ -34,9 +36,11 @@ import TranslateHistory from '@/renderer/components/pdftranslate/TranslateHistor
 import OcrRec from '@/renderer/components/pdftranslate/ocr/OcrRec.vue'
 import OcrHistory from '@/renderer/components/pdftranslate/ocr/OcrHistory.vue'
 // 导入组件DownloadComponent
-import DownloadComponent from '@/renderer/components/update/DownloadComponent.vue'
+import DlTranslateResourceModal from '@/renderer/components/download/DlTranslateResourceModal.vue'
+import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
 // 定义组件映射
 type ViewComponent = DefineComponent<{}, {}, any>
+const filesToDownload = ref<FileDownloadItem[]>([])
 const functionComponents: Record<string, Component> = {
   main: PdfTsMain as ViewComponent,
   history: TranslateHistory as ViewComponent,
@@ -65,6 +69,11 @@ nextTick(() => {
     }
   })
 }
+
+onMounted( async () => {
+  // 初始化时加载主界面
+    filesToDownload.value = await (window as any).window.electronAPI.verifyFileDownloads();
+})
 </script>
 
 <style scoped>
