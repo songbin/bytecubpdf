@@ -278,14 +278,14 @@ ipcMain.handle('update:launch-installer', async () => {
   }
 });
 
-ipcMain.handle('download-file', async (event, target:FileDownloadItem) => {
+ipcMain.handle('download-resource-file', async (event, target:FileDownloadItem) => {
   const progressHandler = (progress: DownloadProgress) => {
     event.sender.send('download-progress', progress);
   };
   return await downloadTargetFile(target, progressHandler);
 });
 
-ipcMain.handle('verify-file-downloads', async () => {
+ipcMain.handle('verify-resource-downloads', async () => {
   return await verifyFileDownloads();
 });
 

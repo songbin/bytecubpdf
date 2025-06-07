@@ -28,10 +28,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileStoragePath: (path: string) => ipcRenderer.invoke('config:saveFileStoragePath', path),
   DbInitTables: () => ipcRenderer.invoke('db:initTables'),
   // 下载目标资源文件
-  downloadFile: (target: FileDownloadItem) => ipcRenderer.invoke('download-file', target),
+  downloadResourceFile: (target: FileDownloadItem) => ipcRenderer.invoke('download-resource-file', target),
 
  
-  listenDownloadProgress: (callback: (progress: number) => void) => {
+  listenDownloadProgress: (callback: (progress: DownloadProgress) => void) => {
     ipcRenderer.on('download-progress', (_, progress) => callback(progress));
   },
   // 移除进度监听事件处理
@@ -39,7 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('download-progress');
   },
  //校验哪些资源文件需要下载
-  verifyFileDownloads: () => ipcRenderer.invoke('verify-file-downloads'),
+  verifyFileDownloads: () => ipcRenderer.invoke('verify-resource-downloads'),
 
   //系统路径
   getRootPath: () => ipcRenderer.invoke('dir:root'),

@@ -59,7 +59,7 @@ interface Window {
       restartApp: () => Promise<void>; // 新增重启应用方法
       listenDownloadProgress: (callback: (progress: DownloadProgress) => void) => void; // 新增监听下载进度方法
       removeDownloadProgressListener: () => void; // 新增移除下载进度监听器方法
-      downloadFile: (target: FileDownloadItem) => Promise<boolean>;
+      downloadResourceFile: (target: FileDownloadItem) => Promise<boolean>;
       
       verifyFileDownloads: () => Promise<FileDownloadItem[]>; // 新增验证文件下载方法
       

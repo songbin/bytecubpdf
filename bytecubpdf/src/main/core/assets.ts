@@ -27,9 +27,9 @@ const logger = console;
 function getCacheFilePath(fileName: string, type: 'fonts' | 'models' | 'assets' | 'tiktoken') {
   let targetDir = '';
   if (type === 'fonts') {
-    targetDir =  path.join(BuildPath.getFontDownDir(), fileName);
+    targetDir =  BuildPath.getFontDownDir()
   }else if (type === 'models') {
-    targetDir =   path.join(BuildPath.getModelDownDir(), fileName);
+    targetDir = BuildPath.getModelDownDir()
   }else{
     console.error('无效的下载类型', type, 'fileName', fileName);
     throw new Error('无效的类型');
@@ -428,7 +428,7 @@ export async function downloadTargetFile(target:FileDownloadItem,progressCallbac
 export async function verifyFileDownloads(): Promise<FileDownloadItem[]> {
   const waitDownFileList = [...waitDownModelFileList, ...waitDownFontList ];
   const fileList: FileDownloadItem[] = waitDownFileList;
-  console.log('正在验证文件列表：', fileList.map(f => f.name));
+  // console.log('正在验证文件列表：', fileList.map(f => f.name));
 
   const failedFiles = [];
   
@@ -447,12 +447,14 @@ export async function verifyFileDownloads(): Promise<FileDownloadItem[]> {
       
       if (hash !== item.expectedSha.toLowerCase()) {
         failedFiles.push(item);
+      }else{
+        console.log(`文件 ${item.name}->${path} 本地已经存在,跳过下载`);
       }
     } catch (error) {
       failedFiles.push(item);
     }
   }
-  
+  // console.log('需要下载的文件列表：', failedFiles.map(f => f.name));
   return failedFiles;
 }
 export {

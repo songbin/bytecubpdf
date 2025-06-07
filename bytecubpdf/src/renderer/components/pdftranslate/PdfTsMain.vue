@@ -163,7 +163,9 @@
    
      
       <HelpFloatButton url="https://www.docfable.com/docs/usage/translatementor/translatepdf.html" />
-     
+      <DlTranslateResourceModal 
+        :filesToDownload= filesToDownload
+       />
   </div>
 </template>
 
@@ -204,7 +206,11 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { translateTermManager } from '@/renderer/service/manager/TranslateTermManager';
 import { termsService } from '@/renderer/service/translate/TermsService';
 import { TranslateHistoryManager } from '@/renderer/service/manager/TranslateHistoryManager';
+// 导入组件DownloadComponent
+import DlTranslateResourceModal from '@/renderer/components/download/DlTranslateResourceModal.vue'
+import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
 const historyManager = new TranslateHistoryManager();
+const filesToDownload = ref<FileDownloadItem[]>([])
 const { t } = useI18n();
 const router = useRouter();
 const dialog = useDialog();
@@ -542,6 +548,7 @@ const formatHistoryParams = async (resultData: any) => {
 // 开始翻译任务
 const handleTranslate = async () => {
   console.log('开始翻译任务'); // 添加日志
+  filesToDownload.value = await (window as any).window.electronAPI.verifyFileDownloads();
   if (fileList.value.length === 0) {
     message.error('请先上传PDF文件');
     return;
