@@ -48,9 +48,7 @@ async function verifyFile(filePath: string, sha3_256_str: string | null): Promis
     const fileBuffer = await fs.readFile(filePath);
     const hash = sha3_256(fileBuffer); 
     // const hash = crypto.createHash('sha3-256').update(fileBuffer).digest('hex');
-    if (hash === sha3_256_str) {
-      console.log(`文件 ${filePath} 验证通过`);
-    }
+ 
     return hash === sha3_256_str;
   } catch (error) {
     return false;

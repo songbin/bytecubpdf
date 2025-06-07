@@ -7,7 +7,7 @@ import traceback
 from typing import Dict
 from config.ts_constants import TSConstants,UploadBiz
 from model.config.chat_exception import ChatException
-from pdf2zh.doclayout import  ModelInstance
+from pdf2zh.doclayout import  ModelInstance,OnnxModel
 from pdf2zh.high_level import translate
 from utils.chatlog import logger
 from string import Template
@@ -81,7 +81,8 @@ class PdfMathService:
         no_dual: bool = True,  # 新增禁用双页翻译字段
     ):
         save_path = os.path.join(os.getcwd(), TSConstants.translate_folder)
-            
+        if not ModelInstance.value:
+            ModelInstance.value = OnnxModel.load_available()    
         # 如果路径不存在，则创建
         if not os.path.exists(save_path):
             os.makedirs(save_path)
