@@ -42,12 +42,15 @@ function getCacheFilePath(fileName: string, type: 'fonts' | 'models' | 'assets' 
 // 验证文件哈希
 async function verifyFile(filePath: string, sha3_256_str: string | null): Promise<boolean> {
   if (!sha3_256_str) return true;
-  
+   
   try {
     await fs.access(filePath);
     const fileBuffer = await fs.readFile(filePath);
     const hash = sha3_256(fileBuffer); 
     // const hash = crypto.createHash('sha3-256').update(fileBuffer).digest('hex');
+    if (hash === sha3_256_str) {
+      console.log(`文件 ${filePath} 验证通过`);
+    }
     return hash === sha3_256_str;
   } catch (error) {
     return false;
@@ -202,6 +205,7 @@ async function getRapidOCRRecModelPath(progressCallback?: (p: DownloadProgress) 
   const modelPath = getCacheFilePath('rapidocr_rec.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256)) {
+   
     return modelPath;
   }
 
@@ -435,20 +439,14 @@ export async function verifyFileDownloads(): Promise<FileDownloadItem[]> {
   for (const item of fileList) {
     try {
       let path = getCacheFilePath(item.name, 'models');
-      if(item.name.startsWith('fonts')){
+      if(item.type === 'font'){
         path = getCacheFilePath(item.name,'fonts');
       }
-      // 检查文件是否存在
-      await fs.access(path);
-      
-      // 计算文件SHA256
-      const fileBuffer = await fs.readFile(path);
-      const hash = sha3_256(fileBuffer); 
-      
-      if (hash !== item.expectedSha.toLowerCase()) {
-        failedFiles.push(item);
+      const is_exist:boolean = await verifyFile(path, item.expectedSha);
+      if (is_exist) {
       }else{
-        console.log(`文件 ${item.name}->${path} 本地已经存在,跳过下载`);
+        console.log(`文件 ${item.name}->${path} 本地需要下载`);
+        failedFiles.push(item);
       }
     } catch (error) {
       failedFiles.push(item);
