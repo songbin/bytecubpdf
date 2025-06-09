@@ -15,7 +15,7 @@ export const PROTOCOL_CAN_LLM = [
 
 export const STATISTICS = {
     BASE_URL: 'https://api.docfable.com/tongji/client',
-    getUrl: (pageName: string) => `${STATISTICS.BASE_URL}/tj${VERSION.version}.html?page=${pageName}`
+    getUrl: (pageName: string) => `${STATISTICS.BASE_URL}/tjv.html?version=${VERSION.version}&page=${pageName}`
 }
 export const UPLOAD_BIZ = {
     "ocr" : "ocr",
