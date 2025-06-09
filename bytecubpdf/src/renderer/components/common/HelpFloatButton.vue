@@ -17,13 +17,13 @@
     </template>
     使用帮助,点击查看
     </n-tooltip>
-    <!-- <iframe 
+    <iframe 
       class="statistics-iframe"
       :src="STATISTICS.getUrl(pageName)" 
       height="2" 
       width="100%" 
       frameborder="0">
-    </iframe> -->
+    </iframe>
   </div>
 </template>
 
