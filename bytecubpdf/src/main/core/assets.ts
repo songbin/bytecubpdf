@@ -169,7 +169,7 @@ async function  downloadFile(
 // 获取模型路径
 // RapidOCR模型路径获取
 async function getRapidOCRDetModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
-  const modelPath = getCacheFilePath('rapidocr_det.onnx', 'models');
+  const modelPath = getCacheFilePath('ch_PP-OCRv4_det_infer.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256)) {
     return modelPath;
@@ -182,7 +182,7 @@ async function getRapidOCRDetModelPath(progressCallback?: (p: DownloadProgress) 
     try {
       const url = TABLE_DETECTION_RAPIDOCR_MODEL_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载检测模型...`);
-      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256, 'rapidocr_det.onnx', 'models', (progress: DownloadProgress) => {
+      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256, 'ch_PP-OCRv4_det_infer.onnx', 'models', (progress: DownloadProgress) => {
         if (progressCallback) {
           progressCallback(progress);
         }
@@ -200,7 +200,7 @@ async function getRapidOCRDetModelPath(progressCallback?: (p: DownloadProgress) 
 }
 
 async function getRapidOCRRecModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
-  const modelPath = getCacheFilePath('rapidocr_rec.onnx', 'models');
+  const modelPath = getCacheFilePath('ch_PP-OCRv4_rec_infer.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256)) {
    
@@ -214,7 +214,7 @@ async function getRapidOCRRecModelPath(progressCallback?: (p: DownloadProgress) 
     try {
       const url = TABLE_DETECTION_RAPIDOCR_MODEL_REC_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载识别模型 ${url}...`);
-      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256, 'rapidocr_rec.onnx', 'models', (progress: DownloadProgress) => {
+      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256, 'ch_PP-OCRv4_rec_infer.onnx', 'models', (progress: DownloadProgress) => {
         if (progressCallback) {
           progressCallback(progress);
         }
@@ -233,7 +233,7 @@ async function getRapidOCRRecModelPath(progressCallback?: (p: DownloadProgress) 
 }
 
 async function getRapidOCRClsModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
-  const modelPath = getCacheFilePath('rapidocr_cls.onnx', 'models');
+  const modelPath = getCacheFilePath('ch_ppocr_mobile_v2.0_cls_infer.onnx', 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256)) {
     return modelPath;
@@ -246,7 +246,7 @@ async function getRapidOCRClsModelPath(progressCallback?: (p: DownloadProgress) 
     try {
       const url = TABLE_DETECTION_RAPIDOCR_MODEL_CLS_URL[upstream];
       logger.info(`尝试从 ${upstream} 下载分类模型 ${url}...`);
-      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256, 'rapidocr_cls.onnx', 'models', (progress: DownloadProgress) => {
+      await downloadFile(url, modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256, 'ch_ppocr_mobile_v2.0_cls_infer.onnx', 'models', (progress: DownloadProgress) => {
         if (progressCallback) {
           progressCallback(progress);
         }
@@ -377,17 +377,17 @@ export const waitDownFontList: FileDownloadItem[] = Object.keys(EMBEDDING_FONT_M
 export const waitDownModelFileList: FileDownloadItem[] = [
  
   {
-    name: 'rapidocr_det.onnx',
+    name: 'ch_PP-OCRv4_det_infer.onnx',
     expectedSha: TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256,
     type: 'models'
   },
   {
-    name: 'rapidocr_rec.onnx',
+    name: 'ch_PP-OCRv4_rec_infer.onnx',
     expectedSha: TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256,
     type: 'models'
   },
   {
-    name: 'rapidocr_cls.onnx',
+    name: 'ch_ppocr_mobile_v2.0_cls_infer.onnx',
     expectedSha: TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256,
     type: 'models'
   },
@@ -403,11 +403,11 @@ export async function downloadTargetFile(target:FileDownloadItem,progressCallbac
       const fontInfo = await getFontAndMetadata(target.name,progressCallback);
       return fontInfo.path;
     }else if(target.type === 'models'){
-      if(target.name === 'rapidocr_det.onnx'){
+      if(target.name === 'ch_PP-OCRv4_det_infer.onnx'){
         return await getRapidOCRDetModelPath(progressCallback);
-      }else if(target.name === 'rapidocr_rec.onnx'){
+      }else if(target.name === 'ch_PP-OCRv4_rec_infer.onnx'){
         return await getRapidOCRRecModelPath(progressCallback);
-      }else if(target.name === 'rapidocr_cls.onnx'){
+      }else if(target.name === 'ch_ppocr_mobile_v2.0_cls_infer.onnx'){
         return await getRapidOCRClsModelPath(progressCallback);
       }else if(target.name === 'doclayout_yolo_docstructbench_imgsz1024.onnx'){
         return await getDoclayoutOnnxModelPath(progressCallback);
