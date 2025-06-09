@@ -40,7 +40,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
  //校验哪些资源文件需要下载
   verifyFileDownloads: () => ipcRenderer.invoke('verify-resource-downloads'),
-
+  verifyFilePathDownloads: () => ipcRenderer.invoke('verify-resource-path-downloads'),
+ 
   //系统路径
   getRootPath: () => ipcRenderer.invoke('dir:root'),
   getCacheDirPath: () => ipcRenderer.invoke('dir:cachedata'),

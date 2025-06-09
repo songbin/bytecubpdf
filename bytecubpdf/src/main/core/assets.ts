@@ -1,11 +1,12 @@
 import fs from 'fs/promises';
-import { mkdirSync } from 'fs';
+import { mkdirSync,existsSync } from 'fs';
 import { createWriteStream } from 'fs';
 import path from 'path';
 import { sha3_256 } from 'js-sha3';
 import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
 import axios from 'axios';
 import BuildPath from './BuildPath';
+ 
 import {
   DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256,
   TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256,
@@ -20,6 +21,14 @@ import {
   TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256,
   getFontFamily
 } from './embedding_assets_metadata';
+
+// 模型文件名常量
+export const MODEL_NAMES = {
+  DETECTION: 'ch_PP-OCRv4_det_infer.onnx',
+  RECOGNITION: 'ch_PP-OCRv4_rec_infer.onnx',
+  CLASSIFICATION: 'ch_ppocr_mobile_v2.0_cls_infer.onnx',
+  DOCLAYOUT: 'doclayout_yolo_docstructbench_imgsz1024.onnx'
+};
 
 const logger = console;
 
@@ -169,7 +178,7 @@ async function  downloadFile(
 // 获取模型路径
 // RapidOCR模型路径获取
 async function getRapidOCRDetModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
-  const modelPath = getCacheFilePath('ch_PP-OCRv4_det_infer.onnx', 'models');
+  const modelPath = getCacheFilePath(MODEL_NAMES.DETECTION, 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256)) {
     return modelPath;
@@ -200,7 +209,7 @@ async function getRapidOCRDetModelPath(progressCallback?: (p: DownloadProgress) 
 }
 
 async function getRapidOCRRecModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
-  const modelPath = getCacheFilePath('ch_PP-OCRv4_rec_infer.onnx', 'models');
+  const modelPath = getCacheFilePath(MODEL_NAMES.RECOGNITION, 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256)) {
    
@@ -233,7 +242,7 @@ async function getRapidOCRRecModelPath(progressCallback?: (p: DownloadProgress) 
 }
 
 async function getRapidOCRClsModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
-  const modelPath = getCacheFilePath('ch_ppocr_mobile_v2.0_cls_infer.onnx', 'models');
+  const modelPath = getCacheFilePath(MODEL_NAMES.CLASSIFICATION, 'models');
   
   if (await verifyFile(modelPath, TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256)) {
     return modelPath;
@@ -265,7 +274,7 @@ async function getRapidOCRClsModelPath(progressCallback?: (p: DownloadProgress) 
 }
 
 async function getDoclayoutOnnxModelPath(progressCallback?: (p: DownloadProgress) => void): Promise<string> {
-  const onnxPath = getCacheFilePath('doclayout_yolo_docstructbench_imgsz1024.onnx', 'models');
+  const onnxPath = getCacheFilePath(MODEL_NAMES.DOCLAYOUT, 'models');
   
   if (await verifyFile(onnxPath, DOCLAYOUT_YOLO_DOCSTRUCTBENCH_IMGSZ1024ONNX_SHA3_256)) {
     return onnxPath;
@@ -427,6 +436,7 @@ export async function downloadTargetFile(target:FileDownloadItem,progressCallbac
   }
   return '';
 }
+//获取全量未下载的文件列表
 export async function verifyFileDownloads(): Promise<FileDownloadItem[]> {
   const waitDownFileList = [...waitDownModelFileList, ...waitDownFontList ];
   const fileList: FileDownloadItem[] = waitDownFileList;
@@ -445,6 +455,40 @@ export async function verifyFileDownloads(): Promise<FileDownloadItem[]> {
       }else{
         console.log(`文件 ${item.name}->${path} 本地需要下载`);
         failedFiles.push(item);
+      }
+    } catch (error) {
+      failedFiles.push(item);
+    }
+  }
+  // console.log('需要下载的文件列表：', failedFiles.map(f => f.name));
+  return failedFiles;
+}
+//仅仅判断文件路径是否存在，翻译的时候判断
+export async function verifyModelFileExistDownloads(): Promise<FileDownloadItem[]> {
+  const waitDownFileList = [...waitDownModelFileList ];
+  const fileList: FileDownloadItem[] = waitDownFileList;
+  // console.log('正在验证文件列表：', fileList.map(f => f.name));
+
+  const failedFiles = [];
+  
+  for (const item of fileList) {
+    try {
+      let path = getCacheFilePath(item.name, 'models');
+      if(item.type === 'font'){
+        path = getCacheFilePath(item.name,'fonts');
+      }
+      //只判断path文件是否存在
+      try {
+        const isExist:boolean =  existsSync(path);
+        if (!isExist) {
+          console.log(`文件 ${item.name}->${path} 本地不存在`);
+          failedFiles.push(item);
+          continue;
+        }
+      } catch (error) {
+        console.log(`文件 ${item.name}->${path} 本地不存在`);
+        failedFiles.push(item);
+        continue;
       }
     } catch (error) {
       failedFiles.push(item);

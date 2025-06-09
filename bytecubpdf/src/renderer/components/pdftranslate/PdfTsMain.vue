@@ -548,8 +548,9 @@ const formatHistoryParams = async (resultData: any) => {
 // 开始翻译任务
 const handleTranslate = async () => {
   console.log('开始翻译任务'); // 添加日志
-  filesToDownload.value = await (window as any).window.electronAPI.verifyFileDownloads();
+  filesToDownload.value = await (window as any).window.electronAPI.verifyFilePathDownloads();
   if (filesToDownload.value.length > 0) {
+    filesToDownload.value = await (window as any).window.electronAPI.verifyFileDownloads();
     return
   }
   if (fileList.value.length === 0) {

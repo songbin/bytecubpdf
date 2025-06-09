@@ -62,6 +62,6 @@ interface Window {
       downloadResourceFile: (target: FileDownloadItem) => Promise<boolean>;
       
       verifyFileDownloads: () => Promise<FileDownloadItem[]>; // 新增验证文件下载方法
-      
+      verifyFilePathDownloads: () => Promise<FileDownloadItem[]>; // 新增验证文件下载方法 
     };
 }

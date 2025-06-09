@@ -9,7 +9,7 @@ import { initialize } from './core/Initialize'
 import  BuildPath  from './core/BuildPath'
 import { pluginLogger } from './core/PluginLog';
 import { Logger,setupConsoleOverrides } from './core/log';
-import {downloadTargetFile,verifyFileDownloads} from './core/assets'
+import {downloadTargetFile,verifyFileDownloads,verifyModelFileExistDownloads} from './core/assets'
 import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
 
 let db: Database | null = null
@@ -288,5 +288,11 @@ ipcMain.handle('download-resource-file', async (event, target:FileDownloadItem) 
 ipcMain.handle('verify-resource-downloads', async () => {
   return await verifyFileDownloads();
 });
+ipcMain.handle('verify-resource-path-downloads', async () => {
+  // 检查模型文件是否存在于下载目录中,不做sha校验
+  return await verifyModelFileExistDownloads();
+});
+
+
 
 
