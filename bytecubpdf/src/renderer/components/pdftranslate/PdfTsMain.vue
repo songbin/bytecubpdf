@@ -459,7 +459,7 @@ const languages = [
 ];
 const translateEngines = [
   { value: 'pdfmath', label: 'PDFMath' },
-  { value: 'babeldoc', label: 'BabelDoc' },
+  { value: 'babeldoc', label: 'BabelDOC' },
 ];
 const handleEngineChange = (value: string) => {
   if (value === 'pdfmath') {

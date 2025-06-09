@@ -101,7 +101,7 @@
   const failedCount = computed(() => downloadList.value.filter(item => item.status === 'failed').length);
   const dialog = useDialog(); 
   const openDownHelp = () => {
-    (window as any).window.electronAPI?.openExternal("https://www.docfable.com/");
+    (window as any).window.electronAPI?.openExternal("https://www.docfable.com/docs/usage/translatementor/resourcedl.html");
   }
   const handleClose = () => {
     // 如果下载已完成，直接关闭
