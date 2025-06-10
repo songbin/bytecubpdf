@@ -2,26 +2,26 @@ import base64
 import functools
 import logging
 import re
-from functools import wraps
 from io import BytesIO
 from itertools import islice
 
 import freetype
-import pdfminer.pdfinterp
 import pymupdf
-from pdfminer.layout import LTChar
-from pdfminer.layout import LTFigure
-from pdfminer.pdffont import PDFCIDFont
-from pdfminer.pdffont import PDFFont
-from pdfminer.pdfpage import PDFPage as PDFMinerPDFPage
-from pdfminer.pdftypes import PDFObjRef as PDFMinerPDFObjRef
-from pdfminer.pdftypes import resolve1 as pdftypes_resolve1
-from pdfminer.psparser import PSLiteral
 
+import babeldoc.pdfminer.pdfinterp
 from babeldoc.document_il import il_version_1
 from babeldoc.document_il.utils import zstd_helper
 from babeldoc.document_il.utils.style_helper import BLACK
 from babeldoc.document_il.utils.style_helper import YELLOW
+from babeldoc.pdfminer.layout import LTChar
+from babeldoc.pdfminer.layout import LTFigure
+from babeldoc.pdfminer.pdffont import PDFCIDFont
+from babeldoc.pdfminer.pdffont import PDFFont
+
+# from babeldoc.pdfminer.pdfpage import PDFPage as PDFMinerPDFPage
+# from babeldoc.pdfminer.pdftypes import PDFObjRef as PDFMinerPDFObjRef
+# from babeldoc.pdfminer.pdftypes import resolve1 as pdftypes_resolve1
+from babeldoc.pdfminer.psparser import PSLiteral
 from babeldoc.translation_config import TranslationConfig
 
 
@@ -38,28 +38,28 @@ def batched(iterable, n, *, strict=False):
 
 logger = logging.getLogger(__name__)
 
-
-def create_hook(func, hook):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        hook(*args, **kwargs)
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def hook_pdfminer_pdf_page_init(*args):
-    attrs = args[3]
-    try:
-        while isinstance(attrs["MediaBox"], PDFMinerPDFObjRef):
-            attrs["MediaBox"] = pdftypes_resolve1(attrs["MediaBox"])
-    except Exception:
-        logger.exception(f"try to fix mediabox failed: {attrs}")
-
-
-PDFMinerPDFPage.__init__ = create_hook(
-    PDFMinerPDFPage.__init__, hook_pdfminer_pdf_page_init
-)
+#
+# def create_hook(func, hook):
+#     @wraps(func)
+#     def wrapper(*args, **kwargs):
+#         hook(*args, **kwargs)
+#         return func(*args, **kwargs)
+#
+#     return wrapper
+#
+#
+# def hook_pdfminer_pdf_page_init(*args):
+#     attrs = args[3]
+#     try:
+#         while isinstance(attrs["MediaBox"], PDFMinerPDFObjRef):
+#             attrs["MediaBox"] = pdftypes_resolve1(attrs["MediaBox"])
+#     except Exception:
+#         logger.exception(f"try to fix mediabox failed: {attrs}")
+#
+#
+# PDFMinerPDFPage.__init__ = create_hook(
+#     PDFMinerPDFPage.__init__, hook_pdfminer_pdf_page_init
+# )
 
 
 def indirect(obj):
@@ -781,7 +781,7 @@ class ILCreater:
             cmap = parse_cmap(self.mupdf.xref_stream(to_unicode_idx).decode("U8"))
         return bbox_list, cmap
 
-    def create_graphic_state(self, gs: pdfminer.pdfinterp.PDFGraphicState):
+    def create_graphic_state(self, gs: babeldoc.pdfminer.pdfinterp.PDFGraphicState):
         graphic_state = il_version_1.GraphicState()
         for k, v in gs.__dict__.items():
             if v is None:

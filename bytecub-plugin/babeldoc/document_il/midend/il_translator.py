@@ -21,6 +21,7 @@ from babeldoc.document_il import PdfStyle
 from babeldoc.document_il.translator.translator import BaseTranslator
 from babeldoc.document_il.utils.fontmap import FontMapper
 from babeldoc.document_il.utils.layout_helper import get_char_unicode_string
+from babeldoc.document_il.utils.layout_helper import get_paragraph_unicode
 from babeldoc.document_il.utils.layout_helper import is_same_style
 from babeldoc.document_il.utils.layout_helper import is_same_style_except_font
 from babeldoc.document_il.utils.layout_helper import is_same_style_except_size
@@ -200,6 +201,9 @@ class ILTranslator:
         # else:
         #     self.tokenizer = tokenizer
 
+        # Cache glossaries at initialization
+        self._cached_glossaries = self.shared_context_cross_split_part.get_glossaries()
+
         self.support_llm_translate = False
         try:
             if translate_engine and hasattr(translate_engine, "do_llm_translate"):
@@ -207,6 +211,8 @@ class ILTranslator:
                 self.support_llm_translate = True
         except NotImplementedError:
             self.support_llm_translate = False
+
+        self.use_as_fallback = False
 
     def calc_token_count(self, text: str) -> int:
         try:
@@ -237,10 +243,7 @@ class ILTranslator:
             total,
         ) as pbar:
             with PriorityThreadPoolExecutor(
-                max_workers=min(
-                    self.translation_config.qps * 2,
-                    self.translation_config.qps + 5,
-                ),
+                max_workers=self.translation_config.pool_max_workers,
             ) as executor:
                 for page in docs.page:
                     self.process_page(page, executor, pbar, tracker.new_page())
@@ -344,7 +347,7 @@ class ILTranslator:
             placeholder, regex_pattern = placeholder
         else:
             regex_pattern = re.escape(placeholder)
-        if placeholder in paragraph.unicode:
+        if re.match(regex_pattern, paragraph.unicode, re.IGNORECASE):
             return self.create_formula_placeholder(formula, formula_id + 1, paragraph)
 
         return FormulaPlaceholder(formula_id, formula, placeholder, regex_pattern)
@@ -369,9 +372,10 @@ class ILTranslator:
             right_placeholder, right_placeholder_regex_pattern = right_placeholder
         else:
             right_placeholder_regex_pattern = re.escape(right_placeholder)
-        if (
-            left_placeholder in paragraph.unicode
-            or right_placeholder in paragraph.unicode
+        if re.match(
+            f"{left_placeholder_regex_pattern}|{right_placeholder_regex_pattern}",
+            paragraph.unicode,
+            re.IGNORECASE,
         ):
             return self.create_rich_text_placeholder(
                 composition,
@@ -628,7 +632,8 @@ class ILTranslator:
 
             # 处理占位符
             if any(
-                isinstance(p, FormulaPlaceholder) and matched_text == p.placeholder
+                isinstance(p, FormulaPlaceholder)
+                and re.match(f"^{p.regex_pattern}$", matched_text, re.IGNORECASE)
                 for p in input_text.placeholders
             ):
                 # 处理公式占位符
@@ -636,7 +641,7 @@ class ILTranslator:
                     p
                     for p in input_text.placeholders
                     if isinstance(p, FormulaPlaceholder)
-                    and matched_text == p.placeholder
+                    and re.match(f"^{p.regex_pattern}$", matched_text, re.IGNORECASE)
                 )
                 comp = PdfParagraphComposition()
                 comp.pdf_formula = placeholder.formula
@@ -647,11 +652,14 @@ class ILTranslator:
                     p
                     for p in input_text.placeholders
                     if not isinstance(p, FormulaPlaceholder)
-                    and re.match(f"^{p.left_regex_pattern}", matched_text)
+                    and re.match(
+                        f"^{p.left_regex_pattern}", matched_text, re.IGNORECASE
+                    )
                 )
                 text = re.match(
                     f"^{placeholder.left_regex_pattern}(.*){placeholder.right_regex_pattern}$",
                     matched_text,
+                    re.IGNORECASE,
                 ).group(1)
 
                 if isinstance(
@@ -768,33 +776,69 @@ class ILTranslator:
             llm_input = [
                 f"You are a professional and reliable machine translation engine responsible for translating the input text into {self.translation_config.lang_out}."
             ]
-        llm_hint = []
+
+        llm_context_hints = []
 
         if title_paragraph:
-            llm_hint.append(
+            llm_context_hints.append(
                 f"The first title in the full text: {title_paragraph.unicode}"
             )
         if (
             local_title_paragraph
+            and title_paragraph
             and local_title_paragraph.debug_id != title_paragraph.debug_id
         ):
-            llm_hint.append(
+            llm_context_hints.append(
                 f"The most similar title in the full text: {local_title_paragraph.unicode}"
             )
 
-        if self.translation_config.add_formula_placehold_hint:
+        if translate_input and self.translation_config.add_formula_placehold_hint:
             placeholders_hint = translate_input.get_placeholders_hint()
             if placeholders_hint:
-                llm_hint.append(
+                llm_context_hints.append(
                     f"This is the formula placeholder hint: \n{placeholders_hint}"
                 )
 
-        if llm_hint:
+        active_glossary_markdown_blocks: list[str] = []
+        # Use cached glossaries
+        if self._cached_glossaries:
+            for glossary in self._cached_glossaries:
+                # Get active entries for the current text being processed (passed as 'text')
+                active_entries = glossary.get_active_entries_for_text(text)
+
+                if active_entries:
+                    current_glossary_md_entries: list[str] = []
+                    for original_source, target_text in active_entries:
+                        current_glossary_md_entries.append(
+                            f"| {original_source} | {target_text} |"
+                        )
+
+                    if current_glossary_md_entries:
+                        glossary_table_md = (
+                            f"### Glossary: {glossary.name}\n\n"
+                            "| Source Term | Target Term |\n"
+                            "|-------------|-------------|\n"
+                            + "\n".join(current_glossary_md_entries)
+                        )
+                        active_glossary_markdown_blocks.append(glossary_table_md)
+
+        if llm_context_hints or active_glossary_markdown_blocks:
             llm_input.append(
                 "When translating, please refer to the following information to improve translation quality:"
             )
-            for i, line in enumerate(llm_hint):
-                llm_input.append(f"{i}. {line}")
+            current_hint_index = 1
+            for hint_line in llm_context_hints:
+                llm_input.append(f"{current_hint_index}. {hint_line}")
+                current_hint_index += 1
+
+            if active_glossary_markdown_blocks:
+                llm_input.append(
+                    f"{current_hint_index}. You MUST strictly adhere to the following glossaries. If a source term from a table appears in the text, use the corresponding target term in your translation:"
+                )
+                current_hint_index += 1
+                for md_block in active_glossary_markdown_blocks:
+                    llm_input.append(f"\n{md_block}\n")
+
         llm_input.append("When translating, please follow the following rules:")
 
         rich_text_left_placeholder = (
@@ -824,7 +868,7 @@ class ILTranslator:
             "3. If there is no need to translate (such as proper nouns, codes, etc.), then return the original text."
         )
         llm_input.append(
-            "4. Only output the translation result without explanations and annotations."
+            f"4. Only output the translation result in {self.translation_config.lang_out} without explanations and annotations."
         )
         llm_input.append(f"5. Translate text into {self.translation_config.lang_out}.")
         prompt_template = f"""
@@ -852,6 +896,9 @@ Now, please carefully read the following text to be translated and directly outp
         self.translation_config.raise_if_cancelled()
         with PbarContext(pbar):
             try:
+                if self.use_as_fallback:
+                    # il translator llm only modifies unicode in some situations
+                    paragraph.unicode = get_paragraph_unicode(paragraph)
                 # Pre-translation processing
                 text, translate_input = self.pre_translate_paragraph(
                     paragraph, tracker, page_font_map, xobj_font_map

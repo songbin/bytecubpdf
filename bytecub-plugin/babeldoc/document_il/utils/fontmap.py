@@ -1,3 +1,4 @@
+import enum
 import functools
 import logging
 import re
@@ -12,11 +13,39 @@ from babeldoc.translation_config import TranslationConfig
 logger = logging.getLogger(__name__)
 
 
+class PrimaryFontFamily(enum.IntEnum):
+    SERIF = 1
+    SANS_SERIF = 2
+    SCRIPT = 3
+    NONE = 4
+
+    @classmethod
+    def from_str(cls, value: str):
+        if value == "serif":
+            return cls.SERIF
+        elif value == "sans-serif":
+            return cls.SANS_SERIF
+        elif value == "script":
+            return cls.SCRIPT
+        else:
+            return cls.NONE
+
+
 class FontMapper:
     stage_name = "Add Fonts"
 
     def __init__(self, translation_config: TranslationConfig):
         self.translation_config = translation_config
+        assert translation_config.primary_font_family in [
+            None,
+            "serif",
+            "sans-serif",
+            "script",
+        ]
+        self.primary_font_family = PrimaryFontFamily.from_str(
+            translation_config.primary_font_family,
+        )
+
         font_family = assets.get_font_family(translation_config.lang_out)
         self.font_file_names = []
         for k in (
@@ -140,6 +169,14 @@ class FontMapper:
                 f"Char unicode: {char_unicode}. ",
             )
             return None
+
+        if self.primary_font_family == PrimaryFontFamily.SERIF:
+            serif = True
+        elif self.primary_font_family == PrimaryFontFamily.SANS_SERIF:
+            serif = False
+        elif self.primary_font_family == PrimaryFontFamily.SCRIPT:
+            serif = False
+            italic = True
 
         script_font_map_result = self.map_in_type(
             bold, italic, monospaced, serif, char_unicode, "script"

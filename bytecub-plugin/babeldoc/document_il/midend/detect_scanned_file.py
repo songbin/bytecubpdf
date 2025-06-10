@@ -3,6 +3,7 @@ import logging
 import cv2
 import numpy as np
 import pymupdf
+import regex
 from skimage.metrics import structural_similarity
 
 from babeldoc.document_il import il_version_1
@@ -63,6 +64,20 @@ class DetectScannedFile:
             ),
         )
 
+    def fast_check(self, doc: pymupdf.Document) -> bool:
+        if doc:
+            hit_list = [0] * len(doc)
+            for page in doc:
+                contents_list = page.get_contents()
+                for index in contents_list:
+                    contents = doc.xref_stream(index)
+                    if regex.search(rb"/Artifact(\s*\<\<\s*/MCID\s+|\s+BDC)", contents):
+                        hit_list[page.number] += 1
+                    if regex.search(rb"\s3\s+Tr\s", contents):
+                        hit_list[page.number] += 1
+            return bool(sum(hit_list) > len(doc) * 0.8)
+        return False
+
     def process(self, docs: il_version_1.Document):
         """Generate layouts for all pages that need to be translated."""
         # Get pages that need to be translated
@@ -71,6 +86,8 @@ class DetectScannedFile:
             for page in docs.page
             if self.translation_config.should_translate_page(page.page_number + 1)
         ]
+        if not pages_to_translate:
+            return
         mupdf = pymupdf.open(self.translation_config.get_working_file_path("input.pdf"))
         total = len(pages_to_translate)
         threshold = 0.8 * total
@@ -96,11 +113,20 @@ class DetectScannedFile:
                 progress.advance(1)
 
         if scanned > threshold:
-            logger.warning(
-                f"Detected {scanned} scanned pages, which is more than 80% of the total pages. "
-                "Please check the input PDF file.",
-            )
-            raise ScannedPDFError("Scanned PDF detected.")
+            if self.translation_config.auto_enable_ocr_workaround:
+                logger.warning(
+                    f"Detected {scanned} scanned pages, which is more than 80% of the total pages. "
+                    "Turning on OCR workaround.",
+                )
+                self.translation_config.shared_context_cross_split_part.auto_enabled_ocr_workaround = True
+                self.translation_config.ocr_workaround = True
+                self.translation_config.skip_scanned_detection = True
+            else:
+                logger.warning(
+                    f"Detected {scanned} scanned pages, which is more than 80% of the total pages. "
+                    "Please check the input PDF file.",
+                )
+                raise ScannedPDFError("Scanned PDF detected.")
 
     @staticmethod
     def detect_page_is_scanned(page: il_version_1.Page, pdf: pymupdf.Document) -> bool:
@@ -130,4 +156,4 @@ class DetectScannedFile:
         )[:, :, ::-1]
         before_page_image = cv2.cvtColor(before_page_image, cv2.COLOR_RGB2GRAY)
         after_page_image = cv2.cvtColor(after_page_image, cv2.COLOR_RGB2GRAY)
-        return structural_similarity(before_page_image, after_page_image) > 0.98
+        return structural_similarity(before_page_image, after_page_image) > 0.97

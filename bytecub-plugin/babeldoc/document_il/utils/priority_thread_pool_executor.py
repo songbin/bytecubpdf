@@ -157,6 +157,7 @@ class PriorityThreadPoolExecutor(ThreadPoolExecutor):
 
         # change work queue type to queue.PriorityQueue
         self._work_queue: PriorityQueue = PriorityQueue()
+        self._all_future = []
 
     def submit(self, fn, *args, **kwargs):
         """
@@ -195,6 +196,7 @@ class PriorityThreadPoolExecutor(ThreadPoolExecutor):
 
             self._work_queue.put((priority, w))
             self._adjust_thread_count()
+            self._all_future.append(f)
             return f
 
     def _adjust_thread_count(self):
@@ -257,3 +259,11 @@ class PriorityThreadPoolExecutor(ThreadPoolExecutor):
                 self._work_queue.put(None)
                 t.join()
         logger.debug("shutdown finish %s", self._thread_name_prefix or self)
+
+    def __del__(self):
+        for f in self._all_future:
+            if f.done() and not f.cancelled():
+                try:
+                    f.result()
+                except Exception as e:
+                    logger.warning("Exception in future %s: %s", f, e, exc_info=True)

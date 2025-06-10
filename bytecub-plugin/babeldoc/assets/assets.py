@@ -234,11 +234,12 @@ async def get_table_detection_rapidocr_model_path_async(
 
 def get_doclayout_onnx_model_path():
     return run_coro(get_doclayout_onnx_model_path_async())
+
 #分类模型
 async def get_table_detection_rapidocr_model_cls_path_async(
     client: httpx.AsyncClient | None = None,
 ):
-    from babeldoc.assets.embedding_assets_metadata import TABLE_DETECTION_RAPIDOCR_MODEL_CLS_URL
+    from babeldoc.assets.embedding_assets_metadata import TABLE_DETECTION_RAPIDOCR_MODEL_CLS_URL,TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256
     onnx_path = get_cache_file_path("ch_ppocr_mobile_v2.0_cls_infer.onnx", "models")
     #判断是否存在
     if onnx_path.exists():
@@ -252,7 +253,7 @@ async def get_table_detection_rapidocr_model_cls_path_async(
 
     url = TABLE_DETECTION_RAPIDOCR_MODEL_CLS_URL[fastest_upstream]
 
-    await download_file(client, url, onnx_path, None)
+    await download_file(client, url, onnx_path, TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256)
     logger.info(
         f"Download table detection rapidocr model from {fastest_upstream} success"
     )
@@ -261,7 +262,7 @@ async def get_table_detection_rapidocr_model_cls_path_async(
 async def get_table_detection_rapidocr_model_rec_path_async(
     client: httpx.AsyncClient | None = None,
 ):
-    from babeldoc.assets.embedding_assets_metadata import TABLE_DETECTION_RAPIDOCR_MODEL_REC_URL
+    from babeldoc.assets.embedding_assets_metadata import TABLE_DETECTION_RAPIDOCR_MODEL_REC_URL,TABLE_DETECTION_RAPIDOCR_MODEL_REC_SHA3_256
     onnx_path = get_cache_file_path("ch_PP-OCRv4_rec_infer.onnx", "models")
     #判断是否存在
     if onnx_path.exists():
@@ -275,7 +276,7 @@ async def get_table_detection_rapidocr_model_rec_path_async(
 
     url = TABLE_DETECTION_RAPIDOCR_MODEL_REC_URL[fastest_upstream]
 
-    await download_file(client, url, onnx_path, None)
+    await download_file(client, url, onnx_path, TABLE_DETECTION_RAPIDOCR_MODEL_REC_SHA3_256)
     logger.info(
         f"Download table detection rapidocr model from {fastest_upstream} success"
     )

@@ -4,8 +4,8 @@ import hashlib
 import io
 import logging
 import pathlib
+import re
 import shutil
-import struct
 import threading
 import time
 from asyncio import CancelledError
@@ -14,11 +14,6 @@ from typing import Any
 from typing import BinaryIO
 
 import pymupdf
-from pdfminer.cmapdb import IdentityCMap
-from pdfminer.pdfdocument import PDFDocument
-from pdfminer.pdfinterp import PDFResourceManager
-from pdfminer.pdfpage import PDFPage
-from pdfminer.pdfparser import PDFParser
 from pymupdf import Document
 from pymupdf import Font
 
@@ -27,12 +22,15 @@ from babeldoc.assets.assets import warmup
 from babeldoc.const import CACHE_FOLDER
 from babeldoc.converter import TranslateConverter
 from babeldoc.document_il import il_version_1
+from babeldoc.document_il.babeldoc_exception.BabelDOCException import ExtractTextError
+from babeldoc.document_il.babeldoc_exception.BabelDOCException import ScannedPDFError
 from babeldoc.document_il.backend.pdf_creater import SAVE_PDF_STAGE_NAME
 from babeldoc.document_il.backend.pdf_creater import SUBSET_FONT_STAGE_NAME
 from babeldoc.document_il.backend.pdf_creater import PDFCreater
 from babeldoc.document_il.backend.pdf_creater import reproduce_cmap
 from babeldoc.document_il.frontend.il_creater import ILCreater
 from babeldoc.document_il.midend.add_debug_information import AddDebugInformation
+from babeldoc.document_il.midend.automatic_term_extractor import AutomaticTermExtractor
 from babeldoc.document_il.midend.detect_scanned_file import DetectScannedFile
 from babeldoc.document_il.midend.il_translator import ILTranslator
 from babeldoc.document_il.midend.il_translator_llm_only import ILTranslatorLLMOnly
@@ -44,23 +42,16 @@ from babeldoc.document_il.midend.typesetting import Typesetting
 from babeldoc.document_il.utils.fontmap import FontMapper
 from babeldoc.document_il.xml_converter import XMLConverter
 from babeldoc.pdfinterp import PDFPageInterpreterEx
+from babeldoc.pdfminer.pdfdocument import PDFDocument
+from babeldoc.pdfminer.pdfinterp import PDFResourceManager
+from babeldoc.pdfminer.pdfpage import PDFPage
+from babeldoc.pdfminer.pdfparser import PDFParser
 from babeldoc.progress_monitor import ProgressMonitor
 from babeldoc.result_merger import ResultMerger
 from babeldoc.split_manager import SplitManager
 from babeldoc.translation_config import TranslateResult
 from babeldoc.translation_config import TranslationConfig
 from babeldoc.translation_config import WatermarkOutputMode
-
-
-def decode(_, code: bytes) -> tuple[int, ...]:
-    n = len(code) // 2
-    if n:
-        return struct.unpack_from(f">{n}H", code)
-    else:
-        return ()
-
-
-IdentityCMap.decode = decode
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +63,7 @@ TRANSLATE_STAGES = [
     (ParagraphFinder.stage_name, 6.26),  # Parse Paragraphs
     (StylesAndFormulas.stage_name, 1.66),  # Parse Formulas and Styles
     # (RemoveDescent.stage_name, 0.15),  # Remove Char Descent
+    (AutomaticTermExtractor.stage_name, 30.0),  # Extract Terms
     (ILTranslator.stage_name, 46.96),  # Translate Paragraphs
     (Typesetting.stage_name, 4.71),  # Typesetting
     (FontMapper.stage_name, 0.61),  # Add Fonts
@@ -100,7 +92,7 @@ def fix_cmap(translate_result: TranslateResult, translate_config: TranslationCon
         "no_watermark_dual_pdf_path",
     ):
         path = getattr(translate_result, attr)
-        if path in processed:
+        if not path or path in processed:
             continue
         processed.append(path)
 
@@ -196,7 +188,7 @@ def start_parse_il(
         # but in order to facilitate the migration of pdf2zh,
         # the relevant code is temporarily retained.
         # pix = doc_zh[page.pageno].get_pixmap()
-        # image = np.fromstring(pix.samples, np.uint8).reshape(
+        # image = np.frombuffer(pix.samples, np.uint8).reshape(
         #     pix.height, pix.width, 3
         # )[:, :, ::-1]
         # page_layout = model.predict(
@@ -240,8 +232,23 @@ def start_parse_il(
 
 
 def translate(translation_config: TranslationConfig) -> TranslateResult:
-    with ProgressMonitor(TRANSLATE_STAGES) as pm:
+    with ProgressMonitor(get_translation_stage(translation_config)) as pm:
         return do_translate(pm, translation_config)
+
+
+def get_translation_stage(
+    translation_config: TranslationConfig,
+) -> list[tuple[str, float]]:
+    result = copy.deepcopy(TRANSLATE_STAGES)
+    should_remove = []
+    if not translation_config.table_model:
+        should_remove.append(TableParser.stage_name)
+    if translation_config.skip_scanned_detection:
+        should_remove.append(DetectScannedFile.stage_name)
+    if not translation_config.auto_extract_glossary:
+        should_remove.append(AutomaticTermExtractor.stage_name)
+    result = [x for x in result if x[0] not in should_remove]
+    return result
 
 
 async def async_translate(translation_config: TranslationConfig):
@@ -298,7 +305,7 @@ async def async_translate(translation_config: TranslationConfig):
     finish_event = asyncio.Event()
     cancel_event = threading.Event()
     with ProgressMonitor(
-        TRANSLATE_STAGES,
+        get_translation_stage(translation_config),
         progress_change_callback=callback.step_callback,
         finish_callback=callback.finished_callback,
         finish_event=finish_event,
@@ -405,6 +412,11 @@ def fix_null_xref(doc: Document) -> None:
             elif obj and "/ASCII85Decode" in obj:  # make pdfminer happy
                 data = doc.xref_stream(i)
                 doc.update_stream(i, data)
+            elif obj and "/LZWDecode" in obj:
+                data = doc.xref_stream(i)
+                doc.update_stream(i, data)
+            elif obj and "/Annots" in obj:
+                doc.xref_set_key(i, "Annots", "null")
         except Exception:
             doc.update_object(i, "[]")
 
@@ -581,11 +593,13 @@ def do_translate(
         result.original_pdf_path = translation_config.input_file
         result.peak_memory_usage = peak_memory_usage
 
-        # should fix macOS preview compatibility
-        # Although the issue of Windows Edge
-        # not being able to copy translated text can be fixed,
-        # the macOS preview is broken
-        # fix_cmap(result, translation_config)
+        fix_cmap(result, translation_config)
+        try:
+            migrate_toc(translation_config, result)
+        except Exception as e:
+            logger.error(
+                f"Failed to migrate TOC from {translation_config.input_file}: {e}"
+            )
         pm.translate_done(result)
         return result
 
@@ -603,31 +617,85 @@ def do_translate(
         translation_config.cleanup_temp_files()
 
 
+def migrate_toc(
+    translation_config: TranslationConfig, translate_result: TranslateResult
+):
+    old_doc = Document(translation_config.input_file)
+    if not old_doc:
+        return
+
+    try:
+        fix_filter(old_doc)
+        fix_null_xref(old_doc)
+    except Exception:
+        logger.exception("auto fix failed, please check the pdf file")
+
+    toc_data = old_doc.get_toc()
+
+    if not toc_data:
+        logger.info("No TOC found in the original PDF, skipping migration.")
+        return
+
+    files = {
+        translate_result.dual_pdf_path,
+        # translate_result.mono_pdf_path,
+        translate_result.no_watermark_dual_pdf_path,
+        # translate_result.no_watermark_mono_pdf_path
+    }
+
+    for f in files:
+        if not f:
+            continue
+        mig_toc_temp_input = translation_config.get_working_file_path(
+            "mig_toc_temp.pdf"
+        )
+        shutil.copy(f, mig_toc_temp_input)
+        new_doc = Document(mig_toc_temp_input.as_posix())
+        if not new_doc:
+            continue
+
+        new_doc.set_toc(toc_data)
+        PDFCreater.save_pdf_with_timeout(
+            new_doc,
+            f.as_posix(),
+            translation_config=translation_config,
+            clean=not translation_config.skip_clean,
+            tag="mig_toc",
+        )
+
+
 def fix_media_box(doc: Document) -> None:
     mediabox_data = {}
-    for page in doc:
-        page_box_data = {}
-        mediabox = doc.xref_get_key(page.xref, "MediaBox")
-        if mediabox[0] == "null":
-            mediabox = ("array", "[0 0 612 792]")
-            doc.xref_set_key(page.xref, "MediaBox", mediabox[1])
-        if page.mediabox.x0 != 0 or page.mediabox.y0 != 0:
-            x0 = page.mediabox.x0
-            y0 = page.mediabox.y0
-            x1 = page.mediabox.x1
-            y1 = page.mediabox.y1
-            page_box_data["MediaBox"] = doc.xref_get_key(page.xref, "MediaBox")[1]
-            doc.xref_set_key(page.xref, "MediaBox", f"[0 0 {x1 - x0} {y1 - y0}]")
-        if page.cropbox.x0 != 0 or page.cropbox.y0 != 0:
-            x0 = page.cropbox.x0
-            y0 = page.cropbox.y0
-            x1 = page.cropbox.x1
-            y1 = page.cropbox.y1
-            page_box_data["CropBox"] = doc.xref_get_key(page.xref, "CropBox")[1]
-            doc.xref_set_key(page.xref, "CropBox", f"[0 0 {x1 - x0} {y1 - x0}]")
-        if page_box_data:
-            mediabox_data[page.number] = page_box_data
+    for x in range(1, doc.xref_length()):
+        t = doc.xref_get_key(x, "Type")
+        box_set = {}
+        if t[1] in ["/Pages", "/Page"]:
+            mediabox = doc.xref_get_key(x, "MediaBox")
+            if mediabox[0] == "array":
+                _, _, x1, y1 = mediabox[1].replace("[", "").replace("]", "").split(" ")
+                doc.xref_set_key(x, "MediaBox", f"[0 0 {x1} {y1}]")
+                box_set["MediaBox"] = mediabox[1]
+            for k in ["CropBox", "BleedBox", "TrimBox", "ArtBox"]:
+                box = doc.xref_get_key(x, k)
+                if box[0] != "null":
+                    box_set[k] = box[1]
+                    doc.xref_set_key(x, k, "null")
+        if box_set:
+            mediabox_data[x] = box_set
     return mediabox_data
+
+
+def check_cid_char(il: il_version_1.Document):
+    chars = []
+    for page in il.page:
+        chars.extend(page.pdf_character)
+
+    cid_count = 0
+    for char in chars:
+        if re.match(r"^\(cid:\d+\)$", char.char_unicode):
+            cid_count += 1
+
+    return cid_count > len(chars) * 0.8
 
 
 def _do_translate_single(
@@ -636,6 +704,11 @@ def _do_translate_single(
 ) -> TranslateResult:
     """Original translation logic for a single document or part"""
     translation_config.progress_monitor = pm
+
+    if translation_config.shared_context_cross_split_part.auto_enabled_ocr_workaround:
+        translation_config.ocr_workaround = True
+        translation_config.skip_scanned_detection = True
+
     original_pdf_path = translation_config.input_file
     if translation_config.debug:
         doc_input = Document(original_pdf_path)
@@ -671,6 +744,23 @@ def _do_translate_single(
 
     resfont = None
     doc_pdf2zh.save(temp_pdf_path)
+
+    if not translation_config.skip_scanned_detection and DetectScannedFile(
+        translation_config
+    ).fast_check(doc_pdf2zh):
+        if translation_config.auto_enable_ocr_workaround:
+            logger.warning(
+                "Fast scanned check hit, Turning on OCR workaround.",
+            )
+            translation_config.shared_context_cross_split_part.auto_enabled_ocr_workaround = True
+            translation_config.ocr_workaround = True
+            translation_config.skip_scanned_detection = True
+        else:
+            logger.warning(
+                "Fast scanned check hit, Please check the input PDF file.",
+            )
+            raise ScannedPDFError("Scanned PDF detected.")
+
     il_creater = ILCreater(translation_config)
     il_creater.mupdf = doc_pdf2zh
     xml_converter = XMLConverter()
@@ -692,6 +782,9 @@ def _do_translate_single(
             docs,
             translation_config.get_working_file_path("create_il.debug.json"),
         )
+
+    if check_cid_char(docs):
+        raise ExtractTextError("The document contains too many CID chars.")
 
     # Rest of the original translation logic...
     # [Previous implementation of do_translate continues here]
@@ -751,6 +844,10 @@ def _do_translate_single(
             support_llm_translate = True
     except NotImplementedError:
         support_llm_translate = False
+
+    if support_llm_translate and translation_config.auto_extract_glossary:
+        AutomaticTermExtractor(translate_engine, translation_config).procress(docs)
+
     if support_llm_translate:
         il_translator = ILTranslatorLLMOnly(translate_engine, translation_config)
     else:

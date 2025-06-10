@@ -99,6 +99,7 @@ def parse_truetype_data(data):
 TOUNICODE_HEAD = """\
 /CIDInit /ProcSet findresource begin
 12 dict begin
+begincmap
 /CIDSystemInfo <</Registry(Adobe)/Ordering(UCS)/Supplement 0>> def
 /CMapName /Adobe-Identity-UCS def
 /CMapType 2 def
@@ -124,7 +125,10 @@ def make_tounicode(cmap, used):
             if code < 0x10000:
                 line.append(f"<{glyph:04x}><{code:04x}>")
             else:
-                line.append(f"<{glyph:04x}><{code:08x}>")
+                code -= 0x10000
+                high = 0xD800 + (code >> 10)
+                low = 0xDC00 + (code & 0b1111111111)
+                line.append(f"<{glyph:04x}><{high:04x}{low:04x}>")
         line.append("endbfchar")
     line.append(TOUNICODE_TAIL)
     return "\n".join(line)
@@ -781,10 +785,10 @@ class PDFCreater:
             return False
 
     def restore_media_box(self, doc: pymupdf.Document, mediabox_data: dict) -> None:
-        for pageno, page_box_data in mediabox_data.items():
+        for xref, page_box_data in mediabox_data.items():
             for name, box in page_box_data.items():
                 try:
-                    doc.xref_set_key(doc[pageno].xref, name, box)
+                    doc.xref_set_key(xref, name, box)
                 except Exception:
                     logger.debug(f"Error restoring media box {name} from PDF")
 
@@ -794,7 +798,6 @@ class PDFCreater:
         try:
             basename = Path(translation_config.input_file).stem
             debug_suffix = ".debug" if translation_config.debug else ""
-            
             from utils.time_util import TimeUtil
             time_str = TimeUtil.get_yyyymmddhhmmss()
             mono_out_file_name = f"{basename}{debug_suffix}.{time_str}{translation_config.lang_out}.mono.pdf"
@@ -1048,7 +1051,11 @@ class PDFCreater:
                             pretty=True,
                         )
                 pbar.advance()
-            # return TranslateResult(mono_out_path, dual_out_path)
+            if self.translation_config.no_mono:
+                mono_out_path = None
+            if self.translation_config.no_dual:
+                dual_out_path = None
+             # return TranslateResult(mono_out_path, dual_out_path)
             return TranslateResult(mono_out_path, dual_out_path,total_pages,
                     mono_out_file_name,source_file_name)
         except Exception:

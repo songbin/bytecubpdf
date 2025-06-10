@@ -5,6 +5,10 @@ from pathlib import Path
 
 import orjson
 from babeldoc.const import CACHE_FOLDER
+from babeldoc.document_il.midend.styles_and_formulas import StylesAndFormulas
+from babeldoc.translation_config import TranslationConfig
+from rich.console import Console
+from rich.table import Table
 
 WORKING_FOLDER = Path(CACHE_FOLDER) / "working"
 
@@ -167,8 +171,19 @@ def main():
         "--json-path",
         help="Path to il_translated.json (if not provided, will use the latest file)",
     )
+    parser.add_argument(
+        "--working-folder",
+        help="Path to the working folder containing il_translated.json files",
+    )
 
     args = parser.parse_args()
+
+    if args.working_folder:
+        global WORKING_FOLDER
+        WORKING_FOLDER = Path(args.working_folder)
+        if not WORKING_FOLDER.exists():
+            print(f"Error: Working folder does not exist: {WORKING_FOLDER}")
+            return 1
 
     # Determine JSON file path
     json_path = None
@@ -198,6 +213,80 @@ def main():
         print(
             f"No fonts found for paragraphs matching debug_id pattern: {args.debug_id_regex}"
         )
+
+    fonts = []
+
+    # Read intermediate representation
+    with json_path.open(encoding="utf-8") as f:
+        pdf_data = json.load(f)
+
+    for page_index, page in enumerate(pdf_data["page"]):
+        for paragraph_index, paragraph_content in enumerate(page["pdf_paragraph"]):
+            font_debug_id = paragraph_content["debug_id"]
+            if font_debug_id:
+                # Create page font mapping
+                page_font_map = {}
+                for font in page["pdf_font"]:
+                    if "font_id" in font and "name" in font:
+                        page_font_map[font["font_id"]] = (font["font_id"], font["name"])
+
+                # Extract fonts from paragraph
+                name_list = []
+                paragraph_fonts = extract_fonts_from_paragraph(
+                    paragraph_content, page_font_map
+                )
+                for _font_id, font_name in paragraph_fonts:
+                    name_list.append(font_name)
+
+                font_list = []
+                for each in fonts:
+                    font_list.append(each[1])
+
+                for each_name in name_list:
+                    if each_name not in font_list:
+                        fonts.append(
+                            (page_index, each_name, paragraph_index, font_debug_id)
+                        )
+
+    # Initialize checker
+    translation_config = TranslationConfig(
+        *[None for _ in range(3)], lang_out="zh_cn", doc_layout_model=1
+    )
+    checker = StylesAndFormulas(translation_config)
+
+    # Create table
+    table = Table(title="Font Recognition Results")
+    table.add_column("Page #", justify="center", style="cyan")
+    table.add_column("Paragraph #", justify="center", style="cyan")
+    table.add_column("DEBUG_ID", justify="center", style="cyan")
+    table.add_column("Font Name", style="magenta")
+    table.add_column("Recognition Result", justify="center")
+
+    # Output results
+    for each_font in fonts:
+        page_index, font_name, paragraph_index, font_debug_id = each_font
+
+        if checker.is_formulas_font(font_name):
+            table.add_row(
+                str(page_index),
+                str(paragraph_index),
+                str(font_debug_id),
+                font_name,
+                "[bold red]Formula Font[/bold red]",
+            )
+        else:
+            table.add_row(
+                str(page_index),
+                str(paragraph_index),
+                str(font_debug_id),
+                font_name,
+                "[bold blue]Non-Formula Font[/bold blue]",
+            )
+
+    # Print table
+    console = Console()
+
+    console.print(table)
 
     return 0
 

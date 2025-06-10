@@ -3,27 +3,27 @@ import re
 import unicodedata
 
 import numpy as np
-from pdfminer.converter import PDFConverter
-from pdfminer.layout import LTChar
-from pdfminer.layout import LTComponent
-from pdfminer.layout import LTFigure
-from pdfminer.layout import LTLine
-from pdfminer.layout import LTPage
-from pdfminer.layout import LTText
-from pdfminer.pdfcolor import PDFColorSpace
-from pdfminer.pdffont import PDFCIDFont
-from pdfminer.pdffont import PDFFont
-from pdfminer.pdffont import PDFUnicodeNotDefined
-from pdfminer.pdfinterp import PDFGraphicState
-from pdfminer.pdfinterp import PDFResourceManager
-from pdfminer.utils import Matrix
-from pdfminer.utils import apply_matrix_pt
-from pdfminer.utils import bbox2str
-from pdfminer.utils import matrix2str
-from pdfminer.utils import mult_matrix
 from pymupdf import Font
 
 from babeldoc.document_il.frontend.il_creater import ILCreater
+from babeldoc.pdfminer.converter import PDFConverter
+from babeldoc.pdfminer.layout import LTChar
+from babeldoc.pdfminer.layout import LTComponent
+from babeldoc.pdfminer.layout import LTFigure
+from babeldoc.pdfminer.layout import LTLine
+from babeldoc.pdfminer.layout import LTPage
+from babeldoc.pdfminer.layout import LTText
+from babeldoc.pdfminer.pdfcolor import PDFColorSpace
+from babeldoc.pdfminer.pdffont import PDFCIDFont
+from babeldoc.pdfminer.pdffont import PDFFont
+from babeldoc.pdfminer.pdffont import PDFUnicodeNotDefined
+from babeldoc.pdfminer.pdfinterp import PDFGraphicState
+from babeldoc.pdfminer.pdfinterp import PDFResourceManager
+from babeldoc.pdfminer.utils import Matrix
+from babeldoc.pdfminer.utils import apply_matrix_pt
+from babeldoc.pdfminer.utils import bbox2str
+from babeldoc.pdfminer.utils import matrix2str
+from babeldoc.pdfminer.utils import mult_matrix
 
 log = logging.getLogger(__name__)
 

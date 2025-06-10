@@ -341,9 +341,13 @@ class TypesettingUnit:
     @property
     def box(self):
         if self.char:
+            box = copy.deepcopy(self.char.box)
             if self.char.visual_bbox and self.char.visual_bbox.box:
-                return self.char.visual_bbox.box
-            return self.char.box
+                box.y = self.char.visual_bbox.box.y
+                box.y2 = self.char.visual_bbox.box.y2
+                # return self.char.visual_bbox.box
+
+            return box
         elif self.formular:
             return self.formular.box
         elif self.unicode:

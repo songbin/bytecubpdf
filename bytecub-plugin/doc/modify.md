@@ -47,6 +47,7 @@
       CACHE_FOLDER = Path(path)
   #### 5. il_translator.py中
      <!-- paragraph_token_count = 0 因为打包exe后token不打包，原因是token打包会有问题 -->
+     calc_token_count这个方法里，直接返回0
      self.tokenizer = tiktoken.encoding_for_model("gpt-4o")
      这一行代码注释掉，因为token打包的时候有问题
 #### 6 rapidocr.py中
@@ -77,3 +78,13 @@
    verify_file增加
    if sha3_256 is None:
         return True
+### 8.embedding_assets_metadata.py中
+    TABLE_DETECTION_RAPIDOCR_MODEL_REC_SHA3_256 = (
+        "6040d1cb9554886e166fd817af0ab69c5cce8e5e80b8a111c1f08258ad4c4b22"
+    )
+
+    TABLE_DETECTION_RAPIDOCR_MODEL_CLS_SHA3_256 = (
+        "1fe31cb7e7babb2fc4cfe7090b1e93fc538b9a4a36a5f9af72bd6da78c9afc26"
+    )
+### 9.hyperscan.py
+   增加hyperscan的模型，创建一个空py文件，用于屏蔽hyperscan引用

@@ -16,14 +16,12 @@ import babeldoc.assets.assets
 import babeldoc.high_level
 from babeldoc.document_il.translator.translator import OpenAITranslator
 from babeldoc.document_il.translator.translator import set_translate_rate_limiter
-from babeldoc.docvision.doclayout import DocLayoutModel
-from babeldoc.docvision.rpc_doclayout import RpcDocLayoutModel
-from babeldoc.docvision.table_detection.rapidocr import RapidOCRModel
+from babeldoc.glossary import Glossary
 from babeldoc.translation_config import TranslationConfig
 from babeldoc.translation_config import WatermarkOutputMode
 
 logger = logging.getLogger(__name__)
-__version__ = "0.3.51"
+__version__ = "0.3.69"
 
 
 def create_parser():
@@ -226,6 +224,43 @@ def create_parser():
         help="Custom system prompt for translation.",
         default=None,
     )
+    translation_group.add_argument(
+        "--add-formula-placehold-hint",
+        action="store_true",
+        default=False,
+        help="Add formula placeholder hint for translation. (Currently not recommended, it may affect translation quality, default: False)",
+    )
+    translation_group.add_argument(
+        "--glossary-files",
+        type=str,
+        default=None,
+        help="Comma-separated paths to glossary CSV files.",
+    )
+    translation_group.add_argument(
+        "--pool-max-workers",
+        type=int,
+        help="Maximum number of worker threads for internal task processing pools. If not specified, defaults to QPS value. This parameter directly sets the worker count, replacing previous QPS-based dynamic calculations.",
+    )
+    translation_group.add_argument(
+        "--no-auto-extract-glossary",
+        action="store_false",
+        dest="auto_extract_glossary",
+        default=True,
+        help="Disable automatic term extraction. (Config file: set auto_extract_glossary = false)",
+    )
+    translation_group.add_argument(
+        "--auto-enable-ocr-workaround",
+        action="store_true",
+        default=False,
+        help="Enable automatic OCR workaround. If a document is detected as heavily scanned, this will attempt to enable OCR processing and skip further scan detection. Note: This option interacts with `--ocr-workaround` and `--skip-scanned-detection`. See documentation for details. (default: False)",
+    )
+    translation_group.add_argument(
+        "--primary-font-family",
+        type=str,
+        choices=["serif", "sans-serif", "script"],
+        default=None,
+        help="Override primary font family for translated text. Choices: 'serif' for serif fonts, 'sans-serif' for sans-serif fonts, 'script' for script/italic fonts. If not specified, uses automatic font selection based on original text properties.",
+    )
     # service option argument group
     service_group = translation_group.add_mutually_exclusive_group()
     service_group.add_argument(
@@ -304,17 +339,48 @@ async def main():
 
     # 设置翻译速率限制
     set_translate_rate_limiter(args.qps)
-
     # 初始化文档布局模型
     if args.rpc_doclayout:
+        from babeldoc.docvision.rpc_doclayout import RpcDocLayoutModel
+
         doc_layout_model = RpcDocLayoutModel(host=args.rpc_doclayout)
     else:
+        from babeldoc.docvision.doclayout import DocLayoutModel
+
         doc_layout_model = DocLayoutModel.load_onnx()
 
     if args.translate_table_text:
+        from babeldoc.docvision.table_detection.rapidocr import RapidOCRModel
+
         table_model = RapidOCRModel()
     else:
         table_model = None
+
+    # Load glossaries
+    loaded_glossaries: list[Glossary] = []
+    if args.glossary_files:
+        paths_str = args.glossary_files.split(",")
+        for p_str in paths_str:
+            file_path = Path(p_str.strip())
+            if not file_path.exists():
+                logger.error(f"Glossary file not found: {file_path}")
+                continue
+            if not file_path.is_file():
+                logger.error(f"Glossary path is not a file: {file_path}")
+                continue
+            try:
+                glossary_obj = Glossary.from_csv(file_path, args.lang_out)
+                if glossary_obj.entries:
+                    loaded_glossaries.append(glossary_obj)
+                    logger.info(
+                        f"Loaded glossary '{glossary_obj.name}' with {len(glossary_obj.entries)} entries."
+                    )
+                else:
+                    logger.info(
+                        f"Glossary '{file_path.stem}' loaded with no applicable entries for lang_out '{args.lang_out}'."
+                    )
+            except Exception as e:
+                logger.error(f"Failed to load glossary from {file_path}: {e}")
 
     pending_files = []
     for file in args.files:
@@ -411,6 +477,12 @@ async def main():
             ocr_workaround=args.ocr_workaround,
             custom_system_prompt=args.custom_system_prompt,
             working_dir=working_dir,
+            add_formula_placehold_hint=args.add_formula_placehold_hint,
+            glossaries=loaded_glossaries,
+            pool_max_workers=args.pool_max_workers,
+            auto_extract_glossary=args.auto_extract_glossary,
+            auto_enable_ocr_workaround=args.auto_enable_ocr_workaround,
+            primary_font_family=args.primary_font_family,
         )
 
         # Create progress handler
@@ -545,6 +617,7 @@ def cli():
             or v.name.startswith("httpx")
             or "http11" in v.name
             or "openai" in v.name
+            or "pdfminer" in v.name
         ):
             v.disabled = True
             v.propagate = False
