@@ -56,3 +56,9 @@ pylatexenc==2.10
 matplotlib==3.10.1
 pillow==11.2.1
 pyzstd>=0.17.0
+
+deprecation>=2.1.0
+img2pdf>=0.5
+packaging>=20
+pikepdf>=8.10.1, !=9.8.0
+pluggy>=1
