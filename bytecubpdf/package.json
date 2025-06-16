@@ -21,6 +21,7 @@
     "rebuild": "cross-env ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-rebuild -f -w sqlite3"
   },
   "dependencies": {
+    "@langchain/community": "^0.3.46",
     "@langchain/core": "^0.3.43",
     "@langchain/ollama": "^0.2.0",
     "@langchain/openai": "^0.5.4",
