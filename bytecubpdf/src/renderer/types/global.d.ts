@@ -2,8 +2,9 @@
 
 import { get } from "http";
 import {LogLevel,FileDownloadItem,DownloadProgress} from '@/shared/constants/dfconstants'
-interface Window {
-    electronAPI?: {
+declare global {
+  interface Window {
+    electronAPI: {
       platform: NodeJS.Platform;
       minimizeWindow: () => Promise<void>;
       maximizeWindow: () => Promise<void>;
@@ -64,4 +65,5 @@ interface Window {
       verifyFileDownloads: () => Promise<FileDownloadItem[]>; // 新增验证文件下载方法
       verifyFilePathDownloads: () => Promise<FileDownloadItem[]>; // 新增验证文件下载方法 
     };
+}
 }

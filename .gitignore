@@ -125,3 +125,4 @@ bytecub-plugin/bytecubplugin.spec
 
 # 调试文件
 /vitepress/debug.*
+/testdata

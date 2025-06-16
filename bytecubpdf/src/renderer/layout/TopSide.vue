@@ -241,7 +241,8 @@ onMounted(() => {
 })
 const minimizeWindow = async (): Promise<void> => {
   try {
-    await (window as any).window.electronAPI?.minimizeWindow()
+    await  window.electronAPI.minimizeWindow()
+
   } catch (error) {
     console.error('最小化窗口失败:', error)
   }
@@ -249,7 +250,7 @@ const minimizeWindow = async (): Promise<void> => {
 
 const maximizeWindow = async (): Promise<void> => {
   try {
-    await (window as any).window.electronAPI?.maximizeWindow()
+    await window.electronAPI?.maximizeWindow()
   } catch (error) {
     console.error('最大化窗口失败:', error)
   }
