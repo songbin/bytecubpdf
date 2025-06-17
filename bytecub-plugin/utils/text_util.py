@@ -1,5 +1,6 @@
 import uuid
 import hashlib
+import re
 from utils.chatlog import logger
 from model.config.chat_exception import ChatException
 
@@ -60,3 +61,14 @@ class TextUtil():
             source = source[:last_n] + target  # 如果是结尾的 \n，则替换为 \n
 
         return source
+
+    @staticmethod
+    def filter_special_char(file_name: str) -> str:
+        '''过滤文件名中的特殊字符，将不允许的字符替换为下划线并去除首尾空格和下划线'''
+        # 定义Windows系统中不允许的文件名特殊字符，包括单引号、双引号、空格等
+        special_chars = r"[\\/:*?\"<>|'‘’“” ]"
+        # 将特殊字符替换为下划线
+        filtered_name = re.sub(special_chars, '_', file_name)
+        # 去除首尾的空格和下划线
+        filtered_name = filtered_name.strip(' _')
+        return filtered_name

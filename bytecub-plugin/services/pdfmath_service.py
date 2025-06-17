@@ -43,6 +43,8 @@ class PdfMathService:
             
             # 获取文件名（不带扩展名）和扩展名
             file_name, file_extension = os.path.splitext(file.filename)
+            #把文件名你的特殊字符串全部过滤掉
+            file_name = TextUtil.filter_special_char(file_name)
             
             # 获取当前时间并格式化为 "年月日时分秒"
             current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
