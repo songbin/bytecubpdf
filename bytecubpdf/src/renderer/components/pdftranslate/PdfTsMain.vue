@@ -458,7 +458,7 @@ const languages = [
   { value: 'uk', label: '乌克兰语' }
 ];
 const translateEngines = [
-  { value: 'pdfmath', label: 'PDFMath' },
+  { value: 'pdfmath', label: 'PDFMath 1.x' },
   { value: 'babeldoc', label: 'BabelDOC' },
 ];
 const handleEngineChange = (value: string) => {

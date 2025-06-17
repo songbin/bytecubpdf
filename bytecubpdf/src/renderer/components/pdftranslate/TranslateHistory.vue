@@ -183,7 +183,7 @@ const columns: TableColumn<TranslateHistory>[] = [
     title: '引擎', 
     key: 'translationEngine', 
     width: 100,
-    render: (row: TranslateHistory) => row.translationEngine === 'babeldoc' ? 'BabelDOC' : row.translationEngine
+    render: (row: TranslateHistory) => row.translationEngine === 'babeldoc' ? 'BabelDOC' : row.translationEngine === 'pdfmath' ? 'PDFMath 1.x' : row.translationEngine
   },
   { title: '页数', key: 'totalPages', width: 80 },
   { title: '耗时(秒)', key: 'timeConsumed', width: 80 },
