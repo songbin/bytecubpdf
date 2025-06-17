@@ -56,12 +56,33 @@ class PdfUtil:
         pdf_document = fitz.open(stream=pdf_data, filetype="pdf")
         text_pages: list[FilePage] = []
         for i in range(pdf_document.page_count):
-            logger.info(
-                f'reader file page {i} page total:{pdf_document.page_count}, file md5:{md5}')
+            # logger.info(
+            #     f'reader file page {i} page total:{pdf_document.page_count}, file md5:{md5}')
             page = pdf_document[i]
             text = page.get_text()
             file_page = FilePage(i+1, text)
             text_pages.append(file_page)
         return text_pages
+    def verify_pdf_is_scanned(self, pdf_path: str) -> bool:
+        '''
+        校验pdf是否是扫描版
+        如果有2页字符数小于10就判定为扫描件
+        '''
+        try:
+            pdf_document = fitz.open(path)
+            low_text_pages = 0
+            for i in range(pdf_document.page_count):
+                page = pdf_document[i]
+                text = page.get_text()
+                cleaned_text = text.replace(" ", "").replace("\n", "")
+                if len(cleaned_text) < 10:
+                    low_text_pages += 1
+                    if low_text_pages >= 2:
+                        return True
+            return low_text_pages >= 2
+        except Exception as e:
+            logger.error(f'verify pdf is scanned error: {e}')
+            return False
+     
 
     

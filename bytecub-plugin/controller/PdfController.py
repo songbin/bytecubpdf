@@ -26,6 +26,7 @@ from ai_enginee.models.chat_request import ChatRequest
 from ai_enginee.agents.entry_agnet import EntryAgent
 from services.ocr_md_service import OcrMdService
 from typing import Optional
+from model.config.error_info import ErrorInfo
 
 router = APIRouter()
 
@@ -109,6 +110,15 @@ class PdfController:
             summary="测试对话接口",
             response_description="测试对话接口",
             operation_id="translate"
+        )
+
+        self.router.add_api_route(
+            path="/pdf/verifypdf",
+            endpoint=self.verify_pdf,
+            methods=["POST"],
+            summary="校验pdf是不是扫描版",
+            response_description="校验pdf是不是扫描版",
+            operation_id="verifypdf"
         )
         
   
@@ -204,7 +214,14 @@ class PdfController:
 
          
 
- 
+    def verify_pdf(self, request: TranslateRequestModel):
+        pdf_path:str = request.file_path
+        is_scanned = PdfUtil.verify_pdf_is_scanned(pdf_path)
+        if is_scanned:
+            return DataResult.fail(msg=ErrorInfo.msg_verify_pdf, code=ErrorInfo.code_verify_pdf)
+        else:
+            return DataResult.ok()
+         
     def translate_pdf(self, request: TranslateRequestModel):
         translate_engine:str = request.translate_engine
         ConfigDir.init(base_dir = request.cache_dir)
