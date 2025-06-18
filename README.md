@@ -1,5 +1,7 @@
 # 小书芽 - PDF翻译工具
 小书芽原名字节立方。
+更新主力在gitcode上，github的更新会有延迟   
+- [小书芽在gitcode的地址](https://gitcode.com/songbinsky/bytecubpdf)
 ## 环境要求
 - **操作系统**: Windows 10/11 64位
 - **Python**: 3.11.9 (推荐使用Miniconda管理环境)
@@ -63,7 +65,7 @@ npm install --force
 ## 致谢
 本项目基于以下开源项目二次开发:
 - [PDFMathTranslate](https://github.com/Byaidu/PDFMathTranslate)
-- [BabelDoc](https://github.com/funstory-ai/BabelDOC)
+- [BabelDOC](https://github.com/funstory-ai/BabelDOC)
 
 感谢原作者的杰出贡献！
 ## 界面截图
@@ -73,4 +75,5 @@ npm install --force
 ![4.png](images/4.png)
 ![5.png](images/5.png)
 ![6.png](images/6.png)
+![7.png](images/7.png)
 ```
