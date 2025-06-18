@@ -69,7 +69,7 @@ function runCoreServer(mainWindow: any) {
     exePath = path.join(__dirname, '../../execute/bytecubplugin.exe');
   } else {
     // 生产环境路径（打包后）
-    exePath = path.join(process.resourcesPath, 'execute/bytecubplugin.exe');
+    exePath = path.join(path.dirname(process.resourcesPath), 'execute', 'bytecubplugin.exe');
   }
   
   // 先杀死可能存在的旧进程
