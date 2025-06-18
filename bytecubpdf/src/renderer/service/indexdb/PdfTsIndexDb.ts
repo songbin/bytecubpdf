@@ -13,6 +13,7 @@ export interface PdfTranslateConfig {
   disableRichText: boolean,  // 新增富文字段
   enableTable: boolean,  // 新增表格翻译字段
   enableDual: boolean,  // 新增双栏翻译字段
+  verifyScanned:boolean,
 }
 
 export default class PdfTsIndexDb {

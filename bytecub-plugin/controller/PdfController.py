@@ -27,6 +27,7 @@ from ai_enginee.agents.entry_agnet import EntryAgent
 from services.ocr_md_service import OcrMdService
 from typing import Optional
 from model.config.error_info import ErrorInfo
+from utils.pdf_util import PdfUtil
 
 router = APIRouter()
 
@@ -38,7 +39,8 @@ parse_babel_executor = ThreadPoolExecutor(max_workers=20)
 summary_executor = ThreadPoolExecutor(max_workers=20)
 
 
-
+class VerifyPdfMode(BaseModel):
+    file_path: str
 class TranslateRequestModel(BaseModel):
     file_path: str
     sourceLanguage: str
@@ -214,7 +216,7 @@ class PdfController:
 
          
 
-    def verify_pdf(self, request: TranslateRequestModel):
+    def verify_pdf(self, request: VerifyPdfMode):
         pdf_path:str = request.file_path
         is_scanned = PdfUtil.verify_pdf_is_scanned(pdf_path)
         if is_scanned:

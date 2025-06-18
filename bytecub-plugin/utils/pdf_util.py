@@ -1,4 +1,4 @@
-from chatlog import logger
+from utils.chatlog import logger
 import fitz
 import io
 import os
@@ -63,19 +63,22 @@ class PdfUtil:
             file_page = FilePage(i+1, text)
             text_pages.append(file_page)
         return text_pages
-    def verify_pdf_is_scanned(self, pdf_path: str) -> bool:
+    @staticmethod
+    def verify_pdf_is_scanned(pdf_path: str) -> bool:
         '''
         校验pdf是否是扫描版
         如果有2页字符数小于10就判定为扫描件
         '''
         try:
-            pdf_document = fitz.open(path)
+            pdf_document = fitz.open(pdf_path)
             low_text_pages = 0
-            for i in range(pdf_document.page_count):
+            # 最多检测前8页
+            for i in range(min(pdf_document.page_count, 8)):
                 page = pdf_document[i]
                 text = page.get_text()
+                logger.info(f'verify pdf is scanned page {i} text: {text}')
                 cleaned_text = text.replace(" ", "").replace("\n", "")
-                if len(cleaned_text) < 10:
+                if len(cleaned_text) < 200:
                     low_text_pages += 1
                     if low_text_pages >= 2:
                         return True

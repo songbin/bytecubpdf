@@ -29,7 +29,7 @@
               :placeholder="t('pdfts.main.tsform.targetLangPlaceholder')" filterable size="small" />
           </n-form-item>
         </n-flex>
-        <n-flex class="form-section">
+        <n-flex class="form-section" >
           <n-form-item :label="t('pdfts.main.tsform.platform')" :show-feedback="false" :style="{ marginBottom: 0 }">
             <n-select v-model:value="formData.platformId" :options="platforms"
               :placeholder="t('pdfts.main.tsform.platformPlaceholder')" filterable @update:value="handlePlatformChange"
@@ -40,7 +40,7 @@
               :placeholder="t('pdfts.main.tsform.modelPlaceholder')" filterable size="small" />
           </n-form-item>
         </n-flex>
-        <n-flex class="form-section" vertical>
+        <n-flex class="form-section" vertical size="small" >
           <n-flex>
             <n-form-item :label="t('pdfts.main.tsform.engine')" :show-feedback="false" :style="{ marginBottom: 0 }">
               <n-tooltip trigger="hover">
@@ -49,7 +49,7 @@
                     <HelpCircle />
                   </n-icon>
                 </template>
-                BabelDoc质量更好,PDFMath速度更快
+                推荐使用BabelDOC,如果遇到问题切换引擎尝试
               </n-tooltip>
               <n-select v-model:value="formData.engine" :options="translateEngines"
                 :placeholder="t('pdfts.main.tsform.enginePlaceholder')" filterable @update:value="handleEngineChange"
@@ -80,6 +80,17 @@
                 启用后将额外生成双语对照pdf
               </n-tooltip>
               <n-switch v-model:value="formData.enableDual" size="small" />
+            </n-form-item>
+            <n-form-item label="扫描检测" :show-feedback="false" :style="{ marginBottom: 0 }">
+              <n-tooltip trigger="hover">
+                <template #trigger>
+                  <n-icon size="large">
+                    <HelpCircle />
+                  </n-icon>
+                </template>
+                当前无法翻译扫描版pdf,开启后可以简单判断下当前是不是扫描版pdf
+              </n-tooltip>
+              <n-switch v-model:value="formData.verifyScanned" size="small" />
             </n-form-item>
             <n-form-item  v-if="formData.engine === 'babeldoc'" label="消除重影" :show-feedback="false" :style="{ marginBottom: 0 }">
               <n-tooltip trigger="hover">
@@ -199,6 +210,7 @@ import {
 import { CloudUpload } from '@vicons/carbon';
 import { useI18n } from 'vue-i18n';
 import { CheckmarkCircle,HelpCircle } from '@vicons/ionicons5';
+import axios from 'axios';
 import { ref, onMounted, watch, nextTick } from 'vue';
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
 import PdfTsIndexDb from '@/renderer/service/indexdb/PdfTsIndexDb';
@@ -219,6 +231,8 @@ const pdfTsIndexDb = new PdfTsIndexDb();
 const message = useMessage();
 const uploadData = ref<Record<string, any>>({});
 import { UPLOAD_BIZ } from '@/renderer/constants/appconfig'
+//是否在翻译前先进行扫描版检测
+const verifyScanned = ref(false)
 // 数据绑定
 const formData = ref({
   sourceLang: '',
@@ -233,6 +247,7 @@ const formData = ref({
   disableRichText: false,  // 新增禁用富文字段
   enableTable: false,  // 新增表格翻译字段
   enableDual: false,  // 新增双语对照字段
+  verifyScanned:true,//是否开启扫描版检测
 
 });
 const fileList = ref<UploadFileInfo[]>([]);
@@ -278,6 +293,7 @@ onMounted(async () => {
         disableRichText: config.disableRichText || false,  // 新增富文字段
         enableTable: config.enableTable || false,  // 新增表格翻译字段
         enableDual: config.enableDual || false,  // 新增双语对照字段
+        verifyScanned: config.verifyScanned || true,
       };
       if (config.platformId) {
         await handlePlatformChange(config.platformId);
@@ -338,6 +354,7 @@ watch(
       disableRichText: newValue.disableRichText, // 新增
       enableTable: newValue.enableTable, // 新增
       enableDual: newValue.enableDual, // 新增
+      verifyScanned: newValue.verifyScanned, // 新增
     });
   },
   { deep: true }
@@ -547,10 +564,11 @@ const formatHistoryParams = async (resultData: any) => {
 // 修改翻译完成的处理逻辑
 // 开始翻译任务
 const handleTranslate = async () => {
+ 
   console.log('开始翻译任务'); // 添加日志
-  filesToDownload.value = await (window as any).window.electronAPI.verifyFilePathDownloads();
+  filesToDownload.value = await window.electronAPI.verifyFilePathDownloads();
   if (filesToDownload.value.length > 0) {
-    filesToDownload.value = await (window as any).window.electronAPI.verifyFileDownloads();
+    filesToDownload.value = await window.electronAPI.verifyFileDownloads();
     return
   }
   if (fileList.value.length === 0) {
@@ -578,8 +596,46 @@ const handleTranslate = async () => {
       return;
     }
   }
+  if(!formData.value.verifyScanned){
+    await startTranslate()
+  }else{
+    // 使用post调用接口验证PDF
+    const postData = {
+      file_path: LocalStorageUtil.getPendingTranslation()
+    }
+     
+    axios.post('http://localhost:8089/pdf/verifypdf', postData)
+      .then(async (response) => {
+        const { code, msg } = response.data;
+        if (code === 4003) {
+          // 不是扫描版，继续翻译流程
+              dialog.success({
+              title: '扫描件提醒',
+              content: '多页可识别文本数量小于200，可能是扫描件，是否继续翻译？',
+              positiveText: '继续',
+              negativeText: '暂不翻译',
+              maskClosable: false,
+              onEsc: () => {
+                message.success('暂不翻译')
+              },
+              onPositiveClick: async () => {
+                setTimeout(async () => {
+                  await startTranslate();
+                }, 0);
+              }
+            })
+        } else {
+          await startTranslate()
+        }
+      })
+      .catch(async error => {
+        await startTranslate();
+        console.error('验证PDF错误:', error);
+      });
+  }
 
-  // 原有翻译逻辑保持不变
+};
+ const startTranslate = async () =>{
   try {
     isLoading.value = true;
     progressVisible.value = true;
@@ -662,7 +718,7 @@ const handleTranslate = async () => {
   } finally {
     isLoading.value = false;
   }
-};
+}
 
 // 终止翻译任务
 const handleAbort = () => {
@@ -706,9 +762,7 @@ watch(pluginLogs, async () => {
   border-radius: 4px;
   background-color: rgba(250, 250, 252, 0.8);
   width: 100%;
-  padding: 5px 8px; /**内边距上下5px，左右8px*/
-  
-  
+  padding: 3px 5px; /**内边距上下5px，左右8px*/
 }
 
 :deep(.n-form-item .n-form-item-feedback-wrapper) {
