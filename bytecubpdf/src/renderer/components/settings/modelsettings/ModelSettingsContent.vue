@@ -434,7 +434,7 @@ async function handleSave() {
             ...formData.value,
             models: models.value
         }
-        llmManager.savePlatform(platformData)
+        await llmManager.savePlatform(platformData)
         // await llmManager.savePlatformWithModels(platformData)
         message.success(t('settings.model.messages.saveSuccess'))
         emit('platform-updated', platformData.id)
