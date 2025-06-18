@@ -26,7 +26,7 @@
                     </n-flex>
 
                     <!-- API密钥 -->
-                    <n-flex>
+                    <n-flex vertical>
                         <n-form-item :label="t('settings.model.apiKey')" path="apiKey"  
                             class="full-width-form-item" :show-feedback="false">
                             <n-input-group>
@@ -42,6 +42,11 @@
                                 </n-button>
                             </n-input-group>
                         </n-form-item>
+                        <n-flex justify="end" v-if="['zhipu', 'deepseek', 'silicon'].includes(formData.id)">
+                            <n-button text size="tiny" type="info" @click="openGuide(formData.id)">
+                                {{formData.platformName}}密钥申请指南</n-button>
+                        </n-flex>
+                        
                     </n-flex>
 
                     <!-- API地址 -->
@@ -200,7 +205,17 @@ const message = useMessage()
 const router = useRouter()
 const llmManager = new LlmModelManager()
 const chatService = new ChatService()
-
+const openGuide = (id:string) =>{
+    if(id === 'silicon'){
+        window.electronAPI.openExternal('https://www.docfable.com/docs/platform/siliconguide.html')
+    }else if (id === 'zhipu'){
+        window.electronAPI.openExternal('https://www.docfable.com/docs/platform/chatglmguide.html')
+    }else if (id === 'deepseek'){
+        window.electronAPI.openExternal('https://www.docfable.com/docs/platform/deepseekguide.html')
+    }else{
+        window.electronAPI.openExternal('https://www.docfable.com/docs/usage/settingsmentor/llm.html')
+    }
+}
 // Props
 const props = defineProps({
     platformId: {
@@ -221,7 +236,8 @@ const formRef = ref<InstanceType<typeof NForm>>()
 const dialogFormRef = ref<InstanceType<typeof NForm>>()
 
 // Data
-const formData = ref<Omit<SettingLLMPlatform, 'id' | 'models'>>({
+const formData = ref<Omit<SettingLLMPlatform, 'models'>>({
+    id: '',
     platformName: '',
     protocolType: '',
     apiKey: '',
@@ -328,7 +344,8 @@ async function loadPlatformData(id: string) {
                     protocolType: platform.protocolType,
                     apiKey: platform.apiKey,
                     apiUrl: platform.apiUrl,
-                    isActive: Boolean(platform.isActive)
+                    isActive: Boolean(platform.isActive),
+                    id: platform.id,
                 }
                 models.value = platform.models || []
             }
@@ -338,6 +355,7 @@ async function loadPlatformData(id: string) {
         }
     } else if (props.isNew) {
         formData.value = {
+            id: '',
             platformName: '',
             protocolType: '',
             apiKey: '',
@@ -405,18 +423,19 @@ async function removeModel(index: number) {
         message.error(t('settings.model.messages.deleteError'))
     }
 }
-
+//以前这里是把所有模型删除然后从新写入
+//现在修改为只保存平台就行了
+//因为模型的修改已经单独处理了
 async function handleSave() {
     try {
         await formRef.value?.validate()
         
         const platformData: SettingLLMPlatform = {
-            id: props.platformId === 'new' ? crypto.randomUUID() : props.platformId,
             ...formData.value,
             models: models.value
         }
-
-        await llmManager.savePlatformWithModels(platformData)
+        llmManager.savePlatform(platformData)
+        // await llmManager.savePlatformWithModels(platformData)
         message.success(t('settings.model.messages.saveSuccess'))
         emit('platform-updated', platformData.id)
     } catch (error) {
