@@ -1,7 +1,8 @@
 # 小书芽 - PDF翻译工具
 小书芽原名字节立方。
 更新主力在gitcode上，github的更新会有延迟   
-- [小书芽在gitcode的地址](https://gitcode.com/songbinsky/bytecubpdf)
+- [小书芽在gitcode的地址 https://gitcode.com/songbinsky/bytecubpdf](https://gitcode.com/songbinsky/bytecubpdf)
+- [小书芽在github的地址 https://github.com/songbin/bytecubpdf](hhttps://github.com/songbin/bytecubpdf)
 ## 环境要求
 - **操作系统**: Windows 10/11 64位
 - **Python**: 3.11.9 (推荐使用Miniconda管理环境)
