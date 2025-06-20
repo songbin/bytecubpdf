@@ -103,12 +103,20 @@ function generateFakeItems(count: number): listType[] {
     </div>
 
 
-    <div style="display: flex; flex-direction: column; gap: 20px;">
-      <MentionSender v-model="senderValue" variant="updown" :auto-size="{ minRows: 2, maxRows: 5 }" clearable
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <n-flex>
+          <n-button size="tiny">
+            PDF翻译
+          </n-button>
+           <n-button size="tiny">
+            图片OCR
+          </n-button>
+      </n-flex>
+      <MentionSender  v-model="senderValue" variant="updown" :auto-size="{ minRows: 2, maxRows: 4 }" clearable
         allow-speech placeholder="Enter=发送, SHIFT + ENTER = 换行">
         <template #prefix>
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <n-button tertiary circle type="info">
+              <n-button size="small" tertiary circle type="info">
               <template #icon>
                 <n-icon>
                   <Add />
@@ -116,18 +124,7 @@ function generateFakeItems(count: number): listType[] {
               </template>
             </n-button>
 
-            <div :class="{ isSelect }"
-              style="display: flex; align-items: center; gap: 4px; padding: 2px 12px; border: 1px solid silver; border-radius: 15px; cursor: pointer; font-size: 12px;"
-              @click="isSelect = !isSelect">
-              <n-button tertiary circle type="primary">
-              <template #icon>
-                <n-icon>
-                  <BrainCircuit20Regular />
-                </n-icon>
-              </template>
-              </n-button>
-              <span>深度思考</span>
-            </div>
+            
 
             左边是自定义 prefix 前缀 右边是自定义 操作列表
           </div>
@@ -135,7 +132,7 @@ function generateFakeItems(count: number): listType[] {
 
         <template #action-list>
           <div style="display: flex; align-items: center; gap: 8px;">
-             <n-button tertiary circle type="primary">
+             <n-button size="small" tertiary circle type="primary">
               <template #icon>
                 <n-icon>
                   <SendAlt />
