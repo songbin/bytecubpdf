@@ -3,15 +3,15 @@
     <n-layout-sider
       collapse-mode="width"
       :collapsed-width="1"
-      :width="200"
-      :show-collapsed-content=false
+      :width="300"
+      :show-collapsed-content=true
       show-trigger
       bordered
     >
-      <MainChatLeftSide/>
+      <MainChatLeftSide />
     </n-layout-sider>
     <n-layout-content>
-      <MainChatContent></MainChatContent>
+      <MainChatContent />
     </n-layout-content>
   </n-layout>
 </template>

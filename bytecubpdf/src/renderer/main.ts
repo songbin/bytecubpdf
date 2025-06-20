@@ -3,7 +3,7 @@ import App from './App.vue'
 import router from './router'
 import { i18n } from '../shared/i18n'
 import { LogLevel } from '@/shared/constants/dfconstants'
-import ElementPlusX from 'vue-element-plus-x'
+// import ElementPlusX from 'vue-element-plus-x'
 
 
  
@@ -38,5 +38,5 @@ if ((window as any).window.electronAPI) {
 const app = createApp(App)
 app.use(i18n) // 引入i18n,必须在use router之前
 app.use(router)
-app.use(ElementPlusX)
+// app.use(ElementPlusX)
 app.mount('#app')

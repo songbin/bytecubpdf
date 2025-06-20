@@ -6,11 +6,12 @@
           <n-icon :component="Search" />
         </template>
       </n-input>
-
     </n-flex>
 
     <!-- 平台列表 -->
-    <n-flex vertical style="height: calc(100vh - 180px); overflow-y: auto">
+    <n-flex 
+      vertical 
+      style="height: calc(100vh - 180px); overflow-y: auto">
       <n-card 
         v-for="platform in platforms" 
         :key="platform.id"
@@ -21,7 +22,9 @@
         @click="handleEditPlatform(platform)"
       >
         <template #header-extra>
-          <n-button text @click.stop="handleDeleteClick(platform.id)"
+          <n-button 
+            text 
+            @click.stop="handleDeleteClick(platform.id)"
           >
             <n-icon>
               <TrashCan />
@@ -67,7 +70,7 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { ref, onMounted,onUnmounted,watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NIcon, NFlex, NInput, NCard, useDialog,NForm,NSelect,NFormItem,NModal } from 'naive-ui'
 import { Search, Add, TrashCan } from '@vicons/carbon'
@@ -76,7 +79,6 @@ import { PROTOCOL_CAN_LLM } from '@/renderer/constants/appconfig'
 
 const { t } = useI18n()
 const platforms = ref<Array<any>>([])
-import { useRouter } from 'vue-router'
 const llmManager = new LlmModelManager()
 const selectedPlatformId = ref<string | null>(null)
 onMounted(async () => {
@@ -173,10 +175,10 @@ const handleAddPlatform = () => {
 }
 
 // 定义newPlatform的类型
-interface PlatformForm {
-  platformName: string
-  protocolType: string
-}
+// interface PlatformForm {
+//   platformName: string
+//   protocolType: string
+// }
 
  
 const showAddDialog = ref(false)

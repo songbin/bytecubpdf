@@ -15,10 +15,16 @@ module.exports = {
   },
   rules: {
     'vue/multi-word-component-names': 'off',
-    'vue/html-indent': ['error', 2],
-    'vue/script-indent': ['error', 2],
-    'indent': ['error', 2],
-    'semi': ['error', 'never'],
+    'vue/html-indent': 'off',
+    'vue/script-indent': 'off',
+    'vue/max-attributes-per-line': 'off',
+    'vue/singleline-html-element-content-newline': 'off',
+    'vue/multiline-html-element-content-newline': 'off',
+    'vue/attributes-order': 'off',
+    'vue/no-multi-spaces': 'off',
+    'vue/html-quotes': 'off',
+    'indent': 'off',
+    'semi': 'off',
     'quotes': ['error', 'single']
   },
   overrides: [

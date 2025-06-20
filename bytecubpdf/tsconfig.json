@@ -7,7 +7,7 @@
     "jsx": "preserve",
     "jsxFactory": "h",
     "jsxFragmentFactory": "Fragment",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -17,7 +17,7 @@
       "@/renderer/*": ["./src/renderer/*"],
       "@/shared/*": ["./src/shared/*"],
       "@/main/*": ["./src/main/*"],
-
+      "vue-i18n": ["node_modules/vue-i18n/dist/vue-i18n.d.ts"]
     },
     "typeRoots": [
       "./node_modules/@types",
@@ -30,7 +30,8 @@
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
-    "src/**/*.vue"
+    "src/**/*.vue",
+    "vite.config.ts"
   ],
   "exclude": ["node_modules"]
 }

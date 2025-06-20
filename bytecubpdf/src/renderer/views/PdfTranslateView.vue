@@ -28,7 +28,7 @@
 <script lang="ts" setup>
 import { ref, shallowRef,type Component,nextTick,onMounted } from 'vue'
 import type { DefineComponent } from 'vue'
-import { NLayout, NLayoutSider, NLayoutContent } from 'naive-ui'
+import { NLayout, NLayoutSider, NLayoutContent,NIcon } from 'naive-ui'
 import PdfTsLeftSide from '@/renderer/components/pdftranslate/PdfTsLeftSide.vue' 
 import PdfTsMain from '@/renderer/components/pdftranslate/PdfTsMain.vue'
 import TermsManager from '@/renderer/components/pdftranslate/TermsManager.vue'

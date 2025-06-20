@@ -3,16 +3,26 @@ import PdfTranslateView from '@/renderer/views/PdfTranslateView.vue'
 import SettingsView from '@/renderer/views/SettingsView.vue'
 import AboutView from '@/renderer/views/AboutView.vue'
 import ModelSettings from  '@/renderer/components/settings/ModelSettings.vue'
+import MainChatView from '@/renderer/views/MainChatView.vue'
 // 路由配置
 const routes: Array<RouteRecordRaw> = [
-  {
+   {
     path: '/',
+    name: 'MainChat',
+    component: MainChatView,
+    meta: {
+      title: '聊天'
+    }
+  },
+  {
+    path: '/pdf',
     name: 'PdfTranslate',
     component: PdfTranslateView,
     meta: {
       title: '首页'
     }
   },
+ 
   {
     path: '/settings',
     name: 'Settings',
