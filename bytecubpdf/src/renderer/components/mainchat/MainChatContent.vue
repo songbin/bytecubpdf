@@ -24,7 +24,7 @@ function generateFakeItems(count: number): listType[] {
     const placement = role === 'ai' ? 'start' : 'end'
     const key = i + 1
     const content = role === 'ai'
-      ? '💖 感谢使用 Element Plus X ! 你的支持，是我们开源的最强动力 ~'.repeat(5)
+      ? '用小书芽以后你可以直接使用国外的模型了,去OpenRouter申请个密钥，什么openai、Gemini都可以在小书芽使用了\n'.repeat(5)
       : `哈哈哈，让我试试`
     const loading = false
     const shape = 'corner'
@@ -126,7 +126,7 @@ function generateFakeItems(count: number): listType[] {
 
             
 
-            左边是自定义 prefix 前缀 右边是自定义 操作列表
+            
           </div>
         </template>
 
