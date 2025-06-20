@@ -1,24 +1,15 @@
 // 移除idb导入
-export interface PdfTranslateConfig {
+export interface MainChatConfig {
   id: string;
-  sourceLang: string;
-  targetLang: string;
   platformId?: string;
   modelId?: string;
-  engine: string;
-  threadCount: number;
-  enableTerms: boolean;
-  maxPages: number, // 新增每页最大页数字段
-  enableOCR: boolean,  // 新增OCR识别字段
-  disableRichText: boolean,  // 新增富文字段
-  enableTable: boolean,  // 新增表格翻译字段
-  enableDual: boolean,  // 新增双栏翻译字段
-  verifyScanned:boolean,
+  platformName?:string;
+  modelName?:string;
 }
 
-export default class PdfTsIndexDb {
-  private readonly dbName = 'pdfTranslateDB';
-  private readonly storeName = 'pdfTranslateConfig';
+export default class MainChatIndexDb {
+  private readonly dbName = 'mainChatDB';
+  private readonly storeName = 'mainChatConfig';
   private db!: IDBDatabase;
   private dbReady: Promise<void>;
 
@@ -48,7 +39,7 @@ export default class PdfTsIndexDb {
     });
   }
 
-  public async saveConfig(config: PdfTranslateConfig): Promise<void> {
+  public async saveConfig(config: MainChatConfig): Promise<void> {
     await this.dbReady;
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(this.storeName, 'readwrite');
@@ -59,8 +50,8 @@ export default class PdfTsIndexDb {
       request.onerror = (event) => reject((event.target as IDBRequest).error);
     });
   }
-  //这个是翻译页面的config配置
-  public async getConfig(): Promise<PdfTranslateConfig | undefined> {
+   
+  public async getConfig(): Promise<MainChatConfig | undefined> {
     await this.dbReady;
     return new Promise((resolve, reject) => {
         const transaction = this.db.transaction(this.storeName, 'readonly');
@@ -71,7 +62,7 @@ export default class PdfTsIndexDb {
         request.onerror = (event) => reject((event.target as IDBRequest).error);
     });
 }
-//这个是翻译页面的config配置
+ 
 public async clearConfig(): Promise<void> {
     await this.dbReady;
     return new Promise((resolve, reject) => {
