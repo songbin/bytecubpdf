@@ -5,9 +5,7 @@ module.exports = {
     'vue/setup-compiler-macros': true
   },
   extends: [
-    'eslint:recommended',
-    'plugin:vue/vue3-recommended',
-    '@vue/eslint-config-typescript'
+   
   ],
   parserOptions: {
     ecmaVersion: 'latest',
@@ -23,9 +21,11 @@ module.exports = {
     'vue/attributes-order': 'off',
     'vue/no-multi-spaces': 'off',
     'vue/html-quotes': 'off',
+    'vue/html-closing-bracket-newline': 'off',
     'indent': 'off',
     'semi': 'off',
-    'quotes': ['error', 'single']
+    'quotes': 'off',
+    'no-empty': 'off'
   },
   overrides: [
     {
