@@ -611,7 +611,7 @@ const handleTranslate = async () => {
           // 不是扫描版，继续翻译流程
               dialog.success({
               title: '扫描件提醒',
-              content: '多页可识别文本数量小于200，可能是扫描件，是否继续翻译？',
+              content: '检测到本pdf可能是扫描件(扫描件无法翻译),如确认非扫描件请继续翻译',
               positiveText: '继续',
               negativeText: '暂不翻译',
               maskClosable: false,
