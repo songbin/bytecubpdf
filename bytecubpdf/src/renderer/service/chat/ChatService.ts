@@ -5,7 +5,7 @@ import { PROTOCOL_CAN_LLM, LLM_PROTOCOL } from '@/renderer/constants/appconfig'
 import { CustomOllamaAi } from '@/renderer/service/langchain/CustomOllamaAi'
 export class ChatService {
   llmManager = new LlmModelManager()
-  
+ 
   /**
    * 用于进行回声测试的方法
    * @param platformId - 大模型平台的唯一标识符
@@ -30,10 +30,10 @@ export class ChatService {
         const modelName = model.id
          // 根据平台协议类型选择不同的AI客户端
          if (platform.protocolType === LLM_PROTOCOL.openai) {
-            const customOpenAi = new CustomOpenAI(baseurl, apiKey, modelName)
+            const customOpenAi = new CustomOpenAI(baseurl, apiKey, modelName, 0.7, 5)
             await customOpenAi.call('你好')
         }else if (platform.protocolType === LLM_PROTOCOL.ollama) {
-            const ollama = new CustomOllamaAi( baseurl,modelName);
+            const ollama = new CustomOllamaAi( baseurl, '' , modelName, 0.7, 5);
             await ollama.call("你好");
         }else {
             // 其他协议类型的处理逻辑

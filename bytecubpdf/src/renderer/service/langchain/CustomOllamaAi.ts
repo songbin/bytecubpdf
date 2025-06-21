@@ -3,12 +3,18 @@ import { Ollama } from "@langchain/ollama";
 export class CustomOllamaAi {
     private llm: Ollama;
 
-    constructor(baseUrl: string, modelName: string) {
+    constructor(
+                baseUrl: string, 
+                apiKey: string, 
+                modelName: string,
+                temperature: number = 0.7,
+                maxTokens: number = 4096,
+                ) {
         this.llm = new Ollama({
             baseUrl: baseUrl,  // 确保格式是 "http://localhost:11434"
             model: modelName,   // 例如 "llama3"
-            temperature: 0.7  ,
-            numPredict: 5,//相当于maxTokens
+            temperature: temperature  ,
+            numPredict: maxTokens,//相当于maxTokens
         });
     }
 

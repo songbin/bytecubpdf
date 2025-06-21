@@ -4,14 +4,20 @@ export class CustomOpenAI {
      private llm: ChatOpenAI;
     // private llm: OpenAI; // 替换为 OpenAI 类型的 llm 成员变量
 
-    constructor(baseUrl: string, apiKey: string, modelName: string) {
+    constructor(
+                baseUrl: string, 
+                apiKey: string, 
+                modelName: string,
+                temperature: number = 0.7,
+                maxTokens: number = 4096,
+                ) {
         this.llm = new ChatOpenAI({
             openAIApiKey: apiKey,
             apiKey: apiKey,
             model: modelName,
-            temperature: 0.7,
+            temperature: temperature,
             streaming: false,
-            maxTokens: 5,
+            maxTokens: maxTokens,
             configuration: {
                 baseURL: baseUrl
             },
@@ -23,7 +29,6 @@ export class CustomOpenAI {
    async call(prompt: string) {
         try {
             const result = await this.llm.invoke(prompt);
-            
             return result;
         } catch (error) {
             console.error("OpenAI API 错误详情:", (error as Error).message || String(error));
@@ -31,6 +36,8 @@ export class CustomOpenAI {
             throw error;
         }
     }
+
+    
 }
 
 export default CustomOpenAI;
