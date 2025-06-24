@@ -1,9 +1,10 @@
-import { ClientConfig } from '@/renderer/service/langchain/models/LlmModel';
-import { AIMessageChunk } from '@langchain/core/messages';
+import { ClientConfig } from '@/renderer/llm/core/config/LlmConfig';
+import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
+import { LlmRequestModel,LlmMessageList } from "@/renderer/llm/model/LlmRequestModel";
 /**
  * AI客户端基类，定义统一接口
  */
-export abstract class BaseLlmCustom {
+export abstract class BaseLlmClient {
   protected config: ClientConfig;
 
   constructor(config: ClientConfig) {
@@ -15,12 +16,12 @@ export abstract class BaseLlmCustom {
    * @param prompt 输入提示
    * @returns 异步生成器，逐段返回结果
    */
-  abstract stream(prompt: string): AsyncGenerator<AIMessageChunk>;
+  abstract stream(messages: LlmMessageList): AsyncGenerator<any>;
   /**
    * 同步调用
    * 
   */
-  abstract call(prompt: string): Promise<any>;
+  abstract call(messages: LlmMessageList): Promise<any>;
 
   /**
    * 获取模型名称

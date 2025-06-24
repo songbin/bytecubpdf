@@ -1,23 +1,29 @@
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager'
 import { SettingLLMModel, SettingLLMPlatform } from '@/renderer/model/settings/SettingLLM';
-import {CustomOpenAI} from '@/renderer/service/langchain/custom/CustomOpenAI'
 import { PROTOCOL_CAN_LLM, LLM_PROTOCOL } from '@/renderer/constants/appconfig'
-import { ClientConfig } from '@/renderer/service/langchain/models/LlmModel';
-import { CustomOllamaAi } from '@/renderer/service/langchain/custom/CustomOllamaAi'
-import { LLMAdapter } from '@/renderer/service/langchain/LLMAdapter';
-import { AIMessageChunk } from '@langchain/core/messages';
-import { concat } from '@langchain/core/utils/stream';
+import { ClientConfig } from '@/renderer/llm/core/config/LlmConfig';
+import {CustomOpenAI} from '@/renderer/llm/custom/CustomOpenAI'
+import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
+import { LLMAdapter } from '@/renderer/llm/LLMAdapter';
+import { LlmRequestModel,LlmMessageList } from "@/renderer/llm/model/LlmRequestModel";
 export class ChatService {
   llmManager = new LlmModelManager()
   async call(platformId: string, modelId:string,temperature:number,maxTokens:number,prompt:string) {
-    
+    const messages = new LlmMessageList({
+        role: 'user', 
+        content: prompt
+        });
     const adapter = await this._buildAdapter(platformId, modelId,temperature,maxTokens,false);
-    return await adapter.call(prompt)
+    return await adapter.call(messages)
   }
 
-  async *stream(platformId: string,  modelId:string,temperature:number,maxTokens:number, prompt:string): AsyncGenerator<AIMessageChunk> {
+  async *stream(platformId: string,  modelId:string,temperature:number,maxTokens:number, prompt:string): AsyncGenerator<any> {
     const adapter = await this._buildAdapter(platformId, modelId,temperature,maxTokens, true);
-    const stream = adapter.stream(prompt)
+    const messages = new LlmMessageList({
+        role: 'user', 
+        content: prompt
+        });
+    const stream = adapter.stream(messages)
     for await (const chunk of stream) {
         yield chunk
         // console.log("收到chunk:", chunk);
@@ -58,14 +64,18 @@ export class ChatService {
         }
         // console.log(JSON.stringify(config))
          // 根据平台协议类型选择不同的AI客户端
-         if (platform.protocolType === LLM_PROTOCOL.openai) {
+        const messages = new LlmMessageList({
+            role: 'user', 
+            content: '你好'
+            });
 
+         if (platform.protocolType === LLM_PROTOCOL.openai) {
             const customOpenAi = new CustomOpenAI( config)
-            await customOpenAi.call('你好')
+            await customOpenAi.call(messages)
         }else if (platform.protocolType === LLM_PROTOCOL.ollama) {
-          
-            const ollama = new CustomOllamaAi( config);
-            await ollama.call("你好");
+            //TODO 
+            const ollama = new CustomOpenAI( config);
+            await ollama.call(messages);
         }else {
             // 其他协议类型的处理逻辑
             throw new Error('Unsupported protocol')

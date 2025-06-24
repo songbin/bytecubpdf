@@ -50,13 +50,16 @@ const handlePlatformChange = async (platformId: string) => {
     formData.value.modelName = ''
   }
 };
+
 const renderLabel = (option: { label: string }) => {
   return option.label;
 }
 const showSelectModel = ref(false)
+
 const handleShowSelectModel = () => {
   showSelectModel.value = true;
 }
+
 const handleSendMessage = async () =>{
   console.log(senderValue.value)
    const platformInfo = await llmManager.getPlatformBasicInfo(formData.value.platformId) 
