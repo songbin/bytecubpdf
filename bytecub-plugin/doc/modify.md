@@ -86,5 +86,5 @@
     TABLE_DETECTION_RAPIDOCR_MODEL_CLS_SHA3_256 = (
         "1fe31cb7e7babb2fc4cfe7090b1e93fc538b9a4a36a5f9af72bd6da78c9afc26"
     )
-### 9.hyperscan.py
-   增加hyperscan的模型，创建一个空py文件，用于屏蔽hyperscan引用
+### 9.detect_scanned_file.py
+   Scanned PDF detected 把 # raise ScannedPDFError("Scanned PDF detected.")注释掉

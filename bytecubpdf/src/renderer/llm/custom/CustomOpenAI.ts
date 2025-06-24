@@ -16,11 +16,11 @@ export class CustomOpenAI extends BaseLlmClient {
     }
    async call(messages: LlmMessageList) {
         try {
-           const response = await this.llm.responses.create({
+           const response = await this.llm.chat.completions.create({
                 model: this.config.modelName,
-                input: messages.toJsonArray(),
+                messages: messages.toJsonArray(),
                 temperature: this.config.temperature,
-                max_output_tokens: this.config.maxTokens,
+                max_tokens: this.config.maxTokens,
                 stream: false
             });
             return response;
@@ -32,11 +32,11 @@ export class CustomOpenAI extends BaseLlmClient {
     }
 
     async *stream(messages: LlmMessageList, signal?: AbortSignal): AsyncGenerator<any> {
-         const stream = await this.llm.responses.create({
+         const stream = await this.llm.chat.completions.create({
                 model: this.config.modelName,
-                input: messages.toJsonArray(),
+                messages: messages.toJsonArray(),
                 temperature: this.config.temperature,
-                max_output_tokens: this.config.maxTokens,
+                max_tokens: this.config.maxTokens,
                 stream: true
             });
         // 监听中断信号

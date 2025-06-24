@@ -128,7 +128,7 @@ class DetectScannedFile:
                     f"Detected {scanned} scanned pages, which is more than 80% of the total pages. "
                     "Please check the input PDF file.",
                 )
-                raise ScannedPDFError("Scanned PDF detected.")
+                # raise ScannedPDFError("Scanned PDF detected.")
 
     @staticmethod
     def detect_page_is_scanned(page: il_version_1.Page, pdf: pymupdf.Document) -> bool:
