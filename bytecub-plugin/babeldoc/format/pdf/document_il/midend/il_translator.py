@@ -198,10 +198,10 @@ class ILTranslator:
         self.shared_context_cross_split_part = (
             translation_config.shared_context_cross_split_part
         )
-        if tokenizer is None:
-            self.tokenizer = tiktoken.encoding_for_model("gpt-4o")
-        else:
-            self.tokenizer = tokenizer
+        # if tokenizer is None:
+        #     self.tokenizer = tiktoken.encoding_for_model("gpt-4o")
+        # else:
+        #     self.tokenizer = tokenizer
 
         # Cache glossaries at initialization
         self._cached_glossaries = self.shared_context_cross_split_part.get_glossaries()
