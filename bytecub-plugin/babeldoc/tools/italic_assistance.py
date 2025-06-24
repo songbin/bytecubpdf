@@ -5,8 +5,8 @@ from pathlib import Path
 
 import orjson
 from babeldoc.const import CACHE_FOLDER
-from babeldoc.document_il.midend.styles_and_formulas import StylesAndFormulas
-from babeldoc.translation_config import TranslationConfig
+from babeldoc.format.pdf.document_il.utils.formular_helper import is_formulas_font
+from babeldoc.format.pdf.translation_config import TranslationConfig
 from rich.console import Console
 from rich.table import Table
 
@@ -252,7 +252,6 @@ def main():
     translation_config = TranslationConfig(
         *[None for _ in range(3)], lang_out="zh_cn", doc_layout_model=1
     )
-    checker = StylesAndFormulas(translation_config)
 
     # Create table
     table = Table(title="Font Recognition Results")
@@ -266,7 +265,7 @@ def main():
     for each_font in fonts:
         page_index, font_name, paragraph_index, font_debug_id = each_font
 
-        if checker.is_formulas_font(font_name):
+        if is_formulas_font(font_name, None):
             table.add_row(
                 str(page_index),
                 str(paragraph_index),

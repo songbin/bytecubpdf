@@ -4,7 +4,7 @@ from collections.abc import Generator
 
 import pymupdf
 
-from babeldoc.document_il.il_version_1 import Page
+from babeldoc.format.pdf.document_il.il_version_1 import Page
 
 logger = logging.getLogger(__name__)
 

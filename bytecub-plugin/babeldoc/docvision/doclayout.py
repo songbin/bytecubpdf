@@ -8,9 +8,9 @@ from collections.abc import Generator
 import cv2
 import numpy as np
 
-from babeldoc.document_il.utils.mupdf_helper import get_no_rotation_img
 from babeldoc.docvision.base_doclayout import DocLayoutModel
 from babeldoc.docvision.base_doclayout import YoloResult
+from babeldoc.format.pdf.document_il.utils.mupdf_helper import get_no_rotation_img
 
 try:
     import onnx
@@ -24,7 +24,7 @@ except ImportError as e:
     raise
 import pymupdf
 
-import babeldoc.document_il.il_version_1
+import babeldoc.format.pdf.document_il.il_version_1
 from babeldoc.assets.assets import get_doclayout_onnx_model_path
 
 # from huggingface_hub import hf_hub_download
@@ -205,12 +205,12 @@ class OnnxModel(DocLayoutModel):
 
     def handle_document(
         self,
-        pages: list[babeldoc.document_il.il_version_1.Page],
+        pages: list[babeldoc.format.pdf.document_il.il_version_1.Page],
         mupdf_doc: pymupdf.Document,
         translate_config,
         save_debug_image,
     ) -> Generator[
-        tuple[babeldoc.document_il.il_version_1.Page, YoloResult], None, None
+        tuple[babeldoc.format.pdf.document_il.il_version_1.Page, YoloResult], None, None
     ]:
         for page in pages:
             translate_config.raise_if_cancelled()

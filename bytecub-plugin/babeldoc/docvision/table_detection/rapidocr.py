@@ -5,11 +5,10 @@ from collections.abc import Generator
 
 import cv2
 import numpy as np
-# from babeldoc.assets.assets import get_table_detection_rapidocr_model_path
-from babeldoc.assets.assets import get_table_detection_rapidocr_model_path,get_table_detection_rapidocr_model_rec_path,get_table_detection_rapidocr_model_cls_path
-from babeldoc.document_il.utils.mupdf_helper import get_no_rotation_img
+from babeldoc.assets.assets import get_table_detection_rapidocr_model_path
 from babeldoc.docvision.base_doclayout import YoloBox
 from babeldoc.docvision.base_doclayout import YoloResult
+from babeldoc.format.pdf.document_il.utils.mupdf_helper import get_no_rotation_img
 from rapidocr_onnxruntime import RapidOCR
 
 try:
@@ -21,7 +20,7 @@ except ImportError as e:
             "Download it at https://aka.ms/vs/17/release/vc_redist.x64.exe"
         ) from e
     raise
-import babeldoc.document_il.il_version_1
+import babeldoc.format.pdf.document_il.il_version_1
 import pymupdf
 
 logger = logging.getLogger(__name__)
@@ -94,31 +93,14 @@ class RapidOCRModel:
             elif re.match(r"cuda", provider, re.IGNORECASE):
                 self.use_cuda = True
         self.use_dml = False  # force disable directml
-        config_path = self.build_config()
-        get_table_detection_rapidocr_model_rec_path()
-        get_table_detection_rapidocr_model_cls_path()
         self.model = RapidOCR(
             det_model_path=get_table_detection_rapidocr_model_path(),
             det_use_cuda=self.use_cuda,
-            det_use_dml=self.use_dml,
-            config_path=config_path,
+            det_use_dml=False,
         )
         self.names = {0: "table_text"}
         self.lock = threading.Lock()
-    def build_config(self):
-        from babeldoc.const import get_cache_file_path
-        import os
-        import shutil
-        from babeldoc.docvision.table_detection.ripadocr_config import get_rapidocr_config
-        import yaml
-                 
-        config_path = get_cache_file_path("config.yaml", "models")
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        # 获取配置字典并写入文件(每次覆盖)
-        config = get_rapidocr_config()
-        with open(config_path, 'w', encoding='utf-8') as f:
-            yaml.dump(config, f, allow_unicode=True)
-        return config_path
+
     @property
     def stride(self):
         return 32
@@ -245,12 +227,12 @@ class RapidOCRModel:
 
     def handle_document(
         self,
-        pages: list[babeldoc.document_il.il_version_1.Page],
+        pages: list[babeldoc.format.pdf.document_il.il_version_1.Page],
         mupdf_doc: pymupdf.Document,
         translate_config,
         save_debug_image,
     ) -> Generator[
-        tuple[babeldoc.document_il.il_version_1.Page, YoloResult], None, None
+        tuple[babeldoc.format.pdf.document_il.il_version_1.Page, YoloResult], None, None
     ]:
         for page in pages:
             translate_config.raise_if_cancelled()

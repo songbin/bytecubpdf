@@ -14,10 +14,10 @@ from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
 import babeldoc
-from babeldoc.document_il.utils.mupdf_helper import get_no_rotation_img
 from babeldoc.docvision.base_doclayout import DocLayoutModel
 from babeldoc.docvision.base_doclayout import YoloBox
 from babeldoc.docvision.base_doclayout import YoloResult
+from babeldoc.format.pdf.document_il.utils.mupdf_helper import get_no_rotation_img
 
 logger = logging.getLogger(__name__)
 
@@ -270,7 +270,7 @@ class RpcDocLayoutModel(DocLayoutModel):
 
     def handle_document(
         self,
-        pages: list[babeldoc.document_il.il_version_1.Page],
+        pages: list[babeldoc.format.pdf.document_il.il_version_1.Page],
         mupdf_doc: pymupdf.Document,
         translate_config,
         save_debug_image,

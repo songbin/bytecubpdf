@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import BinaryIO
 from typing import cast
+import freetype
 
 from babeldoc.pdfminer.casting import safe_float
 from babeldoc.pdfminer.casting import safe_rect_list
@@ -749,99 +750,16 @@ class TrueTypeFont:
     def create_unicode_map(self) -> FileUnicodeMap:
         if b"cmap" not in self.tables:
             raise TrueTypeFont.CMapNotFound
-        (base_offset, length) = self.tables[b"cmap"]
         fp = self.fp
-        fp.seek(base_offset)
-        (version, nsubtables) = cast(tuple[int, int], struct.unpack(">HH", fp.read(4)))
-        subtables: list[tuple[int, int, int]] = []
-        for i in range(nsubtables):
-            subtables.append(
-                cast(tuple[int, int, int], struct.unpack(">HHL", fp.read(8))),
-            )
-        char2gid: dict[int, int] = {}
-        # Only supports subtable type 0, 2 and 4.
-        for platform_id, encoding_id, st_offset in subtables:
-            # Skip non-Unicode cmaps.
-            # https://docs.microsoft.com/en-us/typography/opentype/spec/cmap
-            if not (platform_id == 0 or (platform_id == 3 and encoding_id in [1, 10])):
-                continue
-            fp.seek(base_offset + st_offset)
-            (fmttype, fmtlen, fmtlang) = cast(
-                tuple[int, int, int],
-                struct.unpack(">HHH", fp.read(6)),
-            )
-            if fmttype == 0:
-                char2gid.update(
-                    enumerate(
-                        cast(tuple[int, ...], struct.unpack(">256B", fp.read(256))),
-                    ),
-                )
-            elif fmttype == 2:
-                subheaderkeys = cast(
-                    tuple[int, ...],
-                    struct.unpack(">256H", fp.read(512)),
-                )
-                firstbytes = [0] * 8192
-                for i, k in enumerate(subheaderkeys):
-                    firstbytes[k // 8] = i
-                nhdrs = max(subheaderkeys) // 8 + 1
-                hdrs: list[tuple[int, int, int, int, int]] = []
-                for i in range(nhdrs):
-                    (firstcode, entcount, delta, offset) = cast(
-                        tuple[int, int, int, int],
-                        struct.unpack(">HHhH", fp.read(8)),
-                    )
-                    hdrs.append((i, firstcode, entcount, delta, fp.tell() - 2 + offset))
-                for i, firstcode, entcount, delta, pos in hdrs:
-                    if not entcount:
-                        continue
-                    first = firstcode + (firstbytes[i] << 8)
-                    fp.seek(pos)
-                    for c in range(entcount):
-                        gid = cast(tuple[int], struct.unpack(">H", fp.read(2)))[0]
-                        if gid:
-                            gid += delta
-                        char2gid[first + c] = gid
-            elif fmttype == 4:
-                (segcount, _1, _2, _3) = cast(
-                    tuple[int, int, int, int],
-                    struct.unpack(">HHHH", fp.read(8)),
-                )
-                segcount //= 2
-                ecs = cast(
-                    tuple[int, ...],
-                    struct.unpack(">%dH" % segcount, fp.read(2 * segcount)),
-                )
-                fp.read(2)
-                scs = cast(
-                    tuple[int, ...],
-                    struct.unpack(">%dH" % segcount, fp.read(2 * segcount)),
-                )
-                idds = cast(
-                    tuple[int, ...],
-                    struct.unpack(">%dh" % segcount, fp.read(2 * segcount)),
-                )
-                pos = fp.tell()
-                idrs = cast(
-                    tuple[int, ...],
-                    struct.unpack(">%dH" % segcount, fp.read(2 * segcount)),
-                )
-                for ec, sc, idd, idr in zip(ecs, scs, idds, idrs, strict=False):
-                    if idr:
-                        fp.seek(pos + idr)
-                        for c in range(sc, ec + 1):
-                            b = cast(tuple[int], struct.unpack(">H", fp.read(2)))[0]
-                            char2gid[c] = (b + idd) & 0xFFFF
-                    else:
-                        for c in range(sc, ec + 1):
-                            char2gid[c] = (c + idd) & 0xFFFF
-            else:
-                assert False, str(("Unhandled", fmttype))
-        if not char2gid:
+        char2gid = []
+        try:
+            face = freetype.Face(fp)
+            char2gid = list(face.get_chars())
+        except Exception:
             raise TrueTypeFont.CMapNotFound
         # create unicode map
         unicode_map = FileUnicodeMap()
-        for char, gid in char2gid.items():
+        for char, gid in char2gid:
             unicode_map.add_cid2unichr(gid, char)
         return unicode_map
 
