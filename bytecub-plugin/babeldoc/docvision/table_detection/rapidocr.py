@@ -5,11 +5,10 @@ from collections.abc import Generator
 
 import cv2
 import numpy as np
-# from babeldoc.assets.assets import get_table_detection_rapidocr_model_path
-from babeldoc.assets.assets import get_table_detection_rapidocr_model_path,get_table_detection_rapidocr_model_rec_path,get_table_detection_rapidocr_model_cls_path
-from babeldoc.document_il.utils.mupdf_helper import get_no_rotation_img
+from babeldoc.assets.assets import get_table_detection_rapidocr_model_path
 from babeldoc.docvision.base_doclayout import YoloBox
 from babeldoc.docvision.base_doclayout import YoloResult
+from babeldoc.format.pdf.document_il.utils.mupdf_helper import get_no_rotation_img
 from rapidocr_onnxruntime import RapidOCR
 
 try:
@@ -21,7 +20,7 @@ except ImportError as e:
             "Download it at https://aka.ms/vs/17/release/vc_redist.x64.exe"
         ) from e
     raise
-import babeldoc.document_il.il_version_1
+import babeldoc.format.pdf.document_il.il_version_1
 import pymupdf
 
 logger = logging.getLogger(__name__)
@@ -95,8 +94,6 @@ class RapidOCRModel:
                 self.use_cuda = True
         self.use_dml = False  # force disable directml
         config_path = self.build_config()
-        get_table_detection_rapidocr_model_rec_path()
-        get_table_detection_rapidocr_model_cls_path()
         self.model = RapidOCR(
             det_model_path=get_table_detection_rapidocr_model_path(),
             det_use_cuda=self.use_cuda,
@@ -245,12 +242,12 @@ class RapidOCRModel:
 
     def handle_document(
         self,
-        pages: list[babeldoc.document_il.il_version_1.Page],
+        pages: list[babeldoc.format.pdf.document_il.il_version_1.Page],
         mupdf_doc: pymupdf.Document,
         translate_config,
         save_debug_image,
     ) -> Generator[
-        tuple[babeldoc.document_il.il_version_1.Page, YoloResult], None, None
+        tuple[babeldoc.format.pdf.document_il.il_version_1.Page, YoloResult], None, None
     ]:
         for page in pages:
             translate_config.raise_if_cancelled()

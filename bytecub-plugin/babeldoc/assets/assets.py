@@ -281,12 +281,13 @@ async def get_table_detection_rapidocr_model_rec_path_async(
         f"Download table detection rapidocr model from {fastest_upstream} success"
     )
     return onnx_path
-def get_table_detection_rapidocr_model_path():
-    return run_coro(get_table_detection_rapidocr_model_path_async())
 def get_table_detection_rapidocr_model_rec_path():
     return run_coro(get_table_detection_rapidocr_model_rec_path_async())
 def get_table_detection_rapidocr_model_cls_path():
     return run_coro(get_table_detection_rapidocr_model_cls_path_async())
+def get_table_detection_rapidocr_model_path():
+    return run_coro(get_table_detection_rapidocr_model_path_async())
+
 
 def get_font_url_by_name_and_upstream(font_file_name: str, upstream: str):
     if upstream not in FONT_URL_BY_UPSTREAM:

@@ -3,12 +3,12 @@ import shutil
 import subprocess
 from pathlib import Path
 
-__version__ = "0.3.69"
+__version__ = "0.4.7"
 
 CACHE_FOLDER = Path.home() / ".cache" / "babeldoc"
 def set_cache_folder(path: str | Path):
-    global CACHE_FOLDER
-    CACHE_FOLDER = Path(path)
+      global CACHE_FOLDER
+      CACHE_FOLDER = Path(path)
 
 def get_cache_file_path(filename: str, sub_folder: str | None = None) -> Path:
     if sub_folder is not None:

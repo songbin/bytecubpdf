@@ -39,7 +39,17 @@ TERM_NORM_PATTERN = re.compile(r"\s+", regex.UNICODE)
 class Glossary:
     def __init__(self, name: str, entries: list[GlossaryEntry]):
         self.name = name
-        self.entries = entries
+
+        # Deduplicate entries based on normalized source
+        unique_entries = []
+        seen_normalized_sources = set()
+        for entry in entries:
+            normalized_source = self.normalize_source(entry.source)
+            if normalized_source not in seen_normalized_sources:
+                unique_entries.append(entry)
+                seen_normalized_sources.add(normalized_source)
+        self.entries = unique_entries
+
         self.normalized_lookup: dict[str, tuple[str, str]] = {}
         self.id_lookup: list[tuple[str, str]] = []
         self.hs_dbs: list[hyperscan.Database] | None = None
@@ -125,7 +135,7 @@ class Glossary:
 
         try:
             with file_path.open("r", encoding="utf-8") as f:
-                reader = csv.DictReader(f, escapechar="\\")
+                reader = csv.DictReader(f, doublequote=True)
                 if not all(col in reader.fieldnames for col in ["source", "target"]):
                     raise ValueError(
                         f"CSV file {file_path} must contain 'source' and 'target' columns."
@@ -167,7 +177,7 @@ class Glossary:
         ]
         buffer = io.StringIO()
         dict_writer = csv.DictWriter(
-            buffer, fieldnames=["source", "target", "tgt_lng"], escapechar="\\"
+            buffer, fieldnames=["source", "target", "tgt_lng"], doublequote=True
         )
         dict_writer.writeheader()
         dict_writer.writerows(dict_data)

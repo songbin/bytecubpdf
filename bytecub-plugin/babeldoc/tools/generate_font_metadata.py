@@ -9,11 +9,11 @@ import logging
 import re
 from pathlib import Path
 
-import babeldoc.high_level
-import babeldoc.translation_config
+import babeldoc.format.pdf.high_level
+import babeldoc.format.pdf.translation_config
 import orjson
 import pymupdf
-from babeldoc.document_il import PdfFont
+from babeldoc.format.pdf.document_il import PdfFont
 from rich.logging import RichHandler
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def get_font_metadata(font_path) -> PdfFont:
     doc = pymupdf.open()
     page = doc.new_page(width=1000, height=1000)
     page.insert_font("test_font", font_path)
-    translation_config = babeldoc.translation_config.TranslationConfig(
+    translation_config = babeldoc.format.pdf.translation_config.TranslationConfig(
         *[None for _ in range(4)], doc_layout_model=1
     )
     translation_config.progress_monitor = babeldoc.high_level.ProgressMonitor(

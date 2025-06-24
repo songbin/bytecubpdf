@@ -102,6 +102,16 @@ def predict_layout(
     if response.status_code == 200:
         try:
             result = msgpack.unpackb(response.content, raw=False)
+            if isinstance(result, dict):
+                names = {}
+                for box in result["boxes"]:
+                    box["xyxy"] = box["coordinate"]
+                    box["conf"] = box["score"]
+                    box["cls"] = box["cls_id"]
+                    names[box["cls_id"]] = box["label"]
+                if "names" not in result:
+                    result["names"] = names
+                result = [result]
             return result
         except Exception as e:
             logger.exception(f"Failed to unpack response: {e!s}")
@@ -213,6 +223,7 @@ class RpcDocLayoutModel(DocLayoutModel):
             result_container = ResultContainer()
         target_imgsz = (800, 800)
         orig_h, orig_w = image.shape[:2]
+        target_imgsz = (orig_h, orig_w)
         if image.shape[0] != target_imgsz[0] or image.shape[1] != target_imgsz[1]:
             image = self.resize_and_pad_image(image, new_shape=target_imgsz)
         preds = predict_layout([image], host=self.host, imgsz=800)
@@ -223,7 +234,7 @@ class RpcDocLayoutModel(DocLayoutModel):
                     YoloBox(
                         None,
                         self.scale_boxes(
-                            (800, 800), np.array(x["xyxy"]), (orig_h, orig_w)
+                            target_imgsz, np.array(x["xyxy"]), (orig_h, orig_w)
                         ),
                         np.array(x["conf"]),
                         x["cls"],
@@ -275,7 +286,7 @@ class RpcDocLayoutModel(DocLayoutModel):
         translate_config,
         save_debug_image,
     ):
-        with ThreadPoolExecutor(max_workers=16) as executor:
+        with ThreadPoolExecutor(max_workers=128) as executor:
             yield from executor.map(
                 self.predict_page,
                 pages,

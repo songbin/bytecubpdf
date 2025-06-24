@@ -8,12 +8,13 @@ TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256 = (
     "062f4619afe91b33147c033acadecbb53f2a7b99ac703d157b96d5b10948da5e"
 )
 TABLE_DETECTION_RAPIDOCR_MODEL_REC_SHA3_256 = (
-    "6040d1cb9554886e166fd817af0ab69c5cce8e5e80b8a111c1f08258ad4c4b22"
-)
+       "6040d1cb9554886e166fd817af0ab69c5cce8e5e80b8a111c1f08258ad4c4b22"
+    )
 
 TABLE_DETECTION_RAPIDOCR_MODEL_CLS_SHA3_256 = (
-    "1fe31cb7e7babb2fc4cfe7090b1e93fc538b9a4a36a5f9af72bd6da78c9afc26"
-)
+       "1fe31cb7e7babb2fc4cfe7090b1e93fc538b9a4a36a5f9af72bd6da78c9afc26"
+    )
+    
 TIKTOKEN_CACHES = {
     "fb374d419588a4632f3f557e76b4b70aebbca790": "cb04bcda5782cfbbe77f2f991d92c0ea785d9496ef1137c91dfc3c8c324528d6"
 }
@@ -56,6 +57,7 @@ TABLE_DETECTION_RAPIDOCR_MODEL_REC_URL = {
     "huggingface": "https://huggingface.co/spaces/RapidAI/RapidOCR/resolve/main/models/text_rec/ch_PP-OCRv4_rec_infer.onnx",
 	"hf-mirror": "https://hf-mirror.com/spaces/RapidAI/RapidOCR/resolve/main/models/text_rec/ch_PP-OCRv4_rec_infer.onnx",
 }
+
 # from https://github.com/funstory-ai/BabelDOC-Assets/blob/main/font_metadata.json
 EMBEDDING_FONT_METADATA = {
     "GoNotoKurrent-Bold.ttf": {

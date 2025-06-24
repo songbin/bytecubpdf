@@ -56,7 +56,7 @@ pylatexenc==2.10
 matplotlib==3.10.1
 pillow==11.2.1
 pyzstd>=0.17.0
-
+rtree>=1.4.0
 # deprecation>=2.1.0
 # img2pdf>=0.5
 # packaging>=20
