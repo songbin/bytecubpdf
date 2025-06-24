@@ -800,15 +800,15 @@ class PDFCreater:
         try:
             basename = Path(translation_config.input_file).stem
             debug_suffix = ".debug" if translation_config.debug else ""
-            if (
-                translation_config.watermark_output_mode
-                != WatermarkOutputMode.Watermarked
-            ):
-                debug_suffix += ".no_watermark"
+            from utils.time_util import TimeUtil
+            time_str = TimeUtil.get_yyyymmddhhmmss()
+            mono_out_file_name = f"{basename}{debug_suffix}.{time_str}{translation_config.lang_out}.mono.pdf"
             mono_out_path = translation_config.get_output_file_path(
-                f"{basename}{debug_suffix}.{translation_config.lang_out}.mono.pdf",
+                f"{mono_out_file_name}",
             )
             pdf = pymupdf.open(self.original_pdf_path)
+            total_pages:int = pdf.page_count  
+            source_file_name = Path(translation_config.input_file).name 
             self.font_mapper.add_font(pdf, self.docs)
             with self.translation_config.progress_monitor.stage_start(
                 self.stage_name,
@@ -1081,7 +1081,9 @@ class PDFCreater:
                 mono_out_path = None
             if self.translation_config.no_dual:
                 dual_out_path = None
-            return TranslateResult(mono_out_path, dual_out_path)
+            # return TranslateResult(mono_out_path, dual_out_path)
+            return TranslateResult(mono_out_path, dual_out_path,total_pages,
+                    mono_out_file_name,source_file_name)
         except Exception:
             logger.exception(
                 "Failed to create PDF: %s",

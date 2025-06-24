@@ -93,14 +93,29 @@ class RapidOCRModel:
             elif re.match(r"cuda", provider, re.IGNORECASE):
                 self.use_cuda = True
         self.use_dml = False  # force disable directml
+        config_path = self.build_config()
         self.model = RapidOCR(
             det_model_path=get_table_detection_rapidocr_model_path(),
             det_use_cuda=self.use_cuda,
-            det_use_dml=False,
+            det_use_dml=self.use_dml,
+            config_path=config_path,
         )
         self.names = {0: "table_text"}
         self.lock = threading.Lock()
-
+    def build_config(self):
+        from babeldoc.const import get_cache_file_path
+        import os
+        import shutil
+        from babeldoc.docvision.table_detection.ripadocr_config import get_rapidocr_config
+        import yaml
+                 
+        config_path = get_cache_file_path("config.yaml", "models")
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        # 获取配置字典并写入文件(每次覆盖)
+        config = get_rapidocr_config()
+        with open(config_path, 'w', encoding='utf-8') as f:
+            yaml.dump(config, f, allow_unicode=True)
+        return config_path
     @property
     def stride(self):
         return 32

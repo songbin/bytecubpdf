@@ -385,8 +385,14 @@ class TranslateResult:
     no_watermark_mono_pdf_path: str | None
     no_watermark_dual_pdf_path: str | None
     peak_memory_usage: int | None
+    total_pages: int
+    source_base_name: str | None
+    mono_out_file_name: str | None
 
-    def __init__(self, mono_pdf_path: str | None, dual_pdf_path: str | None):
+    def __init__(self, mono_pdf_path: str | None, dual_pdf_path: str | None,
+            total_pages: int  = 1,
+            mono_out_file_name : str = '',
+            source_base_name :str = ''):
         self.mono_pdf_path = mono_pdf_path
         self.dual_pdf_path = dual_pdf_path
 
@@ -394,6 +400,9 @@ class TranslateResult:
         # the values of mono_pdf_path and no_watermark_mono_pdf_path are the same.
         self.no_watermark_mono_pdf_path = mono_pdf_path
         self.no_watermark_dual_pdf_path = dual_pdf_path
+        self.total_pages = total_pages
+        self.source_base_name = source_base_name
+        self.mono_out_file_name = mono_out_file_name
 
     def __str__(self):
         """Return a human-readable string representation of the translation result."""

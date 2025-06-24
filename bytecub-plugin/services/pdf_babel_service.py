@@ -1,14 +1,16 @@
 from tkinter import NO
-from babeldoc.translation_config import TranslationConfig as YadtConfig
-from babeldoc.high_level import async_translate as yadt_translate
-from babeldoc.high_level import init as yadt_init
+from babeldoc.format.pdf.translation_config import TranslationConfig as YadtConfig
+from babeldoc.format.pdf.high_level import async_translate as yadt_translate
+from babeldoc.format.pdf.high_level import init as yadt_init
 from babeldoc.main import create_progress_handler
 from pdf2zh.high_level import download_remote_fonts
 from services.pdfmath_service import PdfMathService
 from utils.chatlog import logger
 from config.ts_constants import TSConstants, TSCore,TSStatus
+from babeldoc.format.pdf.translation_config import TranslationConfig
 import os
-from babeldoc.translation_config import WatermarkOutputMode
+from babeldoc.format.pdf.translation_config import WatermarkOutputMode
+from babeldoc.docvision.table_detection.rapidocr import RapidOCRModel
 import asyncio
 from functools import partial
 from pathlib import Path
@@ -59,8 +61,6 @@ class PdfBabelSerive:
             os.makedirs(save_path)
         for file in untranlate_file:
             file = file.strip("\"'")
-            from babeldoc.docvision.table_detection.rapidocr import RapidOCRModel
-            from babeldoc.translation_config import TranslationConfig
             table_model = None
             if enable_table:
                 table_model = RapidOCRModel()

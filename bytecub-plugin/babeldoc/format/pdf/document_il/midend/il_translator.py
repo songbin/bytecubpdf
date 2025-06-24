@@ -218,7 +218,8 @@ class ILTranslator:
 
     def calc_token_count(self, text: str) -> int:
         try:
-            return len(self.tokenizer.encode(text, disallowed_special=()))
+            # return len(self.tokenizer.encode(text, disallowed_special=()))
+            return 0
         except Exception:
             return 0
 
