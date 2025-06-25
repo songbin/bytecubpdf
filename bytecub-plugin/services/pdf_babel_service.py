@@ -11,6 +11,7 @@ from babeldoc.format.pdf.translation_config import TranslationConfig
 import os
 from babeldoc.format.pdf.translation_config import WatermarkOutputMode
 from babeldoc.docvision.table_detection.rapidocr import RapidOCRModel
+from babeldoc.babeldoc_exception.BabelDOCException import ScannedPDFError
 import asyncio
 from functools import partial
 from pathlib import Path
@@ -88,6 +89,7 @@ class PdfBabelSerive:
                 ocr_workaround = enable_ocr,
                 table_model = table_model,
                 skip_clean = True,
+                save_auto_extracted_glossary = False,
             )
             
             result_path = asyncio.run(cls.__yadt_translate_coro(
@@ -96,44 +98,66 @@ class PdfBabelSerive:
                 cancellation_event=cancellation_event, 
                 callback=callback))
             return result_path
-                        
-
+    @classmethod                     
+    async def handle_progress_event(cls, event, callback):
+        current_page = event.get("stage_current", 0)
+        total_pages = event.get("stage_total", 1)
+        stage = event.get("stage", "")
+        overall_progress = event.get("overall_progress", 0)
+        if callback:
+            callback(current_page, total_pages,
+                    core=TSCore.babeldoc,
+                    current_part=current_page,
+                    total_parts=total_pages,
+                    stage=stage,
+                    overall_progress=overall_progress)
+    @classmethod 
+    def handle_finish_event(cls, event):
+        result = event["translate_result"]
+        logger.info(f"###########Translation finished: {result}")
+        logger.info(f"#############Translation finished: {result.mono_pdf_path}")
+        dual_out_file_name = Path(result.dual_pdf_path).name if result.dual_pdf_path else None
+        return (
+            str(result.mono_pdf_path),
+            result.mono_out_file_name,
+            result.source_base_name,
+            dual_out_file_name,
+            result.total_pages
+        )
     @classmethod        
     async def __yadt_translate_coro(cls, file_path= None, yadt_config=None, cancellation_event=None, callback = None):
                 progress_context, progress_handler = create_progress_handler(yadt_config)
                 # 开始翻译
                 with progress_context:
-                    async for event in yadt_translate(yadt_config):
-                        # logger.info(event)   
-                        progress_handler(event)
-                        # 检查是否取消
-                        if cancellation_event and cancellation_event.is_set():
-                            raise Exception("Translation cancelled by user")
-                        # 处理进度事件（关键修改点）
-                        if event["type"] == "progress_update" and callback:
-                            # 从事件中提取页面信息
-                            current_page = event.get("stage_current", 0)
-                            total_pages = event.get("stage_total", 1)
-                            stage = event.get("stage", "")
-                            overall_progress = event.get("overall_progress", 0)
-                            callback(current_page, total_pages, 
-                                     core=TSCore.babeldoc,
-                                     current_part=current_page,
-                                     total_parts=total_pages,
-                                     stage=stage, overall_progress=overall_progress) 
-                        if event["type"] == "finish":
-                            result = event["translate_result"]
-                            logger.info(f"###########Translation finished: {result}")
-                            logger.info(f"#############Translation finished: {result.mono_pdf_path}")
-                            dual_out_file_name = None
-                            if result.dual_pdf_path:
-                                dual_out_file_name =  Path(result.dual_pdf_path).name 
-                            return (str(result.mono_pdf_path), 
-                            result.mono_out_file_name,
-                            result.source_base_name,
-                            dual_out_file_name,
-                             result.total_pages)
-                            #break
+                    try:
+                        async for event in yadt_translate(yadt_config):
+                            # logger.info(event)   
+                            progress_handler(event)
+                            # 检查是否取消
+                            if cancellation_event and cancellation_event.is_set():
+                                raise Exception("Translation cancelled by user")
+                            # 处理进度事件（关键修改点）
+                            if event["type"] == "error":
+                                error_msg = event['error']
+                                if isinstance(error_msg, ScannedPDFError):
+                                    raise ScannedPDFError("Scanned PDF detected, please enable OCR recognition")
+                                else:
+                                    logger.info(f"Translation failed: {event['error']}")
+                                    raise Exception(event['error'])
+                            if event["type"] == "progress_update" and callback:
+                                try:
+                                    await cls.handle_progress_event(event, callback)
+                                except Exception as pe:
+                                    logger.warning(f"Progress event handler failed: {pe}")
+                            if event["type"] == "finish":
+                                try:
+                                    return cls.handle_finish_event(event)
+                                except Exception as fe:
+                                    logger.warning(f"Finish event handler failed: {fe}")
+                                #break
+                    except Exception as e:
+                        logger.error(f"Translation failed: {e}")
+                        raise e
 
     @classmethod
     def __query_platform( cls, service_name:str,lang_in, lang_out, service_model, envs, prompt):

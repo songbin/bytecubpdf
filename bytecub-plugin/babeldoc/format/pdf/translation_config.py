@@ -154,6 +154,7 @@ class TranslationConfig:
         auto_enable_ocr_workaround: bool = False,
         primary_font_family: str | None = None,
         only_include_translated_page: bool | None = False,
+        save_auto_extracted_glossary: bool = True,
     ):
         self.translator = translator
         initial_user_glossaries = list(glossaries) if glossaries else []
@@ -273,6 +274,8 @@ class TranslationConfig:
             only_include_translated_page = False
 
         self.only_include_translated_page = only_include_translated_page
+        
+        self.save_auto_extracted_glossary = save_auto_extracted_glossary
 
     def parse_pages(self, pages_str: str | None) -> list[tuple[int, int]] | None:
         """解析页码字符串，返回页码范围列表
@@ -380,21 +383,24 @@ class TranslationConfig:
 class TranslateResult:
     original_pdf_path: str
     total_seconds: float
-    mono_pdf_path: str | None
-    dual_pdf_path: str | None
-    no_watermark_mono_pdf_path: str | None
-    no_watermark_dual_pdf_path: str | None
+    mono_pdf_path: Path | None
+    dual_pdf_path: Path | None
+    no_watermark_mono_pdf_path: Path | None
+    no_watermark_dual_pdf_path: Path | None
     peak_memory_usage: int | None
+    auto_extracted_glossary_path: Path | None
     total_pages: int
     source_base_name: str | None
     mono_out_file_name: str | None
 
-    def __init__(self, mono_pdf_path: str | None, dual_pdf_path: str | None,
+    def __init__(self, mono_pdf_path: Path | None, dual_pdf_path: Path | None,auto_extracted_glossary_path: Path | None = None,
             total_pages: int  = 1,
             mono_out_file_name : str = '',
             source_base_name :str = ''):
         self.mono_pdf_path = mono_pdf_path
         self.dual_pdf_path = dual_pdf_path
+
+        self.auto_extracted_glossary_path = auto_extracted_glossary_path
 
         # For compatibility considerations, if only a non-watermarked PDF is generated,
         # the values of mono_pdf_path and no_watermark_mono_pdf_path are the same.
@@ -436,7 +442,14 @@ class TranslateResult:
             result.append(
                 f"\tNo-watermark Dual-language PDF: {self.no_watermark_dual_pdf_path}"
             )
-
+        if (
+            hasattr(self, "auto_extracted_glossary_path")
+            and self.auto_extracted_glossary_path
+        ):
+            result.append(
+                f"\tAuto-extracted glossary: {self.auto_extracted_glossary_path}"
+            )
+            
         if hasattr(self, "peak_memory_usage") and self.peak_memory_usage:
             result.append(f"\tPeak memory usage: {self.peak_memory_usage} MB")
 

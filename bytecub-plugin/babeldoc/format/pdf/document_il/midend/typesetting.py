@@ -6,7 +6,7 @@ import unicodedata
 from functools import cache
 
 import pymupdf
-
+from rtree import index
 from babeldoc.const import WATERMARK_VERSION
 from babeldoc.format.pdf.document_il import Box
 from babeldoc.format.pdf.document_il import PdfCharacter
@@ -16,6 +16,7 @@ from babeldoc.format.pdf.document_il import PdfStyle
 from babeldoc.format.pdf.document_il import il_version_1
 from babeldoc.format.pdf.document_il.utils.fontmap import FontMapper
 from babeldoc.format.pdf.document_il.utils.formular_helper import update_formula_data
+from babeldoc.format.pdf.document_il.utils.layout_helper import box_to_tuple
 from babeldoc.format.pdf.translation_config import TranslationConfig
 from babeldoc.format.pdf.translation_config import WatermarkOutputMode
 
@@ -592,6 +593,62 @@ class Typesetting:
             == WatermarkOutputMode.Watermarked
         ):
             self.add_watermark(page)
+        try:
+            para_index = index.Index()
+            para_map = {}
+            #
+            valid_paras = [
+                p
+                for p in page.pdf_paragraph
+                if p.box
+                and all(c is not None for c in [p.box.x, p.box.y, p.box.x2, p.box.y2])
+            ]
+
+            for i, para in enumerate(valid_paras):
+                para_map[i] = para
+                para_index.insert(i, box_to_tuple(para.box))
+
+            for i, p_upper in para_map.items():
+                required_gap = 6
+                if not (p_upper.box and p_upper.box.y is not None):
+                    continue
+
+                check_area = il_version_1.Box(
+                    x=p_upper.box.x,
+                    y=p_upper.box.y - required_gap,
+                    x2=p_upper.box.x2,
+                    y2=p_upper.box.y,
+                )
+
+                candidate_ids = list(para_index.intersection(box_to_tuple(check_area)))
+
+                conflicting_paras = []
+                for para_id in candidate_ids:
+                    if para_id == i:
+                        continue
+                    p_lower = para_map[para_id]
+                    if not (
+                        p_lower.box
+                        and p_upper.box
+                        and p_lower.box.x2 < p_upper.box.x
+                        or p_lower.box.x > p_upper.box.x2
+                    ):
+                        conflicting_paras.append(p_lower)
+
+                if conflicting_paras:
+                    max_y2 = max(
+                        p.box.y2
+                        for p in conflicting_paras
+                        if p.box and p.box.y2 is not None
+                    )
+
+                    new_y = max_y2 + required_gap
+                    if p_upper.box and new_y < p_upper.box.y2:
+                        p_upper.box.y = new_y
+        except Exception as e:
+            logger.warning(
+                f"Failed to adjust paragraph positions on page {page.page_number}: {e}"
+            )
         # 开始实际的渲染过程
         for paragraph in page.pdf_paragraph:
             self.render_paragraph(paragraph, page, fonts)
@@ -887,7 +944,7 @@ class Typesetting:
             if scale < 0.7 and min_line_spacing > 1.1:
                 if expand_space_flag == 0:
                     # 先尝试向下扩展
-                    min_y = self.get_max_bottom_space(box, page)
+                    min_y = self.get_max_bottom_space(box, page) + 2
                     if min_y < box.y:
                         expanded_box = Box(
                             x=box.x,
@@ -902,7 +959,7 @@ class Typesetting:
                     continue
                 elif expand_space_flag == 1:
                     # 如果向下扩展后还不够，再尝试向右扩展
-                    max_x = self.get_max_right_space(box, page)
+                    max_x = self.get_max_right_space(box, page) - 5
                     if max_x > box.x2:
                         expanded_box = Box(
                             x=box.x,

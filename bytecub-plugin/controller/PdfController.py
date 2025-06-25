@@ -18,6 +18,7 @@ from services.pdfmath_service import PdfMathService
 from services.pdf_babel_service import PdfBabelSerive
 from utils.chatlog import logger
 import traceback
+from babeldoc.babeldoc_exception.BabelDOCException import ScannedPDFError
 import os
 import json
 from queue import Queue
@@ -333,6 +334,9 @@ class PdfController:
                         "dual_file_name": dual_file_name,
                     }
                     progress_queue.put({"status": "completed", "process": 100, "result": final_result, "msg": "翻译完成"})
+                except ScannedPDFError as spe:
+                    logger.error_ext(f"An error occurred: {spe}")
+                    progress_queue.put({"status": "error", "message": "检测到可能是OCR识别的PDF，请开启【消除重影】后再次尝试"})
                 except Exception as e:
                     logger.error_ext(f"An error occurred: {e}")
                     progress_queue.put({"status": "error", "message": str(e)})

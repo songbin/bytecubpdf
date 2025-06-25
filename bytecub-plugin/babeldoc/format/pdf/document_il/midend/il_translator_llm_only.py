@@ -479,7 +479,7 @@ class ILTranslatorLLMOnly:
                     input_unicode = inputs[id_][2].unicode
                     output_unicode = translated_text
 
-                    trimed_input = re.sub(r"[. 。…，]{20,}", ".", output)
+                    trimed_input = re.sub(r"[. 。…，]{20,}", ".", input_unicode)
 
                     input_token_count = self.calc_token_count(input_unicode)
                     output_token_count = self.calc_token_count(output_unicode)
