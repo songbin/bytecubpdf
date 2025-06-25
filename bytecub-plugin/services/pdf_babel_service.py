@@ -11,6 +11,7 @@ from babeldoc.format.pdf.translation_config import TranslationConfig
 import os
 from babeldoc.format.pdf.translation_config import WatermarkOutputMode
 from babeldoc.docvision.table_detection.rapidocr import RapidOCRModel
+from babeldoc.babeldoc_exception.BabelDOCException import ScannedPDFError
 import asyncio
 from functools import partial
 from pathlib import Path
@@ -136,6 +137,13 @@ class PdfBabelSerive:
                             if cancellation_event and cancellation_event.is_set():
                                 raise Exception("Translation cancelled by user")
                             # 处理进度事件（关键修改点）
+                            if event["type"] == "error":
+                                error_msg = event['error']
+                                if isinstance(error_msg, ScannedPDFError):
+                                    raise ScannedPDFError("Scanned PDF detected, please enable OCR recognition")
+                                else:
+                                    logger.info(f"Translation failed: {event['error']}")
+                                    raise Exception(event['error'])
                             if event["type"] == "progress_update" and callback:
                                 try:
                                     await cls.handle_progress_event(event, callback)

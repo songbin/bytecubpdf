@@ -320,23 +320,6 @@ async def async_translate(translation_config: TranslationConfig):
     ) as pm:
         future = loop.run_in_executor(None, do_translate, pm, translation_config)
         try:
-            await future  # 异常在此处被引发
-        except Exception as e:
-            logger.error("Error during do_translate execution", exc_info=True)
-            cancel_event.set()
-            raise e
-        except asyncio.CancelledError:
-            logger.info("Translation cancelled")
-            cancel_event.set()
-        except KeyboardInterrupt:
-            logger.info("Translation cancelled by user through keyboard interrupt")
-            cancel_event.set()
-        finally:
-            if cancel_event.is_set():
-                future.cancel()
-            logger.info("Waiting for translation to finish...")
-            await finish_event.wait()
-        try:
             async for event in callback:
                 event = event.kwargs
                 yield event
