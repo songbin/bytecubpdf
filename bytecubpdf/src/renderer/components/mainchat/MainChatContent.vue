@@ -13,9 +13,11 @@ import MainChatIndexDb from '@/renderer/service/indexdb/MainChatIndexDb';
 import { ChatService } from '@/renderer/service/chat/ChatService';
 import { AIMessageChunk } from '@langchain/core/messages';
 import { concat } from '@langchain/core/utils/stream';
-type listType = BubbleListItemProps & {
-  key: number
-  role: 'system' | 'user'
+import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
+import { v4 as uuidv4 } from 'uuid';
+type messageType = BubbleListItemProps & {
+  key: string;
+  role: 'system' | 'user' | 'assistant';
 }
 const chatService = new ChatService()
 const message = useMessage()
@@ -34,7 +36,7 @@ const senderValue = ref('')
 const isSelect = ref(false)
 
 // 示例调用
-const messages: BubbleListProps<listType>['list'] = []
+const messages: BubbleListProps<messageType>['list'] = []
 const handlePlatformChange = async (platformId: string) => {
   const modelList = await llmManager.getModelsByPlatform(platformId);
   formData.value.platformName = platforms.value.find((p) => p.value == platformId)?.label || '';
@@ -71,18 +73,38 @@ const handleSendMessage = async () =>{
     message.error('请配置密钥')
     return
   }
-   const role = 'user'
-    const placement = 'end'
-    const key = messages.length + 1;
+    const role = 'user'
     const content =  senderValue.value
-    const loading = false
-    const shape = 'corner'
-    const variant = 'outlined'
-    const isMarkdown = false
-    const typing = false
+    const messageUserItem = buildMessageItem(role,content)
 
-    const avatar =  userAvatar
-    messages.push({
+    messages.push(messageUserItem)
+    const prompt = senderValue.value
+    senderValue.value = ''
+    const messageAssistantItem = buildMessageItem('assistant','11')
+    messages.push(messageAssistantItem)
+    const stream = chatService.stream( formData.value.platformId, 
+                                          formData.value.modelId, 0.7, 4096, prompt)
+   
+    for await (const chunk of stream) {
+        const message = LlmResModel.fromObject(chunk)
+        console.log(message)
+        console.log(message?.getContent())
+        messageAssistantItem.content = messageAssistantItem.content + message?.getContent()
+    }
+    
+}
+
+const buildMessageItem = (role:'system'|'user'|'assistant',content:string) => {
+    const placement: messageType['placement'] = role === 'user' ? 'end' : 'start'
+    const loading = false
+    const shape: messageType['shape'] = 'corner'
+    const variant: messageType['variant'] = role === 'system' ? 'filled' : 'outlined'
+    const isMarkdown = false
+    const typing = role === 'assistant' ? true : false
+    const isFog = role === 'assistant' ? true : false
+    const avatar = role === 'user' ? userAvatar : aiAvatar 
+    const key = uuidv4();
+    return {
       key, // 唯一标识
       role, // user | ai 自行更据模型定义
       placement, // start | end 气泡位置
@@ -92,24 +114,12 @@ const handleSendMessage = async () =>{
       variant, // 气泡的样式
       isMarkdown, // 是否渲染为 markdown
       typing, // 是否开启打字器效果 该属性不会和流式接受冲突
-      isFog: false, // 是否开启打字雾化效果，该效果 v1.1.6 新增，且在 typing 为 true 时生效，该效果会覆盖 typing 的 suffix 属性
+      isFog, // 是否开启打字雾化效果，该效果 v1.1.6 新增，且在 typing 为 true 时生效，该效果会覆盖 typing 的 suffix 属性
       avatar,
       avatarSize: '24px', // 头像占位大小
       avatarGap: '12px', // 头像与气泡之间的距离
-    })
-  
-    senderValue.value = ''
-    const stream = await chatService.stream( formData.value.platformId, 
-                                          formData.value.modelId, 0.7, 4095, senderValue.value)
-    
-    let full: AIMessageChunk | undefined;
-    for await (const chunk of stream) {
-        full = !full ? chunk : concat(full, chunk);
-        console.log(full)
     }
 }
-
-
 onMounted(async () => {
   try {
     await mainChatIndexDb;
@@ -158,12 +168,12 @@ watch(
   },
   { deep: true }
 );
-function generateFakeItems(count: number): listType[] {
-  const messages: listType[] = []
+function generateFakeItems(count: number): messageType[] {
+  const messages: messageType[] = []
   for (let i = 0; i < count; i++) {
     const role = i % 2 === 0 ? 'system' : 'user'
     const placement = role === 'system' ? 'start' : 'end'
-    const key = i + 1
+    const key = uuidv4()
     const content = role === 'system'
       ? '用小书芽以后你可以直接使用国外的模型了,去OpenRouter申请个密钥，什么openai、Gemini都可以在小书芽使用了\n'.repeat(5)
       : `哈哈哈，让我试试`

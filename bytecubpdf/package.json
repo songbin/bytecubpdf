@@ -25,6 +25,7 @@
     "@langchain/core": "^0.3.43",
     "@langchain/ollama": "^0.2.0",
     "@langchain/openai": "^0.5.4",
+    "@microsoft/fetch-event-source": "^2.0.1",
     "@vicons/antd": "^0.13.0",
     "@vicons/carbon": "^0.13.0",
     "@vicons/fluent": "^0.13.0",

@@ -117,4 +117,13 @@ export class LlmResModel {
     const data = JSON.parse(jsonString);
     return new LlmResModel(data);
   }
+
+  /**
+   * 从普通对象创建LlmResModel实例
+   * @param obj 普通对象
+   * @returns LlmResModel实例
+   */
+  static fromObject(obj: any): LlmResModel {
+    return new LlmResModel(obj);
+  }
 }
