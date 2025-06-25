@@ -11,8 +11,6 @@ import { BrainCircuit20Regular } from '@vicons/fluent';
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
 import MainChatIndexDb from '@/renderer/service/indexdb/MainChatIndexDb';
 import { ChatService } from '@/renderer/service/chat/ChatService';
-import { AIMessageChunk } from '@langchain/core/messages';
-import { concat } from '@langchain/core/utils/stream';
 import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
 import { v4 as uuidv4 } from 'uuid';
 type messageType = BubbleListItemProps & {
@@ -33,7 +31,7 @@ const platforms = ref<Array<{ value: string; label: string }>>([]);
 const models = ref<Array<{ value: string; label: string }>>([]);
 
 const senderValue = ref('')
-const isSelect = ref(false)
+const assistantValue = ref('')
 
 // 示例调用
 const messages: BubbleListProps<messageType>['list'] = []
@@ -80,7 +78,8 @@ const handleSendMessage = async () =>{
     messages.push(messageUserItem)
     const prompt = senderValue.value
     senderValue.value = ''
-    const messageAssistantItem = buildMessageItem('assistant','11')
+    const messageAssistantItem = buildMessageItem('assistant','')
+    messageAssistantItem.content = assistantValue.value
     messages.push(messageAssistantItem)
     const stream = chatService.stream( formData.value.platformId, 
                                           formData.value.modelId, 0.7, 4096, prompt)
@@ -89,7 +88,9 @@ const handleSendMessage = async () =>{
         const message = LlmResModel.fromObject(chunk)
         console.log(message)
         console.log(message?.getContent())
-        messageAssistantItem.content = messageAssistantItem.content + message?.getContent()
+        assistantValue.value += message?.getContent() || '';
+        messages[messages.length - 1].content += message?.getContent() || '';
+        await nextTick();
     }
     
 }
@@ -104,6 +105,7 @@ const buildMessageItem = (role:'system'|'user'|'assistant',content:string) => {
     const isFog = role === 'assistant' ? true : false
     const avatar = role === 'user' ? userAvatar : aiAvatar 
     const key = uuidv4();
+    
     return {
       key, // 唯一标识
       role, // user | ai 自行更据模型定义
