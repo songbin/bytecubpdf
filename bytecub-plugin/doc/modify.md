@@ -89,3 +89,7 @@
     )
 ### 9.hyperscan.py
    增加hyperscan的模型，创建一个空py文件，用于屏蔽hyperscan引用
+### 10.high_level.py
+    对async_translate方法中future = loop.run_in_executor增加异常捕捉 
+            try:
+                await future  # 异常在此处被引发
