@@ -88,6 +88,7 @@ class PdfBabelSerive:
                 ocr_workaround = enable_ocr,
                 table_model = table_model,
                 skip_clean = True,
+                save_auto_extracted_glossary = False,
             )
             
             result_path = asyncio.run(cls.__yadt_translate_coro(

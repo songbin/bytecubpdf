@@ -197,8 +197,8 @@ def is_formulas_font(font_name: str, formular_font_pattern: str | None) -> bool:
     )
     precise_formula_font_pattern = (
         r"^("
-        r"|.*CambriaMath.*"
-        r"|.*Cambria Math.*"
+        # r"|.*CambriaMath.*"
+        # r"|.*Cambria Math.*"
         r"|.*Asana.*"
         r"|.*MiriamMonoCLM-BookOblique.*"
         r"|.*Miriam Mono CLM.*"

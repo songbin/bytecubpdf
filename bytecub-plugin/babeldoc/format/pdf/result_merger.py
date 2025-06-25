@@ -127,10 +127,26 @@ class ResultMerger:
                 logger.error(f"Error merging no-watermark PDFs: {e}")
                 merged_no_watermark_dual_path = None
 
+        auto_extracted_glossary_path = None
+        if (
+            self.config.save_auto_extracted_glossary
+            and self.config.shared_context_cross_split_part.auto_extracted_glossary
+        ):
+            auto_extracted_glossary_path = self.config.get_output_file_path(
+                f"{basename}{debug_suffix}.{self.config.lang_out}.glossary.csv"
+            )
+            with auto_extracted_glossary_path.open("w", encoding="utf-8") as f:
+                logger.info(
+                    f"save auto extracted glossary to {auto_extracted_glossary_path}"
+                )
+                f.write(
+                    self.config.shared_context_cross_split_part.auto_extracted_glossary.to_csv()
+                )
         # Create merged result
         merged_result = TranslateResult(
             mono_pdf_path=merged_mono_path,
             dual_pdf_path=merged_dual_path,
+            auto_extracted_glossary_path=auto_extracted_glossary_path,
         )
         merged_result.no_watermark_mono_pdf_path = merged_no_watermark_mono_path
         merged_result.no_watermark_dual_pdf_path = merged_no_watermark_dual_path

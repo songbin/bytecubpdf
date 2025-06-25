@@ -21,7 +21,7 @@ from babeldoc.translator.translator import OpenAITranslator
 from babeldoc.translator.translator import set_translate_rate_limiter
 
 logger = logging.getLogger(__name__)
-__version__ = "0.4.7"
+__version__ = "0.4.11"
 
 
 def create_parser():
@@ -271,6 +271,12 @@ def create_parser():
         default=False,
         help="Only include translated pages in the output PDF. Effective only when --pages is used.",
     )
+    translation_group.add_argument(
+        "--save-auto-extracted-glossary",
+        action="store_true",
+        default=False,
+        help="Save automatically extracted glossary terms to a CSV file in the output directory.",
+    )
     # service option argument group
     service_group = translation_group.add_mutually_exclusive_group()
     service_group.add_argument(
@@ -498,6 +504,7 @@ async def main():
             auto_enable_ocr_workaround=args.auto_enable_ocr_workaround,
             primary_font_family=args.primary_font_family,
             only_include_translated_page=args.only_include_translated_page,
+            save_auto_extracted_glossary=args.save_auto_extracted_glossary,
         )
 
         # Create progress handler

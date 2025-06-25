@@ -5,7 +5,7 @@ import logging
 import re
 import time
 from pathlib import Path
-
+import chardet
 import hyperscan
 import regex
 
@@ -134,8 +134,11 @@ class Glossary:
         normalized_target_lang_out = target_lang_out.lower().replace("-", "_")
 
         try:
-            with file_path.open("r", encoding="utf-8") as f:
-                reader = csv.DictReader(f, doublequote=True)
+             with file_path.open("rb") as f:
+                content = f.read()
+                encoding = chardet.detect(content)["encoding"]
+                buffer = io.StringIO(content.decode(encoding))
+                reader = csv.DictReader(buffer, doublequote=True)
                 if not all(col in reader.fieldnames for col in ["source", "target"]):
                     raise ValueError(
                         f"CSV file {file_path} must contain 'source' and 'target' columns."

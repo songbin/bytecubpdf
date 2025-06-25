@@ -33,6 +33,7 @@
         mono_out_path = translation_config.get_output_file_path(
             f"{mono_out_file_name}",
         )
+        屏蔽auto_extracted_glossary_path写操作
    #### 2.TranslateResult类中添加2个属性，用于存储pdf总页数和文件名以及source_base_name。
    translate_config.py下的class TranslateResult
    def __init__(self, mono_pdf_path: str | None, dual_pdf_path: str | None, total_pages: int | 1):
