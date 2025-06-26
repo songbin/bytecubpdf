@@ -51,7 +51,7 @@ export class CustomOpenAI extends BaseLlmClient {
             if (signal?.aborted) {
                 break;
             }
-            console.log(chunk)
+            // console.log(chunk)
             yield chunk
         }
         // console.log(full);

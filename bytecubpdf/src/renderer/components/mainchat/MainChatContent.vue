@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
 import type { BubbleListItemProps, BubbleListProps } from 'vue-element-plus-x/types/BubbleList'
-import { BubbleList, MentionSender } from 'vue-element-plus-x'
+import { BubbleList, MentionSender,Thinking } from 'vue-element-plus-x'
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
 import { NFlex, NButton, NIcon, NSelect, NTag, NButtonGroup, useMessage, NModal,NCard } from 'naive-ui'
@@ -13,10 +13,9 @@ import MainChatIndexDb from '@/renderer/service/indexdb/MainChatIndexDb';
 import { ChatService } from '@/renderer/service/chat/ChatService';
 import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
 import { v4 as uuidv4 } from 'uuid';
-type messageType = BubbleListItemProps & {
-  key: string;
-  role: 'system' | 'user' | 'assistant';
-}
+import {messageType} from '@/renderer/model/chat/ChatMessage'
+import {ChatMsgToLLM} from '@/renderer/service/chat/MessageConvert'
+import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
 const chatService = new ChatService()
 const message = useMessage()
 const llmManager = new LlmModelManager();
@@ -33,7 +32,6 @@ const models = ref<Array<{ value: string; label: string }>>([]);
 const senderValue = ref('')
 
 // 示例调用
-
 const messages = ref<BubbleListProps<messageType>['list']>([]);
 const handlePlatformChange = async (platformId: string) => {
   const modelList = await llmManager.getModelsByPlatform(platformId);
@@ -50,7 +48,9 @@ const handlePlatformChange = async (platformId: string) => {
     formData.value.modelName = ''
   }
 };
-
+const handleThinkingChange = (payload: { value: boolean; status: ThinkingStatus }) => {
+  // console.log('value', payload.value, 'status', payload.status);
+}
 const renderLabel = (option: { label: string }) => {
   return option.label;
 }
@@ -76,21 +76,33 @@ const handleSendMessage = async () =>{
     const messageUserItem = buildMessageItem(role,content)
 
     messages.value.push(messageUserItem)
-    const prompt = senderValue.value
     senderValue.value = ''
+    
+    
+    const stream = chatService.stream( formData.value.platformId, 
+                                          formData.value.modelId, 0.7, 4096, ChatMsgToLLM(messages.value))
     const messageAssistantItem = buildMessageItem('assistant','')
     messages.value.push(messageAssistantItem)
-    const stream = chatService.stream( formData.value.platformId, 
-                                          formData.value.modelId, 0.7, 4096, prompt)
-   
     for await (const chunk of stream) {
         const message = LlmResModel.fromObject(chunk)
-        console.log(message)
-        console.log(message?.getContent())
         messages.value[messages.value.length - 1].content += message?.getContent() || '';
+        messages.value[messages.value.length - 1].reasoning_content += message?.getReasoningContent() || ''
+        messages.value[messages.value.length - 1].thinkingStatus = parseThinkStatus()
         await nextTick();
     }
     
+}
+
+const parseThinkStatus = () =>{
+  const thinkingContent:string | undefined = messages.value[messages.value.length - 1].reasoning_content
+  const content:string | undefined = messages.value[messages.value.length - 1].content
+  if(thinkingContent && !content){
+    return 'thinking'
+  }
+  if(content){
+    return 'end'
+  }
+  return 'thinking'
 }
 
 const buildMessageItem = (role:'system'|'user'|'assistant',content:string) => {
@@ -103,12 +115,14 @@ const buildMessageItem = (role:'system'|'user'|'assistant',content:string) => {
     const isFog = role === 'assistant' ? true : false
     const avatar = role === 'user' ? userAvatar : aiAvatar 
     const key = uuidv4();
+    const reasoning_content = ''//?: string
     
     return {
       key, // 唯一标识
       role, // user | ai 自行更据模型定义
       placement, // start | end 气泡位置
       content, // 消息内容 流式接受的时候，只需要改这个值即可
+      reasoning_content,
       loading, // 当前气泡的加载状态
       shape, // 气泡的形状
       variant, // 气泡的样式
@@ -183,6 +197,10 @@ watch(
                 {{ item.role === 'system' ? '小书芽' : '用户' }}
               </div>
             </div>
+             <Thinking
+                v-if="item.reasoning_content" v-model="item.thinlCollapse" :content="item.reasoning_content"
+                :status="item.thinkingStatus" auto-collapse  @change="handleThinkingChange"
+              />
           </template>
           <template #footer>
             <n-flex>

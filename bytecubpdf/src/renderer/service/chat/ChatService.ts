@@ -17,12 +17,8 @@ export class ChatService {
     return await adapter.call(messages)
   }
 
-  async *stream(platformId: string,  modelId:string,temperature:number,maxTokens:number, prompt:string): AsyncGenerator<any> {
+  async *stream(platformId: string,  modelId:string,temperature:number,maxTokens:number, messages:LlmMessageList): AsyncGenerator<any> {
     const adapter = await this._buildAdapter(platformId, modelId,temperature,maxTokens, true);
-    const messages = new LlmMessageList({
-        role: 'user', 
-        content: prompt
-        });
     const stream = adapter.stream(messages)
     for await (const chunk of stream) {
         yield chunk

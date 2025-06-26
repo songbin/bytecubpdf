@@ -31,7 +31,10 @@ export class LlmMessageList extends Array<LlmMessage> {
   static fromArray(items: (Omit<LlmMessage, 'constructor'>)[]): LlmMessageList {
     return new LlmMessageList(...items.map(item => new LlmMessage(item.role, item.content)));
   }
-
+  /**实现从jsonArray转成本对象方法*/
+  static fromJsonArray(jsonArray: any[]): LlmMessageList {
+    return new LlmMessageList(...jsonArray.map(item => new LlmMessage(item.role, item.content)));
+  }
   toJsonArray(): any[] {
     return this.map(message => {
       if (typeof message.content === 'string') {
