@@ -18,7 +18,67 @@ export class SqliteDBInit {
         }
         return SqliteDBInit.instance;
     }
+    //写一个聊天历史记录的表的创建function，是用于存储ai对话
+    private async createChatMessageHistoryTable(db:any) {
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS chat_message_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id TEXT NOT NULL, -- 会话ID
+                key TEXT NOT NULL, -- 唯一标识
+                nowTime TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                reasoning_content TEXT,
+                create_time DATETIME DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+                update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                ext1 TEXT NOT NULL DEFAULT '',  -- 扩展字段1
+                ext2 TEXT NOT NULL DEFAULT '',  -- 扩展字段2
+                ext3 TEXT NOT NULL DEFAULT '',  -- 扩展字段3
+                ext4 TEXT NOT NULL DEFAULT '',  -- 扩展字段4
+                ext5 TEXT NOT NULL DEFAULT '',  -- 扩展字段5
+                ext6 TEXT NOT NULL DEFAULT '',  -- 扩展字段6
+                ext7 TEXT NOT NULL DEFAULT '',  -- 扩展字段7
+                ext8 TEXT NOT NULL DEFAULT '',  -- 扩展字段8
+            )
+        `);
+        await db.exec(`
+            CREATE TRIGGER IF NOT EXISTS update_chat_message_history_timestamp 
+            AFTER UPDATE ON chat_message_history 
+            BEGIN
+                UPDATE chat_message_history SET updatetime = CURRENT_TIMESTAMP WHERE id = OLD.id;
+            END
+        `);
+    }
+    // 写一个用于存储聊天本地信息的表的创建函数
+    private async createChatHistroyTable(db: any) {
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id TEXT NOT NULL, -- 会话ID
+                chat_name TEXT NOT NULL, -- 会话名称
+                create_time DATETIME DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+                update_time DATETIME DEFAULT CURRENT_TIMESTAMP, -- 更新时间
+                ext1 TEXT NOT NULL DEFAULT '',  -- 扩展字段1
+                ext2 TEXT NOT NULL DEFAULT '',  -- 扩展字段2
+                ext3 TEXT NOT NULL DEFAULT '',  -- 扩展字段3
+                ext4 TEXT NOT NULL DEFAULT '',  -- 扩展字段4
+                ext5 TEXT NOT NULL DEFAULT '',  -- 扩展字段5
+                ext6 TEXT NOT NULL DEFAULT '',  -- 扩展字段6
+                ext7 TEXT NOT NULL DEFAULT '',  -- 扩展字段7
+                ext8 TEXT NOT NULL DEFAULT '',  -- 扩展字段8
+            )
+        `);
+        await db.exec(`
+            CREATE TRIGGER IF NOT EXISTS update_chat_history_timestamp 
+            AFTER UPDATE ON chat_history 
+            BEGIN
+                UPDATE chat_history SET update_time = CURRENT_TIMESTAMP WHERE id = OLD.id;
+            END
+        `);
+    }
 
+    // 在 initTables 方法中调用该函数，需要在 initTables 方法中调用以下代码，这里仅作函数声明
+    
     public async initTables(): Promise<void> {
         this.dbPath = BuildPath.getDbPath();
         try {
@@ -27,7 +87,8 @@ export class SqliteDBInit {
                 driver: sqlite3.Database
             });
             console.log(`数据库初始化准备: ${this.dbPath}`);
-            
+            await this.createChatMessageHistoryTable(this.db)
+            await this.createChatHistroyTable(this.db)
             // 创建平台表
             await this.db.exec(`
                 CREATE TABLE IF NOT EXISTS llm_platforms (
