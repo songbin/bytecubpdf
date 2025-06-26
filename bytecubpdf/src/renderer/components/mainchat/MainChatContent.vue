@@ -95,13 +95,13 @@ const handleSendMessage = async () =>{
 
 const parseThinkStatus = () =>{
   const thinkingContent:string | undefined = messages.value[messages.value.length - 1].reasoning_content
-  const content:string | undefined = messages.value[messages.value.length - 1].content
+  const content:string | undefined = messages.value[messages.value.length - 1].content;
   if(thinkingContent && !content){
     return 'thinking'
-  }
-  if(content){
+  }else if(content){
     return 'end'
   }
+  
   return 'thinking'
 }
 
