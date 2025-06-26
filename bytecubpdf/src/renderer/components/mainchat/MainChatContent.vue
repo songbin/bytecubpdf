@@ -12,7 +12,7 @@ import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
 import MainChatIndexDb from '@/renderer/service/indexdb/MainChatIndexDb';
 import { ChatService } from '@/renderer/service/chat/ChatService';
 import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
-import { v4 as uuidv4 } from 'uuid';
+import {buildId} from '@/shared/utils/StringUtil'
 import { messageType } from '@/renderer/model/chat/ChatMessage'
 import { ChatMsgToLLM } from '@/renderer/service/chat/MessageConvert'
 import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
@@ -124,7 +124,7 @@ const buildMessageItem = (role: 'system' | 'user' | 'assistant', content: string
   const typing = role === 'assistant' ? true : false
   const isFog = role === 'assistant' ? true : false
   const avatar = role === 'user' ? userAvatar : aiAvatar
-  const key = uuidv4();
+  const key = buildId();
   const reasoning_content = ''//?: string
   const nowTime = new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-').replace(/\s/, ' ');
 

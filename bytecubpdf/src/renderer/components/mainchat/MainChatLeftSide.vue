@@ -1,90 +1,27 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref,onMounted } from 'vue'
 import { Conversations } from 'vue-element-plus-x'
 import type { ConversationItem, ConversationMenuCommand } from 'vue-element-plus-x/types/Conversations'
-import { useMessage, NTabs, NTabPane, NButton, NIcon, NFlex, NInput, NInputGroup } from 'naive-ui'
+import { useMessage, NTabs, NTabPane, NButton, NIcon, NFlex, NInput, NInputGroup ,NModal} from 'naive-ui'
 import { AddComment, SearchLocate } from '@vicons/carbon'
+import { ChatHistory } from '@/renderer/model/chat/db/ChatHistory'
+import { ChatStorageService } from '@/renderer/service/chat/ChatStorageService'
 const message = useMessage()
-const menuTestItems = ref([
-  {
-    key: 'm1',
-    label: '菜单测试项目 1 - 长文本效果演示文本长度溢出效果测试'.repeat(2),
-  },
-  {
-    key: 'm2',
-    label: '菜单测试项目 2',
-    disabled: true,
-  },
-  {
-    key: 'm3',
-    label: '菜单测试项目 3',
-  },
-  {
-    key: 'm4',
-    label: '菜单测试项目 4',
-  },
-  {
-    key: 'm5',
-    label: '菜单测试项目 5',
-  },
-  {
-    key: 'm6',
-    label: '菜单测试项目 6',
-  },
-  {
-    key: 'm7',
-    label: '菜单测试项目 7',
-  },
-  {
-    key: 'm8',
-    label: '菜单测试项目 8',
-  },
-  {
-    key: 'm9',
-    label: '菜单测试项目 9',
-  },
-  {
-    key: 'm10',
-    label: '菜单测试项目 10',
-  },
-  {
-    key: 'm11',
-    label: '菜单测试项目 11',
-  },
-  {
-    key: 'm12',
-    label: '菜单测试项目 12',
-  },
-  {
-    key: 'm13',
-    label: '菜单测试项目 13',
-  },
-  {
-    key: 'm14',
-    label: '菜单测试项目 14',
-  },
-
-  {
-    key: 'm15',
-    label: '菜单测试项目 13',
-  },
-  {
-    key: 'm16',
-    label: '菜单测试项目 14',
-  },
-])
-
-const activeKey4 = ref('m1')
+const chatList = ref<ConversationItem[]>([])
+const chatStorageService:ChatStorageService = new ChatStorageService()
+const activeChat = ref('')
+const showCreateChat = ref(false)
+const newChatName = ref('')
 
 // 内置菜单点击方法
 function handleMenuCommand(command: ConversationMenuCommand, item: ConversationItem) {
-  console.log('内置菜单点击事件：', command, item)
+  
   // 直接修改 item 是否生效
   if (command === 'delete') {
-    const index = menuTestItems.value.findIndex(itemSlef => itemSlef.key === item.key)
+    const index = chatList.value.findIndex(chatList => chatList.chat_id === item.chat_id)
 
     if (index !== -1) {
-      menuTestItems.value.splice(index, 1)
+      chatList.value.splice(index, 1)
       console.log('删除成功')
       message.success('删除成功')
     }
@@ -95,7 +32,31 @@ function handleMenuCommand(command: ConversationMenuCommand, item: ConversationI
     message.success('重命名成功')
   }
 }
+const openCreateChatDialog = () => {
+    showCreateChat.value = true
+}
+const createChat = async () =>{
+  if(newChatName.value === ''){
+    message.error('请输入聊天名字')
+    return
+  }
+  const chat: ConversationItem | null = await chatStorageService.createChat(newChatName.value)
+  if(null == chat){
+    message.error('创建失败，请重试')
+    return
+  }
+  chatList.value.unshift(chat)
+  newChatName.value = ''
+  showCreateChat.value = false
+}
 
+const loadData = async () =>{
+  const list = await chatStorageService.getChatHistoryPage();
+  chatList.value = list;
+}
+onMounted(async () => {
+  await loadData()
+})
 </script>
 
 <template>
@@ -103,12 +64,19 @@ function handleMenuCommand(command: ConversationMenuCommand, item: ConversationI
     <n-tabs type="segment" animated>
       <n-tab-pane name="function" tab="聊天历史">
         <div style="display: flex; flex-direction: column; gap: 12px; height: calc(100vh - 120px);">
-          <Conversations v-model:active="activeKey4" :items="menuTestItems" :label-max-width="160" :show-tooltip="true"
-            row-key="key" tooltip-placement="right" :tooltip-offset="35" show-to-top-btn show-built-in-menu
+          <Conversations 
+            v-model:active="activeChat" 
+            :items="chatList" 
+            :label-max-width="160" 
+            :show-tooltip="true"
+            row-key="id" 
+            
+            tooltip-placement="right" 
+            :tooltip-offset="35" show-to-top-btn show-built-in-menu
             @menu-command="handleMenuCommand">
             <template #header>
               <n-flex vertical>
-                <n-button size="small">
+                <n-button size="small" @click="openCreateChatDialog">
                   <template #icon>
                     <n-icon>
                       <AddComment />
@@ -138,6 +106,14 @@ function handleMenuCommand(command: ConversationMenuCommand, item: ConversationI
         设置区域
       </n-tab-pane>
     </n-tabs>
+
+     <n-modal v-model:show="showCreateChat" preset="dialog" title="创建聊天">
+     
+      <n-input v-model:value="newChatName" size="small" placeholder="输入聊天名字"></n-input>
+      <template #action>
+        <n-button type="success" @click="createChat">创建</n-button>
+      </template>
+    </n-modal>
   </div>
 </template>
 

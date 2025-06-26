@@ -78,4 +78,13 @@ export class ChatHistoryManager {
         `, [this.sanitizeString(chatId)]);
         return result[0]?.changes! > 0;
     }
+
+    //实现根据chat_id查询的function
+    async getChatHistoryByChatId(chatId: string): Promise<ChatHistory | null> {
+        const result = await SqliteDbCore.executeQuery<ChatHistory>(`
+            SELECT * FROM ${this.tableName}
+            WHERE chat_id = ?
+        `, [this.sanitizeString(chatId)]);
+        return result[0] || null;
+    }
 }
