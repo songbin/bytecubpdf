@@ -1,7 +1,7 @@
 import { ChatHistory } from '@/renderer/model/chat/db/ChatHistory';
 import { ChatHistoryManager } from '@/renderer/service/manager/chat/ChatHistoryManager';
 import { buildId } from '@/shared/utils/StringUtil';
-import type { ConversationItem } from 'vue-element-plus-x/types/Conversations'
+import { ChatModel } from '@/renderer/model/chat/ChatMessage';
 const chatHistoryManager = new ChatHistoryManager();
 export class ChatStorageService {
     // 创建聊天会话
@@ -10,7 +10,7 @@ export class ChatStorageService {
     }
 
     // 创建聊天会话
-    async createChat(chat_name: string): Promise<ConversationItem|null> {
+    async createChat(chat_name: string): Promise<ChatModel|null> {
         const chat_id = buildId()
         const chat:ChatHistory = {
             id:0,
@@ -30,7 +30,7 @@ export class ChatStorageService {
         }
     }
     // 获取聊天会话分页列表
-    async getChatHistoryPage(page = 1, pageSize = 20): Promise<ConversationItem[]> {
+    async getChatHistoryPage(page = 1, pageSize = 20): Promise<ChatModel[]> {
         const result = await chatHistoryManager.getChatHistoryPage(page, pageSize);
         return result.map(item => {
             return {

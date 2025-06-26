@@ -4,12 +4,12 @@ import { Conversations } from 'vue-element-plus-x'
 import type { ConversationItem, ConversationMenuCommand } from 'vue-element-plus-x/types/Conversations'
 import { useMessage, NTabs, NTabPane, NButton, NIcon, NFlex, NInput, NInputGroup ,NModal} from 'naive-ui'
 import { AddComment, SearchLocate } from '@vicons/carbon'
-import { ChatHistory } from '@/renderer/model/chat/db/ChatHistory'
+import { ChatModel } from '@/renderer/model/chat/ChatMessage'
 import { ChatStorageService } from '@/renderer/service/chat/ChatStorageService'
 const message = useMessage()
-const chatList = ref<ConversationItem[]>([])
+const chatList = ref<ChatModel[]>([])
 const chatStorageService:ChatStorageService = new ChatStorageService()
-const activeChat = ref('')
+const activeChatId = ref('')
 const showCreateChat = ref(false)
 const newChatName = ref('')
 
@@ -40,7 +40,7 @@ const createChat = async () =>{
     message.error('请输入聊天名字')
     return
   }
-  const chat: ConversationItem | null = await chatStorageService.createChat(newChatName.value)
+  const chat: ChatModel | null = await chatStorageService.createChat(newChatName.value)
   if(null == chat){
     message.error('创建失败，请重试')
     return
@@ -48,6 +48,7 @@ const createChat = async () =>{
   chatList.value.unshift(chat)
   newChatName.value = ''
   showCreateChat.value = false
+  activeChatId.value = chat.id
 }
 
 const loadData = async () =>{
@@ -65,12 +66,11 @@ onMounted(async () => {
       <n-tab-pane name="function" tab="聊天历史">
         <div style="display: flex; flex-direction: column; gap: 12px; height: calc(100vh - 120px);">
           <Conversations 
-            v-model:active="activeChat" 
+            v-model:active="activeChatId" 
             :items="chatList" 
             :label-max-width="160" 
             :show-tooltip="true"
             row-key="id" 
-            
             tooltip-placement="right" 
             :tooltip-offset="35" show-to-top-btn show-built-in-menu
             @menu-command="handleMenuCommand">
