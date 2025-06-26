@@ -31,10 +31,10 @@ const platforms = ref<Array<{ value: string; label: string }>>([]);
 const models = ref<Array<{ value: string; label: string }>>([]);
 
 const senderValue = ref('')
-const assistantValue = ref('')
 
 // 示例调用
-const messages: BubbleListProps<messageType>['list'] = []
+
+const messages = ref<BubbleListProps<messageType>['list']>([]);
 const handlePlatformChange = async (platformId: string) => {
   const modelList = await llmManager.getModelsByPlatform(platformId);
   formData.value.platformName = platforms.value.find((p) => p.value == platformId)?.label || '';
@@ -75,12 +75,11 @@ const handleSendMessage = async () =>{
     const content =  senderValue.value
     const messageUserItem = buildMessageItem(role,content)
 
-    messages.push(messageUserItem)
+    messages.value.push(messageUserItem)
     const prompt = senderValue.value
     senderValue.value = ''
     const messageAssistantItem = buildMessageItem('assistant','')
-    messageAssistantItem.content = assistantValue.value
-    messages.push(messageAssistantItem)
+    messages.value.push(messageAssistantItem)
     const stream = chatService.stream( formData.value.platformId, 
                                           formData.value.modelId, 0.7, 4096, prompt)
    
@@ -88,8 +87,7 @@ const handleSendMessage = async () =>{
         const message = LlmResModel.fromObject(chunk)
         console.log(message)
         console.log(message?.getContent())
-        assistantValue.value += message?.getContent() || '';
-        messages[messages.length - 1].content += message?.getContent() || '';
+        messages.value[messages.value.length - 1].content += message?.getContent() || '';
         await nextTick();
     }
     
@@ -100,7 +98,7 @@ const buildMessageItem = (role:'system'|'user'|'assistant',content:string) => {
     const loading = false
     const shape: messageType['shape'] = 'corner'
     const variant: messageType['variant'] = role === 'system' ? 'filled' : 'outlined'
-    const isMarkdown = false
+    const isMarkdown = true
     const typing = role === 'assistant' ? true : false
     const isFog = role === 'assistant' ? true : false
     const avatar = role === 'user' ? userAvatar : aiAvatar 
@@ -170,41 +168,7 @@ watch(
   },
   { deep: true }
 );
-function generateFakeItems(count: number): messageType[] {
-  const messages: messageType[] = []
-  for (let i = 0; i < count; i++) {
-    const role = i % 2 === 0 ? 'system' : 'user'
-    const placement = role === 'system' ? 'start' : 'end'
-    const key = uuidv4()
-    const content = role === 'system'
-      ? '用小书芽以后你可以直接使用国外的模型了,去OpenRouter申请个密钥，什么openai、Gemini都可以在小书芽使用了\n'.repeat(5)
-      : `哈哈哈，让我试试`
-    const loading = false
-    const shape = 'corner'
-    const variant = role === 'system' ? 'filled' : 'outlined'
-    const isMarkdown = false
-    const typing = role === 'system' ? i === count - 1 : false
-
-    const avatar = role === 'system' ? aiAvatar : userAvatar
-
-    messages.push({
-      key, // 唯一标识
-      role, // user | ai 自行更据模型定义
-      placement, // start | end 气泡位置
-      content, // 消息内容 流式接受的时候，只需要改这个值即可
-      loading, // 当前气泡的加载状态
-      shape, // 气泡的形状
-      variant, // 气泡的样式
-      isMarkdown, // 是否渲染为 markdown
-      typing, // 是否开启打字器效果 该属性不会和流式接受冲突
-      isFog: role === 'system', // 是否开启打字雾化效果，该效果 v1.1.6 新增，且在 typing 为 true 时生效，该效果会覆盖 typing 的 suffix 属性
-      avatar,
-      avatarSize: '24px', // 头像占位大小
-      avatarGap: '12px', // 头像与气泡之间的距离
-    })
-  }
-  return messages
-}
+ 
 </script>
 
 <template>
@@ -317,14 +281,9 @@ function generateFakeItems(count: number): messageType[] {
   </div>
 </template>
 
-<style scoped>
-.isSelect {
-  color: #626aef;
-  border: 1px solid #626aef !important;
-  border-radius: 15px;
-  padding: 3px 12px;
-  font-weight: 700;
+<style scoped lang="less">
+:deep(.markdown-body) {
+  background-color: transparent;
 }
-
 
 </style>
