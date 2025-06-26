@@ -5,4 +5,5 @@ export type messageType = BubbleListItemProps & {
   role: 'system' | 'user' | 'assistant';
   thinkingStatus?: ThinkingStatus;
   thinlCollapse?: boolean;
+  nowTime:string;
 }

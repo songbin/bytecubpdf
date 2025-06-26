@@ -126,9 +126,11 @@ const buildMessageItem = (role: 'system' | 'user' | 'assistant', content: string
   const avatar = role === 'user' ? userAvatar : aiAvatar
   const key = uuidv4();
   const reasoning_content = ''//?: string
+  const nowTime = new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-').replace(/\s/, ' ');
 
   return {
     key, // 唯一标识
+    nowTime,
     role, // user | ai 自行更据模型定义
     placement, // start | end 气泡位置
     content, // 消息内容 流式接受的时候，只需要改这个值即可
@@ -177,8 +179,12 @@ onMounted(async () => {
 
 });
 const copyMessageItem = (item:messageType) =>{
-  const content = item.content;
+  let content = item.content;
+ 
   if(content){
+    if(item.role == 'assistant'){
+      content = content + '\n来自小书芽(DocFable.com)'
+    }
     navigator.clipboard.writeText(content).then(() => {
       message.success('复制成功');
     }).catch((err) => {
@@ -238,7 +244,7 @@ watch(
           <template #header="{ item }">
             <div class="header-wrapper">
               <div class="header-name">
-                {{ item.role === 'system' ? '小书芽' : '用户' }}
+                {{ item.role === 'user' ? item.nowTime + ' 用户' : '小书芽 ' + item.nowTime }}
               </div>
             </div>
             <Thinking v-if="item.reasoning_content" v-model="item.thinlCollapse" :content="item.reasoning_content"
@@ -246,18 +252,7 @@ watch(
           </template>
           <template #footer="{ item }">
             <n-flex>
-              <n-tooltip>
-                <template #trigger>
-                  <n-button tertiary circle type="info" >
-                    <template #icon>
-                      <n-icon>
-                        <Edit />
-                      </n-icon>
-                    </template>
-                  </n-button>
-                </template>
-                编辑
-              </n-tooltip>
+              
               <n-tooltip>
                 <template #trigger>
                   <n-button tertiary circle type="info" @click="refreshMessage(item)">
