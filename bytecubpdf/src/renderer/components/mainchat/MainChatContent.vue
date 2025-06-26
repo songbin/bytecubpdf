@@ -4,7 +4,7 @@ import type { BubbleListItemProps, BubbleListProps } from 'vue-element-plus-x/ty
 import { BubbleList, MentionSender, Thinking } from 'vue-element-plus-x'
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
-import { NFlex, NButton, NIcon, NSelect, NTag, NButtonGroup, useMessage, NModal, NCard } from 'naive-ui'
+import { NFlex, NButton, NIcon, NSelect, NTag, NTooltip, NButtonGroup, useMessage, NModal, NCard } from 'naive-ui'
 import { Delete, CopyFile, Edit, SendAlt, Temperature } from '@vicons/carbon'
 import { Refresh, Attach, Add, TrainOutline as TrainIcon } from '@vicons/ionicons5';
 import { BrainCircuit20Regular } from '@vicons/fluent';
@@ -81,27 +81,27 @@ const handleSendMessage = async () => {
 
 }
 const askSSE = async () => {
-  try{
+  try {
     const stream = chatService.stream(formData.value.platformId,
-        formData.value.modelId,
-        0.7,
-        4096,
-        ChatMsgToLLM(messages.value))
+      formData.value.modelId,
+      0.7,
+      4096,
+      ChatMsgToLLM(messages.value))
 
-      const messageAssistantItem = buildMessageItem('assistant', '')
-      messages.value.push(messageAssistantItem)
-      for await (const chunk of stream) {
-        const message = LlmResModel.fromObject(chunk)
-        messages.value[messages.value.length - 1].content += message?.getContent() || '';
-        messages.value[messages.value.length - 1].reasoning_content += message?.getReasoningContent() || ''
-        messages.value[messages.value.length - 1].thinkingStatus = parseThinkStatus()
-        await nextTick();
-  }
-  }catch(error){
+    const messageAssistantItem = buildMessageItem('assistant', '')
+    messages.value.push(messageAssistantItem)
+    for await (const chunk of stream) {
+      const message = LlmResModel.fromObject(chunk)
+      messages.value[messages.value.length - 1].content += message?.getContent() || '';
+      messages.value[messages.value.length - 1].reasoning_content += message?.getReasoningContent() || ''
+      messages.value[messages.value.length - 1].thinkingStatus = parseThinkStatus()
+      await nextTick();
+    }
+  } catch (error) {
     const error_msg = '请求大模型平台失败' + (error as Error).message
     message.error(error_msg)
   }
-  
+
 }
 const parseThinkStatus = () => {
   const thinkingContent: string | undefined = messages.value[messages.value.length - 1].reasoning_content
@@ -176,7 +176,27 @@ onMounted(async () => {
   }
 
 });
-
+const copyMessageItem = (item:messageType) =>{
+  const content = item.content;
+  if(content){
+    navigator.clipboard.writeText(content).then(() => {
+      message.success('复制成功');
+    }).catch((err) => {
+      message.error('复制失败:', err);
+    });
+  }
+}
+const deleteMessageItem = (item:messageType) =>{
+  //把所有message的typing设置为false
+  messages.value.forEach((m) => {
+    m.typing = false;
+  })
+   
+  const index = messages.value.indexOf(item);
+  if (index !== -1) {
+    messages.value.splice(index, 1);
+  }
+}
 watch(
   formData,
   async (newValue) => {
@@ -210,36 +230,57 @@ watch(
             <Thinking v-if="item.reasoning_content" v-model="item.thinlCollapse" :content="item.reasoning_content"
               :status="item.thinkingStatus" auto-collapse @change="handleThinkingChange" />
           </template>
-          <template #footer>
+          <template #footer="{ item }">
             <n-flex>
-              <n-button tertiary circle type="info">
-                <template #icon>
-                  <n-icon>
-                    <Edit />
-                  </n-icon>
+              <n-tooltip>
+                <template #trigger>
+                  <n-button tertiary circle type="info" >
+                    <template #icon>
+                      <n-icon>
+                        <Edit />
+                      </n-icon>
+                    </template>
+                  </n-button>
                 </template>
-              </n-button>
-              <n-button tertiary circle type="info">
-                <template #icon>
-                  <n-icon>
-                    <Refresh />
-                  </n-icon>
+                编辑
+              </n-tooltip>
+              <n-tooltip>
+                <template #trigger>
+                  <n-button tertiary circle type="info">
+                    <template #icon>
+                      <n-icon>
+                        <Refresh />
+                      </n-icon>
+                    </template>
+                  </n-button>
                 </template>
-              </n-button>
-              <n-button tertiary circle type="info">
-                <template #icon>
-                  <n-icon>
-                    <CopyFile />
-                  </n-icon>
+                重新生成
+              </n-tooltip>
+              <n-tooltip>
+                <template #trigger>
+                  <n-button tertiary circle type="info" @click="copyMessageItem(item)">
+                    <template #icon>
+                      <n-icon>
+                        <CopyFile />
+                      </n-icon>
+                    </template>
+                  </n-button>
                 </template>
-              </n-button>
-              <n-button tertiary circle type="info">
-                <template #icon>
-                  <n-icon>
-                    <Delete />
-                  </n-icon>
+                复制
+              </n-tooltip>
+              <n-tooltip>
+                <template #trigger>
+                  <n-button tertiary circle type="info" @click="deleteMessageItem(item)">
+                    <template #icon>
+                      <n-icon>
+                        <Delete />
+                      </n-icon>
+                    </template>
+                  </n-button>
                 </template>
-              </n-button>
+                删除
+              </n-tooltip>
+
 
             </n-flex>
           </template>
