@@ -18,9 +18,10 @@ function handleMenuCommand(command: ConversationMenuCommand, item: ConversationI
   
   // 直接修改 item 是否生效
   if (command === 'delete') {
-    const index = chatList.value.findIndex(chatList => chatList.chat_id === item.chat_id)
+    const index = chatList.value.findIndex(chatItem => chatItem.id === item.id)
 
     if (index !== -1) {
+      chatStorageService.deleteChatHistory(item.id)
       chatList.value.splice(index, 1)
       console.log('删除成功')
       message.success('删除成功')
@@ -34,6 +35,15 @@ function handleMenuCommand(command: ConversationMenuCommand, item: ConversationI
 }
 const openCreateChatDialog = () => {
     showCreateChat.value = true
+}
+const directCreateChat = async () =>{
+    const chat: ChatModel | null = await chatStorageService.createChat('新建聊天')
+    if(null == chat){
+      message.error('创建失败，请重试')
+      return
+    }
+    chatList.value.unshift(chat)
+    activeChatId.value = chat.id
 }
 const createChat = async () =>{
   if(newChatName.value === ''){
@@ -76,7 +86,7 @@ onMounted(async () => {
             @menu-command="handleMenuCommand">
             <template #header>
               <n-flex vertical>
-                <n-button size="small" @click="openCreateChatDialog">
+                <n-button size="small" @click="directCreateChat">
                   <template #icon>
                     <n-icon>
                       <AddComment />
