@@ -12,9 +12,11 @@ const chatStorageService:ChatStorageService = new ChatStorageService()
 const activeChatId = ref('')
 const showCreateChat = ref(false)
 const newChatName = ref('')
+const showRenameChat = ref(false)
+const chatId = ref('') //当前正在操作的chatid
 
 // 内置菜单点击方法
-function handleMenuCommand(command: ConversationMenuCommand, item: ConversationItem) {
+function handleMenuCommand(command: ConversationMenuCommand, item: ChatModel) {
   
   // 直接修改 item 是否生效
   if (command === 'delete') {
@@ -28,9 +30,12 @@ function handleMenuCommand(command: ConversationMenuCommand, item: ConversationI
     }
   }
   if (command === 'rename') {
-    item.label = '已修改'
-    console.log('重命名成功')
-    message.success('重命名成功')
+    // item.label = '已修改'
+    // console.log('重命名成功')
+    // message.success('重命名成功')
+    showRenameChat.value = true
+    chatId.value = item.id
+    newChatName.value = item.label ?? ''
   }
 }
 const openCreateChatDialog = () => {
@@ -42,8 +47,18 @@ const directCreateChat = async () =>{
       message.error('创建失败，请重试')
       return
     }
-    chatList.value.unshift(chat)
+    await loadData()
     activeChatId.value = chat.id
+}
+const renameChat = async () =>{
+  if(newChatName.value === ''){
+    message.error('请输入聊天名字')
+    return
+  }
+  await chatStorageService.updateChatHistoryName(chatId.value, newChatName.value)
+  await loadData()
+  newChatName.value = ''
+  showRenameChat.value = false
 }
 const createChat = async () =>{
   if(newChatName.value === ''){
@@ -55,7 +70,7 @@ const createChat = async () =>{
     message.error('创建失败，请重试')
     return
   }
-  chatList.value.unshift(chat)
+  await loadData()
   newChatName.value = ''
   showCreateChat.value = false
   activeChatId.value = chat.id
@@ -118,11 +133,17 @@ onMounted(async () => {
     </n-tabs>
 
      <n-modal v-model:show="showCreateChat" preset="dialog" title="创建聊天">
-     
-      <n-input v-model:value="newChatName" size="small" placeholder="输入聊天名字"></n-input>
-      <template #action>
-        <n-button type="success" @click="createChat">创建</n-button>
-      </template>
+        <n-input v-model:value="newChatName" size="small" placeholder="输入聊天名字"></n-input>
+        <template #action>
+          <n-button type="success" @click="createChat">创建</n-button>
+        </template>
+    </n-modal>
+
+    <n-modal v-model:show="showRenameChat" preset="dialog" title="改名">
+        <n-input v-model:value="newChatName" size="small" placeholder="输入聊天名字"></n-input>
+        <template #action>
+          <n-button type="success" @click="renameChat">确认</n-button>
+        </template>
     </n-modal>
   </div>
 </template>

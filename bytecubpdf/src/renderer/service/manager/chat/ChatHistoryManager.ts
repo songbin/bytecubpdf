@@ -46,7 +46,7 @@ export class ChatHistoryManager {
         const offset = (Math.max(1, pageno) - 1) * pageSize;
         return SqliteDbCore.executeQuery<ChatHistory>(`
             SELECT * FROM ${this.tableName}
-            ORDER BY update_time DESC
+            ORDER BY id DESC
             LIMIT ? OFFSET ?
         `, [pageSize, offset]);
     }
