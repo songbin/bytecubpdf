@@ -38,14 +38,14 @@ export class SqliteDBInit {
                 ext5 TEXT NOT NULL DEFAULT '',  -- 扩展字段5
                 ext6 TEXT NOT NULL DEFAULT '',  -- 扩展字段6
                 ext7 TEXT NOT NULL DEFAULT '',  -- 扩展字段7
-                ext8 TEXT NOT NULL DEFAULT '',  -- 扩展字段8
+                ext8 TEXT NOT NULL DEFAULT ''  -- 扩展字段8
             )
         `);
         await db.exec(`
             CREATE TRIGGER IF NOT EXISTS update_chat_message_history_timestamp 
             AFTER UPDATE ON chat_message_history 
             BEGIN
-                UPDATE chat_message_history SET updatetime = CURRENT_TIMESTAMP WHERE id = OLD.id;
+                UPDATE chat_message_history SET update_time = CURRENT_TIMESTAMP WHERE id = OLD.id;
             END
         `);
     }
@@ -65,8 +65,8 @@ export class SqliteDBInit {
                 ext5 TEXT NOT NULL DEFAULT '',  -- 扩展字段5
                 ext6 TEXT NOT NULL DEFAULT '',  -- 扩展字段6
                 ext7 TEXT NOT NULL DEFAULT '',  -- 扩展字段7
-                ext8 TEXT NOT NULL DEFAULT '',  -- 扩展字段8
-            )
+                ext8 TEXT NOT NULL DEFAULT ''  -- 扩展字段8
+)
         `);
         await db.exec(`
             CREATE TRIGGER IF NOT EXISTS update_chat_history_timestamp 
