@@ -32,29 +32,27 @@ export class CustomOpenAI extends BaseLlmClient {
     }
 
     async *stream(messages: LlmMessageList, signal?: AbortSignal): AsyncGenerator<any> {
-         const stream = await this.llm.chat.completions.create({
-                model: this.config.modelName,
-                messages: messages.toJsonArray(),
-                temperature: this.config.temperature,
-                max_tokens: this.config.maxTokens,
-                stream: true
-            });
-        // 监听中断信号
-        // if (signal) {
-        //     signal.addEventListener('abort', () => {
-        //         stream.cancel?.();
-        //     });
-        // }
-        // let full: AIMessageChunk | undefined;
-        for await (const chunk of stream) {
-            // 检查是否已中断
-            if (signal?.aborted) {
-                break;
-            }
-            // console.log(chunk)
-            yield chunk
+        try{
+                const stream = await this.llm.chat.completions.create({
+                        model: this.config.modelName,
+                        messages: messages.toJsonArray(),
+                        temperature: this.config.temperature,
+                        max_tokens: this.config.maxTokens,
+                        stream: true
+                    });
+                for await (const chunk of stream) {
+                    // 检查是否已中断
+                    if (signal?.aborted) {
+                        break;
+                    }
+                    yield chunk
+                }
+        }catch(error){
+            console.error("OpenAI API 错误详情:", (error as Error).message || String(error));
+            console.error("完整错误对象:", error);
+            throw error;
         }
-        // console.log(full);
+       
     }
 
 }
