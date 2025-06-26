@@ -186,6 +186,20 @@ const copyMessageItem = (item:messageType) =>{
     });
   }
 }
+const refreshMessage = (item:messageType) =>{
+  //如果item是user那就在messages中把这条item之后的item都删除，如果item是assistant，那就把这条item以及后面的item都删除
+  //你应该先看这条item在messages的index是多少，保留index之前的元素，然后根据role的值，决定是否保留这条item
+  const index = messages.value.findIndex(msg => msg.key === item.key);
+  if(index == -1){
+    return;
+  }
+  if(item.role == 'user'){
+    messages.value = messages.value.slice(0, index + 1);
+  }else{
+    messages.value = messages.value.slice(0, index);
+  }
+  askSSE()
+}
 const deleteMessageItem = (item:messageType) =>{
   //把所有message的typing设置为false
   messages.value.forEach((m) => {
@@ -246,7 +260,7 @@ watch(
               </n-tooltip>
               <n-tooltip>
                 <template #trigger>
-                  <n-button tertiary circle type="info">
+                  <n-button tertiary circle type="info" @click="refreshMessage(item)">
                     <template #icon>
                       <n-icon>
                         <Refresh />
