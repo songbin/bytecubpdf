@@ -19,6 +19,9 @@ const chatId = ref('') //当前正在操作的chatid
 const current_page = ref(1)
 const page_size = ref(20)
 const isLoading = ref(false)
+const emit = defineEmits<{
+  (e: 'selectChat', chatId: string, chatName: string): void
+}>()
 
 // 内置菜单点击方法
 function handleMenuCommand(command: ConversationMenuCommand, item: ChatModel) {
@@ -83,7 +86,6 @@ const loadData = async () =>{
   current_page.value = 1
   const list = await chatStorageService.getChatHistoryPage(searchValue.value, current_page.value, page_size.value);
   chatList.value = list;
-  
 }
 const loadMore = async () =>{
   current_page.value++

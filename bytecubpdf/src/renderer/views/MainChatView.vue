@@ -8,7 +8,8 @@
       show-trigger
       bordered
     >
-      <MainChatLeftSide />
+      <MainChatLeftSide 
+       @selectChat = "selectChat"/>
     </n-layout-sider>
     <n-layout-content>
       <MainChatContent />
@@ -21,6 +22,9 @@ import { NLayout, NLayoutSider, NLayoutContent } from 'naive-ui'
 import MainChatLeftSide from '@/renderer/components/mainchat/MainChatLeftSide.vue' 
 import MainChatContent from '@/renderer/components/mainchat/MainChatContent.vue' 
 
+const selectChat = (chatId:string, chatName:string) => {
+  console.log('selectChat', chatId, chatName)
+}
 </script>
 
 <style scoped>

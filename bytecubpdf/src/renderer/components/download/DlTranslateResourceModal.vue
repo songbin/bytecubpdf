@@ -83,7 +83,7 @@
   <script lang="ts" setup>
   import { ref, defineProps, watch,computed,onMounted,toRaw  } from 'vue';
   import { NProgress, NAlert, NSpace, NModal, NCard, NButton, NList, 
-    NListItem, NCollapseTransition,useDialog,NSwitch,NThing,NTag,NFlex } from 'naive-ui';
+    NListItem, NCollapseTransition,useDialog,NSwitch,NThing,NTag,NFlex,NIcon } from 'naive-ui';
   import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
   interface DownloadItem {
     name: string;
