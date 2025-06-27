@@ -34,6 +34,9 @@
         </n-flex>
       </div>
     </div>
+      <DlTranslateResourceModal 
+        :filesToDownload= filesToDownload
+       />
   </div>
 </template>
 
@@ -44,14 +47,17 @@ import FuncSide from './FuncSide.vue'
 import SettingsSide from './SettingsSide.vue'
 import TopSide from './TopSide.vue'
 import logo from '@/renderer/assets/images/docfable.png'
-
-
-onMounted(() => {
+// 导入组件DownloadComponent
+import DlTranslateResourceModal from '@/renderer/components/download/DlTranslateResourceModal.vue'
+import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
+const filesToDownload = ref<FileDownloadItem[]>([])
+onMounted( async() => {
   if ((window as any).window.electronAPI) {
     console.log('当前平台:', (window as any).window.electronAPI.platform)
   } else {
     console.warn('Electron API 不可用')
   }
+   filesToDownload.value = await (window as any).window.electronAPI.verifyFileDownloads();
 })
 
 
