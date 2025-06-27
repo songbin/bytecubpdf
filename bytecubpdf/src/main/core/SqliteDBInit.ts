@@ -24,7 +24,7 @@ export class SqliteDBInit {
             CREATE TABLE IF NOT EXISTS chat_message_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 chat_id TEXT NOT NULL, -- 会话ID
-                key TEXT NOT NULL, -- 唯一标识
+                msg_id TEXT NOT NULL, -- 唯一标识
                 nowTime TEXT NOT NULL,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,

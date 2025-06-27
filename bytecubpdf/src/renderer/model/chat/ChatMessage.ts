@@ -7,6 +7,7 @@ export type messageType = BubbleListItemProps & {
   thinkingStatus?: ThinkingStatus;
   thinlCollapse?: boolean;
   nowTime:string;
+  chatId:string;
 }
 
 export type ChatModel = ConversationItem & {

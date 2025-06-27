@@ -24,9 +24,11 @@ import MainChatContent from '@/renderer/components/mainchat/MainChatContent.vue'
 import { ref } from 'vue'
 const chatId = ref('')
 const chatName = ref('')
-
-const selectChat = (chatId:string, chatName:string) => {
-  console.log('selectChat', chatId, chatName)
+const contentRef = ref()
+const selectChat = (chat_id:string, chat_name:string) => {
+  // console.log('selectChat', chatId, chatName)
+  chatId.value = chat_id
+  chatName.value = chat_name
 }
 </script>
 

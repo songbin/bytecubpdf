@@ -7,7 +7,7 @@ export interface ChatMessageDb {
     // 会话ID
     chat_id: string;
     // 唯一标识
-    key: string;
+    msg_id: string;
     // 当前时间
     nowTime: string;
     // 角色

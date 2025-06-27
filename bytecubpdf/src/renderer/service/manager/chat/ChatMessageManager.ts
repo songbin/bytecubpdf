@@ -10,10 +10,10 @@ export class ChatMessageManager {
     }
 
     // 创建聊天消息
-    async createMessage(message: Omit<ChatMessageDb, 'id'|'create_time'|'update_time'>): Promise<number> {
+    async createMessage(message: Omit<ChatMessageDb, 'id' | 'create_time' | 'update_time'>): Promise<number> {
         const sanitizedValues = [
             this.sanitizeString(message.chat_id),
-            this.sanitizeString(message.key),
+            this.sanitizeString(message.msg_id),
             this.sanitizeString(message.nowTime),
             this.sanitizeString(message.role),
             this.sanitizeString(message.content),
@@ -31,7 +31,7 @@ export class ChatMessageManager {
         const result = await SqliteDbCore.executeQuery<{ lastInsertRowid: number }>(`
             INSERT INTO ${this.tableName} (
                 chat_id,
-                key,
+                msg_id,
                 nowTime,
                 role,
                 content,
@@ -54,10 +54,43 @@ export class ChatMessageManager {
         return SqliteDbCore.executeQuery(`
             SELECT * FROM ${this.tableName}
             WHERE chat_id = ?
-            ORDER BY create_time ASC
+            ORDER BY id ASC
         `, [this.sanitizeString(chatId)]);
     }
 
+    /**
+     * 批量删除指定会话中的多个消息
+     * @param chatId 会话ID
+     * @param keys 消息唯一标识数组
+     * @returns 是否全部删除成功
+     */
+    async deleteMessagesByChatIdAndKeys(chatId: string, keys: string[]): Promise<boolean> {
+        if (!chatId) {
+            throw new Error('会话ID不能为空');
+        }
+        if (!keys || keys.length === 0) {
+            throw new Error('消息Key数组不能为空');
+        }
+
+        try {
+            // 生成 IN 子句的占位符列表（如 ?, ?, ?）
+            const placeholders = keys.map(() => '?').join(',');
+            // 构造 SQL 语句（使用参数化查询）
+            const sql = `
+      DELETE FROM ${this.tableName}
+      WHERE chat_id = ? AND msg_id IN (${placeholders})
+    `;
+            // 构造参数数组（第一个参数是 chatId，后面是 keys 数组的元素）
+            const params = [chatId, ...keys];
+            // 执行查询
+            const result = await SqliteDbCore.executeQuery<{ changes: number }>(sql, params);
+            // 返回是否成功删除消息
+            return result[0]?.changes! > 0;
+        } catch (error) {
+            console.error(`批量删除会话[${chatId}]中的消息失败:`, error);
+            throw new Error(`批量删除消息失败: ${(error as Error).message}`);
+        }
+    }
     // 更新消息内容
     // 根据chat_id和key更新消息内容
     async updateMessageByChatIdAndKey(chatId: string, key: string, newContent: string): Promise<boolean> {
@@ -67,7 +100,7 @@ export class ChatMessageManager {
             UPDATE ${this.tableName}
             SET content = ?,
                 update_time = CURRENT_TIMESTAMP
-            WHERE chat_id = ? AND key = ?
+            WHERE chat_id = ? AND msg_id = ?
         `, [this.sanitizeString(newContent), sanitizedChatId, sanitizedKey]);
         return result[0]?.changes! > 0;
     }
@@ -78,7 +111,7 @@ export class ChatMessageManager {
         const sanitizedKey = this.sanitizeString(key);
         const result = await SqliteDbCore.executeQuery<{ changes: number }>(`
             DELETE FROM ${this.tableName}
-            WHERE chat_id = ? AND key = ?
+            WHERE chat_id = ? AND msg_id = ?
         `, [sanitizedChatId, sanitizedKey]);
         return result[0]?.changes! > 0;
     }

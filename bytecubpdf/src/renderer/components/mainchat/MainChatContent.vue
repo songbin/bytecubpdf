@@ -7,7 +7,6 @@ import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
 import { NFlex, NButton, NIcon, NSelect, NTag, NTooltip, NButtonGroup, useMessage, NModal, NCard } from 'naive-ui'
 import { Delete, CopyFile, Edit, SendAlt, Temperature } from '@vicons/carbon'
 import { Refresh, Attach, Add, TrainOutline as TrainIcon } from '@vicons/ionicons5';
-import { BrainCircuit20Regular } from '@vicons/fluent';
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
 import MainChatIndexDb from '@/renderer/service/indexdb/MainChatIndexDb';
 import { ChatService } from '@/renderer/service/chat/ChatService';
@@ -16,16 +15,27 @@ import {buildId} from '@/shared/utils/StringUtil'
 import { messageType } from '@/renderer/model/chat/ChatMessage'
 import { ChatMsgToLLM } from '@/renderer/service/chat/MessageConvert'
 import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
+import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageService'
 const chatService = new ChatService()
 const message = useMessage()
 const llmManager = new LlmModelManager();
 const mainChatIndexDb = new MainChatIndexDb();
+const chatId = ref('')
+const chatName = ref('')
+const disableSender = ref(true)
+const senderHolder = ref('只有选中聊天才可用，没有的话新建一个吧')
 const formData = ref({
   platformId: '',
   platformName: '',
   modelId: '',
   modelName: '',
 })
+//定义接受来自父组件的属性chatId和chatName
+const props = defineProps<{
+  chatId: string;
+  chatName: string;
+}>();
+
 const platforms = ref<Array<{ value: string; label: string }>>([]);
 const models = ref<Array<{ value: string; label: string }>>([]);
 
@@ -33,6 +43,23 @@ const senderValue = ref('')
 
 // 示例调用
 const messages = ref<BubbleListProps<messageType>['list']>([]);
+
+const loadMsg = async (chat_id:string , chat_name:string) => {
+  if (!chatId || !chatName) {
+    message.error('参数错误')
+    return
+  } 
+  chatId.value = chat_id
+  chatName.value = chat_name
+  try {
+    const msgList = await chatMsgStorageService.getMessagesByChatId(chat_id)
+    messages.value = msgList
+  } catch (error) {
+    message.error(`获取消息失败: ${error instanceof Error ? error.message : String(error)}`)
+    return
+  }
+  
+}
 const handlePlatformChange = async (platformId: string) => {
   const modelList = await llmManager.getModelsByPlatform(platformId);
   formData.value.platformName = platforms.value.find((p) => p.value == platformId)?.label || '';
@@ -74,10 +101,15 @@ const handleSendMessage = async () => {
   const role = 'user'
   const content = senderValue.value
   const messageUserItem = buildMessageItem(role, content)
-
   messages.value.push(messageUserItem)
-  senderValue.value = ''
-  askSSE()
+  try {
+    await chatMsgStorageService.saveMessage(messageUserItem)
+    senderValue.value = ''
+    askSSE()
+  } catch (error) {
+    message.error(`保存用户消息失败: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  
 
 }
 const askSSE = async () => {
@@ -96,6 +128,11 @@ const askSSE = async () => {
       messages.value[messages.value.length - 1].reasoning_content += message?.getReasoningContent() || ''
       messages.value[messages.value.length - 1].thinkingStatus = parseThinkStatus()
       await nextTick();
+    }
+    try {
+      await chatMsgStorageService.saveMessage(messageAssistantItem)
+    } catch (error) {
+      message.error(`保存AI消息失败: ${error instanceof Error ? error.message : String(error)}`)
     }
   } catch (error) {
     const error_msg = '请求大模型平台失败' + (error as Error).message
@@ -144,8 +181,21 @@ const buildMessageItem = (role: 'system' | 'user' | 'assistant', content: string
     avatar,
     avatarSize: '24px', // 头像占位大小
     avatarGap: '12px', // 头像与气泡之间的距离
+    chatId:chatId.value
   }
 }
+// 监听属性chatId的变化
+    watch(() => props.chatId, async (newChatId, oldChatId) => {
+      if (newChatId) {
+        if(!newChatId){
+          disableSender.value = true
+        }else{
+          disableSender.value = false
+          await loadMsg(newChatId, props.chatName);
+          senderHolder.value = 'ENTER=发送  SHIFT+ENTER=换行'
+        }
+      }
+    });
 onMounted(async () => {
   try {
     await mainChatIndexDb;
@@ -172,6 +222,7 @@ onMounted(async () => {
     }
 
     handlePlatformChange(formData.value.platformId);
+    
 
   } catch (error) {
     console.error('加载配置失败:', error);
@@ -192,30 +243,54 @@ const copyMessageItem = (item:messageType) =>{
     });
   }
 }
-const refreshMessage = (item:messageType) =>{
+const refreshMessage = async (item:messageType) =>{
   //如果item是user那就在messages中把这条item之后的item都删除，如果item是assistant，那就把这条item以及后面的item都删除
   //你应该先看这条item在messages的index是多少，保留index之前的元素，然后根据role的值，决定是否保留这条item
   const index = messages.value.findIndex(msg => msg.key === item.key);
   if(index == -1){
     return;
   }
+  let deleteMessages = []
   if(item.role == 'user'){
+    //保留当前item以及之前的item
+    deleteMessages = messages.value.slice(index + 1);
     messages.value = messages.value.slice(0, index + 1);
   }else{
+    //值保留当前item之前的
+    deleteMessages = messages.value.slice(index);
     messages.value = messages.value.slice(0, index);
   }
-  askSSE()
+  //这里还需要计算出所有被删除的message的key
+  const keys = deleteMessages.map(msg => msg.key);
+  console.log(JSON.stringify(keys))
+  try{
+    try {
+      await chatMsgStorageService.deleteMessagesByKeys(chatId.value, keys)
+      askSSE()
+    } catch (error) {
+      message.error(`删除多条消息失败: ${error instanceof Error ? error.message : String(error)}`)
+      console.log(error)
+    }
+  }catch(error){
+    message.error(`重新生成失败: ${error instanceof Error ? error.message : String(error)}`)
+    console.log(error)
+  }
 }
-const deleteMessageItem = (item:messageType) =>{
+const deleteMessageItem = async (item:messageType) =>{
   //把所有message的typing设置为false
   messages.value.forEach((m) => {
     m.typing = false;
   })
-   
-  const index = messages.value.indexOf(item);
-  if (index !== -1) {
-    messages.value.splice(index, 1);
+  try {
+    await chatMsgStorageService.deleteMessage(chatId.value, item.key)
+    const index = messages.value.indexOf(item);
+    if (index !== -1) {
+      messages.value.splice(index, 1);
+    }
+  } catch (error) {
+    message.error(`删除消息失败: ${error instanceof Error ? error.message : String(error)}`)
   }
+  
 }
 watch(
   formData,
@@ -306,8 +381,10 @@ watch(
             图片OCR
           </n-button>
         </n-flex>
-        <MentionSender ref="senderRef" v-model="senderValue" @submit="handleSendMessage" variant="updown"
-          :auto-size="{ minRows: 2, maxRows: 4 }" clearable placeholder="Enter=发送, SHIFT + ENTER = 换行">
+        <MentionSender ref="senderRef" v-model="senderValue"
+          :disabled="disableSender"
+           @submit="handleSendMessage" variant="updown"
+          :auto-size="{ minRows: 2, maxRows: 4 }" clearable :placeholder="senderHolder">
           <template #prefix>
             <n-flex>
               <n-button size="small" tertiary circle type="info">
