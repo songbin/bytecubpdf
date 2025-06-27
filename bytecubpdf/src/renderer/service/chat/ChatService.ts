@@ -17,13 +17,13 @@ export class ChatService {
     return await adapter.call(messages)
   }
 
-  async *stream(platformId: string,  modelId:string,temperature:number,maxTokens:number, messages:LlmMessageList): AsyncGenerator<any> {
+  async *stream(platformId: string,  modelId:string,temperature:number,
+    maxTokens:number, messages:LlmMessageList, 
+    signal: AbortSignal): AsyncGenerator<any> {
     const adapter = await this._buildAdapter(platformId, modelId,temperature,maxTokens, true);
-    const stream = adapter.stream(messages)
+    const stream = adapter.stream(messages, signal)
     for await (const chunk of stream) {
         yield chunk
-        // console.log("收到chunk:", chunk);
-        // 可在此处更新UI或进行其他业务处理
     }
   }
   /**

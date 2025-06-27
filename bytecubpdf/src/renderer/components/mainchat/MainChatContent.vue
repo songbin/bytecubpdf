@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
-import type { BubbleListItemProps, BubbleListProps } from 'vue-element-plus-x/types/BubbleList'
+import type { BubbleListItemProps, BubbleListProps,BubbleListInstance } from 'vue-element-plus-x/types/BubbleList'
 import { BubbleList, MentionSender, Thinking } from 'vue-element-plus-x'
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
@@ -24,6 +24,10 @@ const chatId = ref('')
 const chatName = ref('')
 const disableSender = ref(true)
 const senderHolder = ref('只有选中聊天才可用，没有的话新建一个吧')
+const senderLoading = ref(false)
+const bubbleListRef = ref<BubbleListInstance | null>(null);
+const controller = ref<AbortController | null>(null);
+ 
 const formData = ref({
   platformId: '',
   platformName: '',
@@ -88,7 +92,6 @@ const handleShowSelectModel = () => {
 }
 
 const handleSendMessage = async () => {
-  console.log(senderValue.value)
   const platformInfo = await llmManager.getPlatformBasicInfo(formData.value.platformId)
   if (!platformInfo) {
     message.error('平台非法')
@@ -112,13 +115,22 @@ const handleSendMessage = async () => {
   
 
 }
+const cancelSse = async () => {
+   if (controller.value) {
+    controller.value.abort();
+    senderLoading.value = false
+  }
+}
 const askSSE = async () => {
   try {
+    senderLoading.value = true
+    bubbleListRef.value?.scrollToBottom();
+    controller.value = new AbortController();
     const stream = chatService.stream(formData.value.platformId,
       formData.value.modelId,
       0.7,
       4096,
-      ChatMsgToLLM(messages.value))
+      ChatMsgToLLM(messages.value),controller.value.signal)
 
     const messageAssistantItem = buildMessageItem('assistant', '')
     messages.value.push(messageAssistantItem)
@@ -137,6 +149,8 @@ const askSSE = async () => {
   } catch (error) {
     const error_msg = '请求大模型平台失败' + (error as Error).message
     message.error(error_msg)
+  }finally{
+    senderLoading.value = false
   }
 
 }
@@ -262,7 +276,6 @@ const refreshMessage = async (item:messageType) =>{
   }
   //这里还需要计算出所有被删除的message的key
   const keys = deleteMessages.map(msg => msg.key);
-  console.log(JSON.stringify(keys))
   try{
     try {
       await chatMsgStorageService.deleteMessagesByKeys(chatId.value, keys)
@@ -314,7 +327,7 @@ watch(
   <div>
     <n-flex vertical>
       <div style="height: calc(100vh - 300px);">
-        <BubbleList :list="messages" max-height="100%">
+        <BubbleList :list="messages" ref="bubbleListRef" max-height="100%">
           <!-- 自定义头部 -->
           <template #header="{ item }">
             <div class="header-wrapper">
@@ -383,6 +396,8 @@ watch(
         </n-flex>
         <MentionSender ref="senderRef" v-model="senderValue"
           :disabled="disableSender"
+          :loading="senderLoading"
+          @cancel="cancelSse"
            @submit="handleSendMessage" variant="updown"
           :auto-size="{ minRows: 2, maxRows: 4 }" clearable :placeholder="senderHolder">
           <template #prefix>

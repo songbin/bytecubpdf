@@ -31,7 +31,7 @@ export class CustomOpenAI extends BaseLlmClient {
         }
     }
 
-    async *stream(messages: LlmMessageList, signal?: AbortSignal): AsyncGenerator<any> {
+    async *stream(messages: LlmMessageList, signal: AbortSignal): AsyncGenerator<any> {
         try{
                 const stream = await this.llm.chat.completions.create({
                         model: this.config.modelName,
@@ -42,7 +42,8 @@ export class CustomOpenAI extends BaseLlmClient {
                     });
                 for await (const chunk of stream) {
                     // 检查是否已中断
-                    if (signal?.aborted) {
+                    if (signal.aborted) {
+                        console.log('用户中断对话')
                         break;
                     }
                     yield chunk

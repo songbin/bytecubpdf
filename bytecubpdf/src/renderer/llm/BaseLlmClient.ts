@@ -16,7 +16,7 @@ export abstract class BaseLlmClient {
    * @param prompt 输入提示
    * @returns 异步生成器，逐段返回结果
    */
-  abstract stream(messages: LlmMessageList): AsyncGenerator<any>;
+  abstract stream(messages: LlmMessageList, signal: AbortSignal): AsyncGenerator<any>;
   /**
    * 同步调用
    * 
