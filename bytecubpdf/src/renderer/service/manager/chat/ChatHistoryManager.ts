@@ -42,13 +42,15 @@ export class ChatHistoryManager {
     }
 
     // 分页获取聊天会话
-    async getChatHistoryPage(pageno = 1, pageSize = 20): Promise<ChatHistory[]> {
-        const offset = (Math.max(1, pageno) - 1) * pageSize;
+    async getChatHistoryPage(chatName:string, pageno = 1, pageSize = 20): Promise<ChatHistory[]> {
+         const offset = (Math.max(1, pageno) - 1) * pageSize;
+        const sanitizedKeyword = this.sanitizeString(chatName);
         return SqliteDbCore.executeQuery<ChatHistory>(`
             SELECT * FROM ${this.tableName}
+            WHERE chat_name LIKE ?
             ORDER BY id DESC
             LIMIT ? OFFSET ?
-        `, [pageSize, offset]);
+        `, [`%${sanitizedKeyword}%`, pageSize, offset]);
     }
 
     // 获取会话总数量
@@ -87,4 +89,16 @@ export class ChatHistoryManager {
         `, [this.sanitizeString(chatId)]);
         return result[0] || null;
     }
+    
+    async searchChatHistoryByName(keyword: string, pageno = 1, pageSize = 20): Promise<ChatHistory[]> {
+        const offset = (Math.max(1, pageno) - 1) * pageSize;
+        const sanitizedKeyword = this.sanitizeString(keyword);
+        return SqliteDbCore.executeQuery<ChatHistory>(`
+            SELECT * FROM ${this.tableName}
+            WHERE chat_name LIKE ?
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+        `, [`%${sanitizedKeyword}%`, pageSize, offset]);
+    }
+    
 }

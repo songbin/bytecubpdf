@@ -10,10 +10,15 @@ const message = useMessage()
 const chatList = ref<ChatModel[]>([])
 const chatStorageService:ChatStorageService = new ChatStorageService()
 const activeChatId = ref('')
+const searchValue = ref('')
+
 const showCreateChat = ref(false)
 const newChatName = ref('')
 const showRenameChat = ref(false)
 const chatId = ref('') //当前正在操作的chatid
+const current_page = ref(1)
+const page_size = ref(20)
+const isLoading = ref(false)
 
 // 内置菜单点击方法
 function handleMenuCommand(command: ConversationMenuCommand, item: ChatModel) {
@@ -30,14 +35,12 @@ function handleMenuCommand(command: ConversationMenuCommand, item: ChatModel) {
     }
   }
   if (command === 'rename') {
-    // item.label = '已修改'
-    // console.log('重命名成功')
-    // message.success('重命名成功')
     showRenameChat.value = true
     chatId.value = item.id
     newChatName.value = item.label ?? ''
   }
 }
+
 const openCreateChatDialog = () => {
     showCreateChat.value = true
 }
@@ -77,8 +80,19 @@ const createChat = async () =>{
 }
 
 const loadData = async () =>{
-  const list = await chatStorageService.getChatHistoryPage();
+  current_page.value = 1
+  const list = await chatStorageService.getChatHistoryPage(searchValue.value, current_page.value, page_size.value);
   chatList.value = list;
+  
+}
+const loadMore = async () =>{
+  current_page.value++
+  const list = await chatStorageService.getChatHistoryPage(searchValue.value, current_page.value, page_size.value)
+  if(list.length === 0){
+    message.info('没有更多数据了')
+    return
+  }
+  chatList.value = chatList.value.concat(list)
 }
 onMounted(async () => {
   await loadData()
@@ -98,6 +112,8 @@ onMounted(async () => {
             row-key="id" 
             tooltip-placement="right" 
             :tooltip-offset="35" show-to-top-btn show-built-in-menu
+            :load-more="loadMore"
+            :load-more-loading="isLoading"
             @menu-command="handleMenuCommand">
             <template #header>
               <n-flex vertical>
@@ -111,12 +127,12 @@ onMounted(async () => {
                 </n-button>
                 <n-input-group>
 
-                  <n-input round type="text" size="small" placeholder="根据会话名搜索">
+                  <n-input  round type="text" size="small" clearable v-model:value="searchValue" placeholder="根据会话名搜索">
                     <template #prefix>
                       <n-icon :component="SearchLocate" />
                     </template>
                   </n-input>
-                  <n-button type="primary" size="small">
+                  <n-button type="primary" size="small" @click="loadData">
                     搜索
                   </n-button>
                 </n-input-group>

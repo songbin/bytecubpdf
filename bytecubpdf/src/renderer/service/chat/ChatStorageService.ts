@@ -30,8 +30,8 @@ export class ChatStorageService {
         }
     }
     // 获取聊天会话分页列表
-    async getChatHistoryPage(page = 1, pageSize = 20): Promise<ChatModel[]> {
-        const result = await chatHistoryManager.getChatHistoryPage(page, pageSize);
+    async getChatHistoryPage(chatName:string, page = 1, pageSize = 20): Promise<ChatModel[]> {
+        const result = await chatHistoryManager.getChatHistoryPage(chatName, page, pageSize);
         return result.map(item => {
             return {
                 id: item.chat_id,
@@ -54,4 +54,6 @@ export class ChatStorageService {
     async deleteChatHistory(chatId: string): Promise<boolean> {
         return chatHistoryManager.deleteChatHistory(chatId);
     }
+
+    
 }
