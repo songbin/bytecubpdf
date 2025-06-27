@@ -18,7 +18,9 @@
       <keep-alive include="PdfTsMain">
         <component :is="activeTab === 'function' ? activeFunctionComponent : activeSettingsComponent" />
       </keep-alive>
-    
+      <DlTranslateResourceModal 
+        :filesToDownload= filesToDownload
+       />
     </n-layout-content>
   </n-layout>
 </template>
@@ -33,10 +35,12 @@ import TermsManager from '@/renderer/components/pdftranslate/TermsManager.vue'
 import TranslateHistory from '@/renderer/components/pdftranslate/TranslateHistory.vue'
 import OcrRec from '@/renderer/components/pdftranslate/ocr/OcrRec.vue'
 import OcrHistory from '@/renderer/components/pdftranslate/ocr/OcrHistory.vue'
-
+// 导入组件DownloadComponent
+import DlTranslateResourceModal from '@/renderer/components/download/DlTranslateResourceModal.vue'
+import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
 // 定义组件映射
 type ViewComponent = DefineComponent<{}, {}, any>
-
+const filesToDownload = ref<FileDownloadItem[]>([])
 const functionComponents: Record<string, Component> = {
   main: PdfTsMain as ViewComponent,
   history: TranslateHistory as ViewComponent,
@@ -68,7 +72,7 @@ nextTick(() => {
 
 onMounted( async () => {
   // 初始化时加载主界面
-   
+    filesToDownload.value = await (window as any).window.electronAPI.verifyFileDownloads();
 })
 </script>
 

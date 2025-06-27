@@ -22,7 +22,10 @@ const isLoading = ref(false)
 const emit = defineEmits<{
   (e: 'selectChat', chatId: string, chatName: string): void
 }>()
-
+function handleChange(item: ConversationItem<ChatModel>) {
+  const label = item.label ?? ''
+  emit('selectChat', item.id, label)
+}
 // 内置菜单点击方法
 function handleMenuCommand(command: ConversationMenuCommand, item: ChatModel) {
   
@@ -116,6 +119,7 @@ onMounted(async () => {
             :tooltip-offset="35" show-to-top-btn show-built-in-menu
             :load-more="loadMore"
             :load-more-loading="isLoading"
+            @change="handleChange"
             @menu-command="handleMenuCommand">
             <template #header>
               <n-flex vertical>

@@ -12,7 +12,7 @@
        @selectChat = "selectChat"/>
     </n-layout-sider>
     <n-layout-content>
-      <MainChatContent />
+      <MainChatContent :chatId="chatId" :chatName="chatName"/>
     </n-layout-content>
   </n-layout>
 </template>
@@ -21,6 +21,9 @@
 import { NLayout, NLayoutSider, NLayoutContent } from 'naive-ui'
 import MainChatLeftSide from '@/renderer/components/mainchat/MainChatLeftSide.vue' 
 import MainChatContent from '@/renderer/components/mainchat/MainChatContent.vue' 
+import { ref } from 'vue'
+const chatId = ref('')
+const chatName = ref('')
 
 const selectChat = (chatId:string, chatName:string) => {
   console.log('selectChat', chatId, chatName)
