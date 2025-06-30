@@ -16,6 +16,7 @@ import { messageType } from '@/renderer/model/chat/ChatMessage'
 import { ChatMsgToLLM } from '@/renderer/service/chat/MessageConvert'
 import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
 import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageService'
+import { LLM_PROTOCOL } from '@/renderer/constants/appconfig';
 const chatService = new ChatService()
 const message = useMessage()
 const llmManager = new LlmModelManager();
@@ -27,6 +28,8 @@ const senderHolder = ref('只有选中聊天才可用，没有的话新建一个
 const senderLoading = ref(false)
 const bubbleListRef = ref<BubbleListInstance | null>(null);
 const controller = ref<AbortController | null>(null);
+const isThinking = ref(false)
+const showThinking = ref(false)
  
 const formData = ref({
   platformId: '',
@@ -130,7 +133,8 @@ const askSSE = async () => {
       formData.value.modelId,
       0.7,
       4096,
-      ChatMsgToLLM(messages.value),controller.value.signal)
+      ChatMsgToLLM(messages.value),controller.value.signal, isThinking.value)
+
 
     const messageAssistantItem = buildMessageItem('assistant', '')
     messages.value.push(messageAssistantItem)
@@ -317,6 +321,19 @@ watch(
       platformName: formData.value.platformName,
       modelName: formData.value.modelName
     });
+    showThinking.value = false
+    const platformBasicInfo = await llmManager.getPlatformBasicInfo(newValue.platformId);
+    if(platformBasicInfo){
+      if(LLM_PROTOCOL.ollama === platformBasicInfo.protocolType){
+        //如果modelId为deepseek-r1  qwen3  magistral granite3.2这里面其中一个，showThinkig就设置为true，否则设置为false
+        const baseModelId = newValue.modelId.split(':')[0]; // 提取冒号前的基础模型ID
+        if(['deepseek-r1','qwen3','magistral','granite3.2'].includes(baseModelId)){
+          showThinking.value = true
+        }else{
+          isThinking.value = false
+        }
+      }
+    }
   },
   { deep: true }
 );
@@ -409,6 +426,7 @@ watch(
                   </n-icon>
                 </template>
               </n-button>
+            
               <n-button-group>
 
                 <n-button size='tiny' secondary @click="handleShowSelectModel()">
@@ -420,7 +438,12 @@ watch(
                   {{ formData.platformName }}|{{ formData.modelName }}
                 </n-button>
               </n-button-group>
-
+              <div :class="{ isThinking }" 
+              style="display: flex; align-items: center; gap: 4px; padding: 2px 12px; border: 1px solid silver; border-radius: 15px; cursor: pointer; font-size: 12px;" 
+              v-if="showThinking"
+              @click="isThinking = !isThinking">
+                <span>深度思考</span>
+              </div>
 
             </n-flex>
           </template>
@@ -449,5 +472,12 @@ watch(
 <style scoped lang="less">
 :deep(.markdown-body) {
   background-color: transparent;
+}
+.isThinking {
+  color: #626aef;
+  border: 1px solid #626aef !important;
+  border-radius: 15px;
+  padding: 3px 12px;
+  font-weight: 700;
 }
 </style>

@@ -32,7 +32,8 @@ export class CustomOpenAI extends BaseLlmClient {
         }
     }
 
-    async *stream(messages: LlmMessageList, signal: AbortSignal): AsyncGenerator<LlmResModel> {
+    async *stream(messages: LlmMessageList, signal: AbortSignal,thinking:boolean=false): AsyncGenerator<LlmResModel> {
+
         try{
                 const stream = await this.llm.chat.completions.create({
                         model: this.config.modelName,

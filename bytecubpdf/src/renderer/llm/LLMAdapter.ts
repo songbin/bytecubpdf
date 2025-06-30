@@ -28,8 +28,8 @@ export class LLMAdapter{
      * @param prompt 输入提示
      * @returns 异步生成器，逐段返回结果
      */
-    async * stream(messages: LlmMessageList, signal: AbortSignal): AsyncGenerator<LlmResModel>{
-        const stream = await this.llm.stream(messages, signal);
+    async * stream(messages: LlmMessageList, signal: AbortSignal,thinking:boolean): AsyncGenerator<LlmResModel>{
+        const stream = await this.llm.stream(messages, signal,thinking);
         for await (const part of stream) {
             yield part;
         }

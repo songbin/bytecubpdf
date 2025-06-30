@@ -20,9 +20,9 @@ export class ChatService {
 
   async *stream(platformId: string,  modelId:string,temperature:number,
     maxTokens:number, messages:LlmMessageList, 
-    signal: AbortSignal): AsyncGenerator<any> {
+    signal: AbortSignal,thinking:boolean): AsyncGenerator<any> {
     const adapter = await this._buildAdapter(platformId, modelId,temperature,maxTokens, true);
-    const stream = adapter.stream(messages, signal)
+    const stream = adapter.stream(messages, signal,thinking)
     for await (const chunk of stream) {
         yield chunk
     }

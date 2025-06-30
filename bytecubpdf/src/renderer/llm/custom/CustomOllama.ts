@@ -37,12 +37,12 @@ export class CustomOllama extends BaseLlmClient {
         }
     }
 
-    async *stream(messages: LlmMessageList, signal: AbortSignal): AsyncGenerator<LlmResModel> {
+    async *stream(messages: LlmMessageList, signal: AbortSignal, thinking:boolean): AsyncGenerator<LlmResModel> {
         try{
                 const stream = await this.llm.chat({
                 model: this.config.modelName,
                 messages: messages.toJsonArray(),
-                think: true,
+                think: thinking,
                 stream: true
                  });
                 for await (const chunk of stream) {
