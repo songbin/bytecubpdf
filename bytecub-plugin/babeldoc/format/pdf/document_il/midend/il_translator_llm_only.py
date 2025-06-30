@@ -69,6 +69,10 @@ class ILTranslatorLLMOnly:
             self.translate_engine.do_llm_translate(None)
         except NotImplementedError as e:
             raise ValueError("LLM translator not supported") from e
+        
+        self.ok_count = 0
+        self.fallback_count = 0
+        self.total_count = 0
 
     def calc_token_count(self, text: str) -> int:
         try:
@@ -145,7 +149,9 @@ class ILTranslatorLLMOnly:
             logger.debug(f"save translate tracking to {path}")
             with Path(path).open("w", encoding="utf-8") as f:
                 f.write(tracker.to_json())
-
+            logger.info(
+            f"Translation completed. Total: {self.total_count}, Successful: {self.ok_count}, Fallback: {self.fallback_count}"
+        )
     def process_page(
         self,
         page: Page,
@@ -476,15 +482,15 @@ class ILTranslatorLLMOnly:
                     translate_input = inputs[id_][1]
                     llm_translate_tracker = inputs[id_][4]
 
-                    input_unicode = inputs[id_][2].unicode
+                    input_unicode = inputs[id_][0]
                     output_unicode = translated_text
 
                     trimed_input = re.sub(r"[. 。…，]{20,}", ".", input_unicode)
 
-                    input_token_count = self.calc_token_count(input_unicode)
+                    input_token_count = self.calc_token_count(trimed_input)
                     output_token_count = self.calc_token_count(output_unicode)
 
-                    if trimed_input == output_unicode and input_token_count > 20:
+                    if trimed_input == output_unicode and input_token_count > 10:
                         llm_translate_tracker.set_error_message(
                             "Translation result is the same as input, fallback."
                         )
@@ -529,7 +535,9 @@ class ILTranslatorLLMOnly:
                         llm_translate_tracker.set_error_message(error_message)
                     continue
                 finally:
+                    self.total_count += 1
                     if should_fallback:
+                        self.fallback_count += 1
                         inputs[id_][4].set_fallback_to_translate()
                         logger.warning(
                             f"Fallback to simple translation. paragraph id: {inputs[id_][2].debug_id}"
@@ -551,6 +559,8 @@ class ILTranslatorLLMOnly:
                             title_paragraph=title_paragraph,
                             local_title_paragraph=local_title_paragraph,
                         )
+                    else:
+                        self.ok_count += 1
 
         except Exception as e:
             error_message = f"Error {e} during translation. try fallback"
