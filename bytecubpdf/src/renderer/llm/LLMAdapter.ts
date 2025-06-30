@@ -1,17 +1,19 @@
 import { ClientConfig } from '@/renderer/llm/core/config/LlmConfig';
 import {CustomOpenAI} from '@/renderer/llm/custom/CustomOpenAI'
+import {CustomOllama} from '@/renderer/llm/custom/CustomOllama'
+import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
 import { BaseLlmClient } from "@/renderer/llm/BaseLlmClient";
 import { PROTOCOL_CAN_LLM, LLM_PROTOCOL } from '@/renderer/constants/appconfig'
 import { LlmRequestModel,LlmMessageList } from "@/renderer/llm/model/LlmRequestModel";
 export class LLMAdapter{
     config:ClientConfig;
-    private llm:  CustomOpenAI;
+    private llm:  BaseLlmClient;
 
     constructor(config: ClientConfig) {
         this.config = config
         switch (config.protocolType) {
             case LLM_PROTOCOL.ollama:
-                this.llm = new CustomOpenAI(config);
+                this.llm = new CustomOllama(config);
                 break;
             case LLM_PROTOCOL.openai:
                 this.llm = new CustomOpenAI(config);
@@ -26,7 +28,7 @@ export class LLMAdapter{
      * @param prompt 输入提示
      * @returns 异步生成器，逐段返回结果
      */
-    async * stream(messages: LlmMessageList, signal: AbortSignal): AsyncGenerator<any>{
+    async * stream(messages: LlmMessageList, signal: AbortSignal): AsyncGenerator<LlmResModel>{
         const stream = await this.llm.stream(messages, signal);
         for await (const part of stream) {
             yield part;
@@ -36,7 +38,7 @@ export class LLMAdapter{
      * 同步调用
      * 
      */
-    async call(messages: LlmMessageList): Promise<any>{
+    async call(messages: LlmMessageList): Promise<LlmResModel>{
         return await this.llm.call(messages);
     }
     

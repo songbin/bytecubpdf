@@ -3,6 +3,7 @@ import { SettingLLMModel, SettingLLMPlatform } from '@/renderer/model/settings/S
 import { PROTOCOL_CAN_LLM, LLM_PROTOCOL } from '@/renderer/constants/appconfig'
 import { ClientConfig } from '@/renderer/llm/core/config/LlmConfig';
 import {CustomOpenAI} from '@/renderer/llm/custom/CustomOpenAI'
+import {CustomOllama} from '@/renderer/llm/custom/CustomOllama'
 import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
 import { LLMAdapter } from '@/renderer/llm/LLMAdapter';
 import { LlmRequestModel,LlmMessageList } from "@/renderer/llm/model/LlmRequestModel";
@@ -70,7 +71,7 @@ export class ChatService {
             await customOpenAi.call(messages)
         }else if (platform.protocolType === LLM_PROTOCOL.ollama) {
             //TODO 
-            const ollama = new CustomOpenAI( config);
+            const ollama = new CustomOllama( config);
             await ollama.call(messages);
         }else {
             // 其他协议类型的处理逻辑

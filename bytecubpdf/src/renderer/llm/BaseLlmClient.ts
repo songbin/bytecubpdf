@@ -16,12 +16,12 @@ export abstract class BaseLlmClient {
    * @param prompt 输入提示
    * @returns 异步生成器，逐段返回结果
    */
-  abstract stream(messages: LlmMessageList, signal: AbortSignal): AsyncGenerator<any>;
+  abstract stream(messages: LlmMessageList, signal: AbortSignal): AsyncGenerator<LlmResModel>;
   /**
    * 同步调用
    * 
   */
-  abstract call(messages: LlmMessageList): Promise<any>;
+  abstract call(messages: LlmMessageList): Promise<LlmResModel>;
 
   /**
    * 获取模型名称

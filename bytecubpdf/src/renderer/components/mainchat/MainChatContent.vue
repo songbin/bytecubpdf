@@ -135,7 +135,7 @@ const askSSE = async () => {
     const messageAssistantItem = buildMessageItem('assistant', '')
     messages.value.push(messageAssistantItem)
     for await (const chunk of stream) {
-      const message = LlmResModel.fromObject(chunk)
+      const message:LlmResModel = chunk
       messages.value[messages.value.length - 1].content += message?.getContent() || '';
       messages.value[messages.value.length - 1].reasoning_content += message?.getReasoningContent() || ''
       messages.value[messages.value.length - 1].thinkingStatus = parseThinkStatus()

@@ -1,6 +1,11 @@
 // LLM响应模型定义
 // 转换为class并实现字段获取方法
 
+import { LLM_PROTOCOL } from "@/renderer/constants/appconfig";
+import { ContactSupportFilled } from "@vicons/material";
+import { resultProps } from "naive-ui";
+
+import { Ollama,ChatResponse as OllamaChatResponse, Message as OllamaMessage } from 'ollama/browser'
 export class PromptTokensDetails {
   cached_tokens?: number;
 
@@ -63,13 +68,24 @@ export class Choice {
 }
 
 export class LlmResModel {
-  id?: string;
-  object?: string;
-  created?: number;
-  model?: string;
+  protocol_type: string = LLM_PROTOCOL.openai;
+  id?: string;  
+  object?: string; //openAI协议
+  created?: number;//openai和ollama
+  model?: string; //openai和ollama
   system_fingerprint?: string;
-  choices?: Choice[];
-  usage?: Usage;
+  choices?: Choice[]; //openAI协议
+  usage?: Usage; //openAI协议
+  message?: OllamaMessage; //ollama协议 
+  done_reason?: string; //ollama协议 结束原因 stop or 其他 
+  done?: boolean; //ollama协议,是否完结 false or true
+  total_duration?: number; //ollama协议
+  load_duration?: number; //ollama协议
+  prompt_eval_count?: number; //ollama协议
+  prompt_eval_duration?: number; //ollama协议
+  eval_count?: number; //ollama协议
+  eval_duration?: number; //ollama协议 
+
 
   constructor(data?: Partial<LlmResModel>) {
     if (data) {
@@ -96,7 +112,12 @@ export class LlmResModel {
    * @returns content或undefined
    */
   getContent(): string | undefined {
-    return this.choices?.[0]?.delta?.content;
+    switch(this.protocol_type){
+      case LLM_PROTOCOL.openai:
+        return this.choices?.[0]?.delta?.content;
+      case LLM_PROTOCOL.ollama:
+        return this.message?.content;
+    }
   }
 
   /**
@@ -104,7 +125,13 @@ export class LlmResModel {
    * @returns reasoning_content或undefined
    */
   getReasoningContent(): string | null | undefined {
-    return this.choices?.[0]?.delta?.reasoning_content;
+    switch(this.protocol_type){
+      case LLM_PROTOCOL.openai:
+        return this.choices?.[0]?.delta?.reasoning_content;
+      case LLM_PROTOCOL.ollama:
+        return this.message?.thinking;
+    }
+     
   }
 
   /**
@@ -113,9 +140,19 @@ export class LlmResModel {
    * @returns LlmResModel实例
    * @throws {SyntaxError} 如果JSON字符串无效则抛出异常
    */
-  static fromJson(jsonString: string): LlmResModel {
+  static fromJson(jsonString: string, protocol:string = LLM_PROTOCOL.openai): LlmResModel {
     const data = JSON.parse(jsonString);
-    return new LlmResModel(data);
+    let result = new LlmResModel(data)
+    result.protocol_type = protocol;
+    switch(protocol){
+      case LLM_PROTOCOL.openai:
+        result.protocol_type = LLM_PROTOCOL.openai;
+        break;
+      case LLM_PROTOCOL.ollama:
+        result.protocol_type = LLM_PROTOCOL.ollama;
+        break;
+    }
+    return result;
   }
 
   /**
@@ -123,7 +160,9 @@ export class LlmResModel {
    * @param obj 普通对象
    * @returns LlmResModel实例
    */
-  static fromObject(obj: any): LlmResModel {
-    return new LlmResModel(obj);
+  static fromObject(obj: any, protocol:string): LlmResModel {
+    let result = new LlmResModel(obj)
+    result.protocol_type = protocol;
+    return result;
   }
 }
