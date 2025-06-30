@@ -79,7 +79,8 @@ export class ChatMsgStorageService {
             role: item.role as 'system' | 'user' | 'assistant',
             create_time: item.create_time,
             update_time: item.update_time,
-            placement
+            placement,
+            isMarkdown: true
         }
       })
     } catch (error) {
