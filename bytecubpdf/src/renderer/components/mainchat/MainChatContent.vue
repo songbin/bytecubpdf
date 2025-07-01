@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
-import FilesSelect from '@/renderer/components/fileselect/FileSelect.vue'
+import {FileUtil} from '@/renderer/utils/FileUtil'
 import type { BubbleListItemProps, BubbleListProps,BubbleListInstance } from 'vue-element-plus-x/types/BubbleList'
-import { BubbleList, MentionSender, Thinking,Attachments } from 'vue-element-plus-x'
+import { BubbleList, MentionSender, Thinking,Attachments,FilesCard  } from 'vue-element-plus-x'
 import { useFileDialog } from '@vueuse/core';
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
@@ -68,15 +68,18 @@ const { reset, open, onChange } = useFileDialog({
   multiple: false, // 是否允许多选
 });
 onChange((files) => {
-  if (!files)
-    return;
+  if (!files){
+    return
+  }
+   
   if(uploadFilesList.value.length > 0){
     message.error('只允许上传一个文件')
     return
   }
   for (let i = 0; i < files!.length; i++) {
     const file = files![i];
-
+    
+    openHeader()
     uploadFilesList.value.push({
       uid: crypto.randomUUID(), // 不写 uid，文件列表展示不出来，elx 1.2.0 bug 待修复
       name: file.name,
@@ -140,7 +143,27 @@ const showSelectModel = ref(false)
 const handleShowSelectModel = () => {
   showSelectModel.value = true;
 }
+const copyUploadFile = ()=>{
+  uploadFilesList.value = [] 
+  if(uploadFilesList.value.length == 0){
+    return
+  }
+  uploadFilesList.value.forEach((file) => {
+    const item = file as FilesList
+    chatFileList.value.push({
+      uid: item.uid,
+      name: item.name,
+      fileSize: item.fileSize,
+      file: item.file,
+      maxWidth: '200px',
+      showDelIcon: true, // 显示删除图标
+      imgPreview: true, // 显示图片预览
+      imgVariant: 'square', // 图片预览的形状
+      url: item.url, // 图片预览地址
+    })
+  })
 
+}
 const handleSendMessage = async () => {
   const platformInfo = await llmManager.getPlatformBasicInfo(formData.value.platformId)
   if (!platformInfo) {
@@ -153,13 +176,16 @@ const handleSendMessage = async () => {
   }
   const role = 'user'
   const content = senderValue.value
-  const messageUserItem = buildMessageItem(role, content)
+  copyUploadFile()
+  const messageUserItem = await buildMessageItem(role, content)
   messages.value.push(messageUserItem)
   try {
+    
     uploadFilesList.value = []
+    
     await chatMsgStorageService.saveMessage(messageUserItem)
     senderValue.value = ''
-    askSSE()
+    await askSSE()
   } catch (error) {
     message.error(`保存用户消息失败: ${error instanceof Error ? error.message : String(error)}`)
   }
@@ -184,7 +210,7 @@ const askSSE = async () => {
       ChatMsgToLLM(messages.value),controller.value.signal, isThinking.value)
 
 
-    const messageAssistantItem = buildMessageItem('assistant', '')
+    const messageAssistantItem = await buildMessageItem('assistant', '')
     messages.value.push(messageAssistantItem)
     for await (const chunk of stream) {
       const message:LlmResModel = chunk
@@ -195,6 +221,7 @@ const askSSE = async () => {
     }
     try {
       await chatMsgStorageService.saveMessage(messageAssistantItem)
+      senderLoading.value = false
     } catch (error) {
       message.error(`保存AI消息失败: ${error instanceof Error ? error.message : String(error)}`)
     }
@@ -202,7 +229,7 @@ const askSSE = async () => {
     const error_msg = '请求大模型平台失败' + (error as Error).message
     message.error(error_msg)
   }finally{
-    senderLoading.value = false
+   
   }
 
 }
@@ -217,8 +244,16 @@ const parseThinkStatus = () => {
 
   return 'thinking'
 }
+const calcFileMd5 = async ():Promise<string> => {
+  if(chatFileList.value.length == 0){
+    return ''
+  }
+  const file: File = chatFileList.value[0].file
+  const md5 = await FileUtil.getFileMd5(file)
+  return md5
+}
+const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: string) => {
 
-const buildMessageItem = (role: 'system' | 'user' | 'assistant', content: string) => {
   const placement: messageType['placement'] = role === 'user' ? 'end' : 'start'
   const loading = false
   const shape: messageType['shape'] = 'corner'
@@ -230,7 +265,10 @@ const buildMessageItem = (role: 'system' | 'user' | 'assistant', content: string
   const key = buildId();
   const reasoning_content = ''//?: string
   const nowTime = new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-').replace(/\s/, ' ');
+  const fileMd5 = await calcFileMd5()
+  if('' !== fileMd5){
 
+  }
   return {
     key, // 唯一标识
     nowTime,
@@ -251,18 +289,19 @@ const buildMessageItem = (role: 'system' | 'user' | 'assistant', content: string
   }
 }
 // 监听属性chatId的变化
-    watch(() => props.chatId, async (newChatId, oldChatId) => {
-      if (newChatId) {
+watch(() => props.chatId, async (newChatId, oldChatId) => {
+       console.log('newChatId', newChatId)
+    
         if(!newChatId){
+          messages.value = []
           disableSender.value = true
-          
         }else{
+          
           disableSender.value = false
-          // senderRef.value.closeHeader()
           await loadMsg(newChatId, props.chatName);
           senderHolder.value = 'ENTER=发送  SHIFT+ENTER=换行'
         }
-      }
+      
     });
 const initializeChatConfig = async () => {
   try {
@@ -319,14 +358,14 @@ const initializeChatConfig = async () => {
 }
 onMounted(async () => {
  await initializeChatConfig()
- senderRef.value.openHeader()
+//  senderRef.value.openHeader()
 });
 const copyMessageItem = (item:messageType) =>{
   let content = item.content;
  
   if(content){
     if(item.role == 'assistant'){
-      content = content + '\n来自小书芽(DocFable.com)'
+      // content = content + '\n来自小书芽(DocFable.com)'
     }
     navigator.clipboard.writeText(content).then(() => {
       message.success('复制成功');
@@ -386,8 +425,13 @@ const deleteMessageItem = async (item:messageType) =>{
 const closeHeader = () =>{
   senderRef.value.closeHeader()
 }
+const openHeader = () =>{
+  senderRef.value.openHeader()
+}
 const handleDeleteCard = (_item: FilesCardProps, index: number) =>{
-   uploadFilesList.value.splice(index, 1);
+   //uploadFilesList.value.splice(index, 1);
+   uploadFilesList.value = []
+   closeHeader()
 }
 const calcThinkingShowStatus = async (platformId:string,modelId:string) =>{
     try{

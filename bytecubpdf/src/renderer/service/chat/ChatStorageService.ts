@@ -44,12 +44,15 @@ export class ChatStorageService {
     async getChatHistoryTotalCount(): Promise<number> {
         return chatHistoryManager.getChatHistoryTotalCount();
     }
-
-    // 更新聊天会话
-    async updateChatHistoryName(chatId: string, newName: string): Promise<boolean> {
-        return chatHistoryManager.updateChatHistoryName(chatId, newName);
+    // 更新聊天会话file_md5
+    async updateChatHistoryFileMd5(chatId: string, fileMd5: string): Promise<boolean> {
+        return chatHistoryManager.updateChatHistoryFileMd5(chatId, fileMd5);
     }
 
+    // 更新聊天会话名称
+    async updateChatHistoryName(chatId: string, chatName: string): Promise<boolean> {
+        return chatHistoryManager.updateChatHistoryName(chatId, chatName);
+    }
     // 删除聊天会话
     async deleteChatHistory(chatId: string): Promise<boolean> {
         return chatHistoryManager.deleteChatHistory(chatId);

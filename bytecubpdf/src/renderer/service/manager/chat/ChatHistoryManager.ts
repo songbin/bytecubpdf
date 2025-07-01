@@ -71,6 +71,16 @@ export class ChatHistoryManager {
         `, [this.sanitizeString(newName), this.sanitizeString(chatId)]);
         return result[0]?.changes! > 0;
     }
+    //更新file_md5
+    async updateChatHistoryFileMd5(chatId: string, fileMd5: string): Promise<boolean> {
+        const result = await SqliteDbCore.executeQuery<{ changes: number }>(`
+            UPDATE ${this.tableName}
+            SET file_md5 = ?,
+                update_time = CURRENT_TIMESTAMP
+            WHERE chat_id = ?
+        `, [this.sanitizeString(fileMd5), this.sanitizeString(chatId)]);
+        return result[0]?.changes! > 0;
+    }
 
     // 删除会话
     async deleteChatHistory(chatId: string): Promise<boolean> {

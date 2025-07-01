@@ -26,6 +26,9 @@ function handleChange(item: ConversationItem<ChatModel>) {
   const label = item.label ?? ''
   emit('selectChat', item.id, label)
 }
+const submitChatChange = async (chatId:string, chatName:string) =>{
+  emit('selectChat', chatId, chatName)
+}
 // 内置菜单点击方法
 function handleMenuCommand(command: ConversationMenuCommand, item: ChatModel) {
   
@@ -36,7 +39,8 @@ function handleMenuCommand(command: ConversationMenuCommand, item: ChatModel) {
     if (index !== -1) {
       chatStorageService.deleteChatHistory(item.id)
       chatList.value.splice(index, 1)
-      console.log('删除成功')
+      submitChatChange('', '')
+     
       message.success('删除成功')
     }
   }
@@ -50,6 +54,7 @@ function handleMenuCommand(command: ConversationMenuCommand, item: ChatModel) {
 const openCreateChatDialog = () => {
     showCreateChat.value = true
 }
+
 const directCreateChat = async () =>{
     const chat: ChatModel | null = await chatStorageService.createChat('新建聊天')
     if(null == chat){
@@ -57,6 +62,8 @@ const directCreateChat = async () =>{
       return
     }
     await loadData()
+     
+    submitChatChange(chat.id, chat.label ?? '')
     activeChatId.value = chat.id
 }
 const renameChat = async () =>{
