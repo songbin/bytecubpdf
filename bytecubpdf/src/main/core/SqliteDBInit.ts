@@ -29,6 +29,7 @@ export class SqliteDBInit {
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
                 reasoning_content TEXT,
+                file_name NOT NULL DEFAULT '',
                 create_time DATETIME DEFAULT CURRENT_TIMESTAMP, -- 创建时间
                 update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
                 ext1 TEXT NOT NULL DEFAULT '',  -- 扩展字段1

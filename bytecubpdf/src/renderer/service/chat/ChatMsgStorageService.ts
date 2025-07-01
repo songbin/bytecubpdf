@@ -43,6 +43,7 @@ export class ChatMsgStorageService {
         msg_id: message.key,
         role: message.role,
         content: content,
+        file_name: message.fileName,
         reasoning_content: message.reasoning_content,
         nowTime: message.nowTime,
         create_time: message.nowTime,
@@ -72,6 +73,7 @@ export class ChatMsgStorageService {
         return {
             key: item.msg_id,
             content: item.content,
+            fileName: item.file_name,
             chatId: item.chat_id,
             reasoning_content: item.reasoning_content,
             nowTime: item.nowTime,

@@ -39,10 +39,9 @@ const showThinking = ref(false)
 type FilesList = FilesCardProps & {
   file: File;
 };
-/**上传的附件列表，不代表是聊天的附件*/
+/**上传的附件列表，聊天也用个这个*/
 const uploadFilesList = ref<FilesList[]>([]);
-/**聊天的附件列表*/
-const chatFileList = ref<FilesList[]>([]);
+ 
 const formData = ref({
   platformId: '',
   platformName: '',
@@ -144,27 +143,7 @@ const showSelectModel = ref(false)
 const handleShowSelectModel = () => {
   showSelectModel.value = true;
 }
-const copyUploadFile = ()=>{
-  uploadFilesList.value = [] 
-  if(uploadFilesList.value.length == 0){
-    return
-  }
-  uploadFilesList.value.forEach((file) => {
-    const item = file as FilesList
-    chatFileList.value.push({
-      uid: item.uid,
-      name: item.name,
-      fileSize: item.fileSize,
-      file: item.file,
-      maxWidth: '200px',
-      showDelIcon: true, // 显示删除图标
-      imgPreview: true, // 显示图片预览
-      imgVariant: 'square', // 图片预览的形状
-      url: item.url, // 图片预览地址
-    })
-  })
-
-}
+ 
 const handleSendMessage = async () => {
   const platformInfo = await llmManager.getPlatformBasicInfo(formData.value.platformId)
   if (!platformInfo) {
@@ -177,7 +156,7 @@ const handleSendMessage = async () => {
   }
   const role = 'user'
   const content = senderValue.value
-  copyUploadFile()
+ 
   const messageUserItem = await buildMessageItem(role, content)
   const fileMd5 = await calcFileMd5()
   if('' !== fileMd5){
@@ -185,11 +164,9 @@ const handleSendMessage = async () => {
   }
   messages.value.push(messageUserItem)
   try {
-    
-    uploadFilesList.value = []
-    
     await chatMsgStorageService.saveMessage(messageUserItem)
     senderValue.value = ''
+    uploadFilesList.value = []
     await askSSE()
   } catch (error) {
     message.error(`保存用户消息失败: ${error instanceof Error ? error.message : String(error)}`)
@@ -250,12 +227,19 @@ const parseThinkStatus = () => {
   return 'thinking'
 }
 const calcFileMd5 = async ():Promise<string> => {
-  if(chatFileList.value.length == 0){
+  if(uploadFilesList.value.length == 0){
     return ''
   }
-  const file: File = chatFileList.value[0].file
+  const file: File = uploadFilesList.value[0].file
   const md5 = await FileUtil.getFileMd5(file)
   return md5
+}
+const getFileName = () => {
+  if(uploadFilesList.value.length == 0){
+    return ''
+  }
+  const file: File = uploadFilesList.value[0].file
+  return file.name
 }
 const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: string) => {
 
@@ -270,9 +254,15 @@ const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: 
   const key = buildId();
   const reasoning_content = ''//?: string
   const nowTime = new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-').replace(/\s/, ' ');
- 
+  let fileName = ''
+  console.log('role->', role)
+  if(role === 'user'){
+    fileName = getFileName()
+    console.log('filename->',fileName)
+  }
   return {
     key, // 唯一标识
+    fileName,
     nowTime,
     role, // user | ai 自行更据模型定义
     placement, // start | end 气泡位置
@@ -292,8 +282,6 @@ const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: 
 }
 // 监听属性chatId的变化
 watch(() => props.chatId, async (newChatId, oldChatId) => {
-       console.log('newChatId', newChatId)
-    
         if(!newChatId){
           messages.value = []
           disableSender.value = true

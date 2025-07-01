@@ -9,6 +9,7 @@ export type messageType = BubbleListItemProps & {
   nowTime:string;
   chatId:string;
   fileMd5?:string;
+  fileName?:string;
 }
 
 export type ChatModel = ConversationItem & {
