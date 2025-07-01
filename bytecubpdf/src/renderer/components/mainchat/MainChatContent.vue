@@ -487,6 +487,15 @@ watch(
               class="thinking-chain-warp"
             />
           </template>
+          <template #content="{item}">
+            <div class="content-wrapper">
+              {{ item.content }}  
+              <!-- 判断item.fileName，如果存在则显示名字 -->
+              <div v-if="item.fileName">
+                 <FilesCard :name=item.fileName />
+              </div>
+            </div>
+          </template>
           <template #footer="{ item }">
             <n-flex>
               <n-tooltip>
@@ -653,7 +662,7 @@ watch(
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 800px;
+  //max-width: 800px;
   height: 100%;
   margin: 0 auto;
   padding: 0 12px;
