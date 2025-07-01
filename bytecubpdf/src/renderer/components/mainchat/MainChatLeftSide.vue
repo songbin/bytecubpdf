@@ -5,10 +5,9 @@ import type { ConversationItem, ConversationMenuCommand } from 'vue-element-plus
 import { useMessage, NTabs, NTabPane, NButton, NIcon, NFlex, NInput, NInputGroup ,NModal} from 'naive-ui'
 import { AddComment, SearchLocate } from '@vicons/carbon'
 import { ChatModel } from '@/renderer/model/chat/ChatMessage'
-import { ChatStorageService } from '@/renderer/service/chat/ChatStorageService'
+import { chatStorageService } from '@/renderer/service/chat/ChatStorageService'
 const message = useMessage()
-const chatList = ref<ChatModel[]>([])
-const chatStorageService:ChatStorageService = new ChatStorageService()
+const chatList = ref<ChatModel[]>([]) 
 const activeChatId = ref('')
 const searchValue = ref('')
 

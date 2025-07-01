@@ -6,6 +6,7 @@ export interface ChatHistory {
     chat_id: string; // 会话ID
     chat_name: string; // 会话名称
     file_md5?: string; // 文件md5
+    file_content?: string; // 文件内容
     create_time: string; // 创建时间
     update_time: string; // 更新时间
     ext1?: string; // 扩展字段1

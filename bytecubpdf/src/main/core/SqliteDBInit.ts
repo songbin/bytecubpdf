@@ -71,6 +71,7 @@ export class SqliteDBInit {
                 chat_id TEXT NOT NULL, -- 会话ID
                 chat_name TEXT NOT NULL, -- 会话名称
                 file_md5 TEXT DEFAULT '',
+                file_content TEXT DEFAULT '', --文件内容
                 create_time DATETIME DEFAULT CURRENT_TIMESTAMP, -- 创建时间
                 update_time DATETIME DEFAULT CURRENT_TIMESTAMP, -- 更新时间
                 ext1 TEXT NOT NULL DEFAULT '',  -- 扩展字段1

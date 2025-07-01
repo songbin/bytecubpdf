@@ -22,6 +22,7 @@ import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageServi
 import { LLM_PROTOCOL } from '@/renderer/constants/appconfig';
 import type { FilesCardProps } from 'vue-element-plus-x/types/FilesCard';
 import { SignalCellularConnectedNoInternet0BarFilled } from '@vicons/material';
+import { chatStorageService } from '@/renderer/service/chat/ChatStorageService';
 const chatService = new ChatService()
 const message = useMessage()
 const llmManager = new LlmModelManager();
@@ -178,6 +179,10 @@ const handleSendMessage = async () => {
   const content = senderValue.value
   copyUploadFile()
   const messageUserItem = await buildMessageItem(role, content)
+  const fileMd5 = await calcFileMd5()
+  if('' !== fileMd5){
+     chatStorageService.updateChatHistoryFileMd5(chatId.value, fileMd5)
+  }
   messages.value.push(messageUserItem)
   try {
     
@@ -265,10 +270,7 @@ const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: 
   const key = buildId();
   const reasoning_content = ''//?: string
   const nowTime = new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-').replace(/\s/, ' ');
-  const fileMd5 = await calcFileMd5()
-  if('' !== fileMd5){
-
-  }
+ 
   return {
     key, // 唯一标识
     nowTime,
