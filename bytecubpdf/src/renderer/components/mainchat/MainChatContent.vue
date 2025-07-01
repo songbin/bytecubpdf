@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
+import FilesSelect from '@/renderer/components/fileselect/FileSelect.vue'
 import type { BubbleListItemProps, BubbleListProps,BubbleListInstance } from 'vue-element-plus-x/types/BubbleList'
-import { BubbleList, MentionSender, Thinking } from 'vue-element-plus-x'
+import { BubbleList, MentionSender, Thinking,Attachments } from 'vue-element-plus-x'
+import { useFileDialog } from '@vueuse/core';
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
 import { NFlex, NButton, NIcon, NSelect, NTag, NTooltip, NButtonGroup, useMessage, NModal, NCard } from 'naive-ui'
-import { Delete, CopyFile, Edit, SendAlt, Temperature } from '@vicons/carbon'
-import { Refresh, Attach, Add, TrainOutline as TrainIcon } from '@vicons/ionicons5';
+import { Delete, CopyFile, Edit, SendAlt, Light,ArrowRight,ArrowLeft } from '@vicons/carbon'
+import { Refresh, Attach, Add, TrainOutline as TrainIcon,CloseCircleOutline } from '@vicons/ionicons5';
+import { PaperClipOutlined } from '@vicons/antd';
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
 import MainChatIndexDb from '@/renderer/service/indexdb/MainChatIndexDb';
 import { ChatService } from '@/renderer/service/chat/ChatService';
@@ -17,6 +20,8 @@ import { ChatMsgToLLM } from '@/renderer/service/chat/MessageConvert'
 import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
 import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageService'
 import { LLM_PROTOCOL } from '@/renderer/constants/appconfig';
+import type { FilesCardProps } from 'vue-element-plus-x/types/FilesCard';
+import { SignalCellularConnectedNoInternet0BarFilled } from '@vicons/material';
 const chatService = new ChatService()
 const message = useMessage()
 const llmManager = new LlmModelManager();
@@ -30,7 +35,13 @@ const bubbleListRef = ref<BubbleListInstance | null>(null);
 const controller = ref<AbortController | null>(null);
 const isThinking = ref(false)
 const showThinking = ref(false)
- 
+type FilesList = FilesCardProps & {
+  file: File;
+};
+/**上传的附件列表，不代表是聊天的附件*/
+const uploadFilesList = ref<FilesList[]>([]);
+/**聊天的附件列表*/
+const chatFileList = ref<FilesList[]>([]);
 const formData = ref({
   platformId: '',
   platformName: '',
@@ -45,12 +56,48 @@ const props = defineProps<{
 
 const platforms = ref<Array<{ value: string; label: string }>>([]);
 const models = ref<Array<{ value: string; label: string }>>([]);
-
+const senderRef = ref();
 const senderValue = ref('')
 
 // 示例调用
 const messages = ref<BubbleListProps<messageType>['list']>([]);
+const { reset, open, onChange } = useFileDialog({
+  // 允许所有图片文件，文档文件，音视频文件
+  accept: '.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt',
+  directory: false, // 是否允许选择文件夹
+  multiple: false, // 是否允许多选
+});
+onChange((files) => {
+  if (!files)
+    return;
+  if(uploadFilesList.value.length > 0){
+    message.error('只允许上传一个文件')
+    return
+  }
+  for (let i = 0; i < files!.length; i++) {
+    const file = files![i];
 
+    uploadFilesList.value.push({
+      uid: crypto.randomUUID(), // 不写 uid，文件列表展示不出来，elx 1.2.0 bug 待修复
+      name: file.name,
+      fileSize: file.size,
+      file,
+      maxWidth: '200px',
+      showDelIcon: true, // 显示删除图标
+      imgPreview: true, // 显示图片预览
+      imgVariant: 'square', // 图片预览的形状
+      url: URL.createObjectURL(file), // 图片预览地址
+    }); 
+  }
+   
+  // 重置文件选择器
+  nextTick(() => reset());
+});
+
+function handleUploadFiles() {
+  open();
+  
+}
 const loadMsg = async (chat_id:string , chat_name:string) => {
   if (!chatId || !chatName) {
     message.error('参数错误')
@@ -109,6 +156,7 @@ const handleSendMessage = async () => {
   const messageUserItem = buildMessageItem(role, content)
   messages.value.push(messageUserItem)
   try {
+    uploadFilesList.value = []
     await chatMsgStorageService.saveMessage(messageUserItem)
     senderValue.value = ''
     askSSE()
@@ -207,8 +255,10 @@ const buildMessageItem = (role: 'system' | 'user' | 'assistant', content: string
       if (newChatId) {
         if(!newChatId){
           disableSender.value = true
+          
         }else{
           disableSender.value = false
+          // senderRef.value.closeHeader()
           await loadMsg(newChatId, props.chatName);
           senderHolder.value = 'ENTER=发送  SHIFT+ENTER=换行'
         }
@@ -268,9 +318,8 @@ const initializeChatConfig = async () => {
   }
 }
 onMounted(async () => {
-   
  await initializeChatConfig()
-
+ senderRef.value.openHeader()
 });
 const copyMessageItem = (item:messageType) =>{
   let content = item.content;
@@ -334,6 +383,12 @@ const deleteMessageItem = async (item:messageType) =>{
   }
   
 }
+const closeHeader = () =>{
+  senderRef.value.closeHeader()
+}
+const handleDeleteCard = (_item: FilesCardProps, index: number) =>{
+   uploadFilesList.value.splice(index, 1);
+}
 const calcThinkingShowStatus = async (platformId:string,modelId:string) =>{
     try{
       showThinking.value = false
@@ -373,24 +428,35 @@ watch(
 
 </script>
 
+ 
+
 <template>
-  <div>
-    <n-flex vertical>
-      <div style="height: calc(100vh - 300px);">
-        <BubbleList :list="messages" ref="bubbleListRef" max-height="100%">
-          <!-- 自定义头部 -->
+  <div class="chat-with-id-container">
+    <div class="chat-warp">
+      <div class="bubble-list-container">
+        <BubbleList 
+          :list="messages" 
+          ref="bubbleListRef" 
+          max-height="calc(100vh - 320px)"
+        >
           <template #header="{ item }">
             <div class="header-wrapper">
               <div class="header-name">
                 {{ item.role === 'user' ? item.nowTime + ' 用户' : '小书芽 ' + item.nowTime }}
               </div>
             </div>
-            <Thinking v-if="item.reasoning_content" v-model="item.thinlCollapse" :content="item.reasoning_content"
-              :status="item.thinkingStatus" auto-collapse @change="handleThinkingChange" />
+            <Thinking 
+              v-if="item.reasoning_content" 
+              v-model="item.thinlCollapse" 
+              :content="item.reasoning_content"
+              :status="item.thinkingStatus" 
+              auto-collapse 
+              @change="handleThinkingChange" 
+              class="thinking-chain-warp"
+            />
           </template>
           <template #footer="{ item }">
             <n-flex>
-              
               <n-tooltip>
                 <template #trigger>
                   <n-button tertiary circle type="info" @click="refreshMessage(item)">
@@ -427,74 +493,120 @@ watch(
                 </template>
                 删除
               </n-tooltip>
-
-
             </n-flex>
           </template>
         </BubbleList>
       </div>
 
-
-      <div style="display: flex; flex-direction: column; gap: 5px;">
+      <div class="chat-tools mb-8px">
         <n-flex>
-          <n-button size="tiny">
-            PDF翻译
-          </n-button>
-          <n-button size="tiny">
-            图片OCR
-          </n-button>
+          <n-button size="tiny">PDF翻译</n-button>
+          <n-button size="tiny">图片OCR</n-button>
         </n-flex>
-        <MentionSender ref="senderRef" v-model="senderValue"
-          :disabled="disableSender"
-          :loading="senderLoading"
-          @cancel="cancelSse"
-           @submit="handleSendMessage" variant="updown"
-          :auto-size="{ minRows: 2, maxRows: 4 }" clearable :placeholder="senderHolder">
-          <template #prefix>
-            <n-flex>
-              <n-button size="small" tertiary circle type="info">
-                <template #icon>
-                  <n-icon>
-                    <Add />
-                  </n-icon>
-                </template>
-              </n-button>
-            
-              <n-button-group>
-
-                <n-button size='tiny' secondary @click="handleShowSelectModel()">
-                  <template #icon>
-                    <n-icon>
-                      <TrainIcon />
-                    </n-icon>
-                  </template>
-                  {{ formData.platformName }}|{{ formData.modelName }}
-                </n-button>
-              </n-button-group>
-              <div :class="{ isThinking }" 
-              style="display: flex; align-items: center; gap: 4px; padding: 2px 12px; border: 1px solid silver; border-radius: 15px; cursor: pointer; font-size: 12px;" 
-              v-if="showThinking"
-              @click="isThinking = !isThinking">
-                <span>深度思考</span>
-              </div>
-
-            </n-flex>
-          </template>
-        </MentionSender>
       </div>
-    </n-flex>
-    <n-modal title="大模型配置" v-model:show="showSelectModel" preset="card" style="width: 600px;">
+
+      <MentionSender 
+        ref="senderRef" 
+        v-model="senderValue"
+        :disabled="disableSender"
+        :loading="senderLoading"
+        @cancel="cancelSse"
+        @submit="handleSendMessage" 
+        variant="updown"
+        :auto-size="{ minRows: 4, maxRows: 6 }" 
+        clearable 
+        :placeholder="senderHolder"
+        class="chat-defaul-sender"
+      >
+        <template #header>
+          <div class="sender-header">
+            <Attachments
+              :items="uploadFilesList"
+              :hide-upload="true" 
+              @delete-card="handleDeleteCard"
+            >
+              <template #prev-button="{ show, onScrollLeft }">
+                <div
+                  v-if="show"
+                  class="prev-next-btn left-8px"
+                  @click="onScrollLeft"
+                >
+                  <n-icon><ArrowLeft /></n-icon>
+                </div>
+              </template>
+
+              <template #next-button="{ show, onScrollRight }">
+                <div
+                  v-if="show"
+                  class="prev-next-btn right-8px"
+                  @click="onScrollRight"
+                >
+                  <n-icon><ArrowRight /></n-icon>
+                </div>
+              </template>
+            </Attachments>
+          </div>
+        </template>
+        
+        <template #prefix>
+          <div class="sender-prefix">
+            <n-button size="tiny" type="primary" secondary @click="handleUploadFiles">
+              <template #icon>
+                <n-icon><PaperClipOutlined /></n-icon>
+              </template>
+            </n-button>
+            
+            <n-button size="tiny" secondary @click="handleShowSelectModel()">
+              <template #icon>
+                <n-icon><TrainIcon /></n-icon>
+              </template>
+              {{ formData.platformName }} | {{ formData.modelName }}
+            </n-button>
+
+            <div 
+              :class="{ isThinking }" 
+              class="thinking-toggle"
+              @click="isThinking = !isThinking"
+              v-if="showThinking"
+            >
+              <n-icon><Light /></n-icon>
+              <span>深度思考</span>
+            </div>
+          </div>
+        </template>
+      </MentionSender>
+    </div>
+
+    <n-modal 
+      title="大模型配置" 
+      v-model:show="showSelectModel" 
+      preset="card" 
+      style="width: 600px;"
+    >
       <n-card>
         <n-flex vertical>
-          <n-flex>
-            <n-button text size="small">平台</n-button>
-            <n-select v-model:value="formData.platformId" :options="platforms" filterable
-              @update:value="handlePlatformChange" size="small" class="adaptive-select" :render-label="renderLabel" />
+          <n-flex align="center">
+            <span class="modal-label">平台：</span>
+            <n-select 
+              v-model:value="formData.platformId" 
+              :options="platforms" 
+              filterable
+              @update:value="handlePlatformChange" 
+              size="small" 
+              class="adaptive-select" 
+              :render-label="renderLabel" 
+            />
           </n-flex>
-          <n-flex>
-            <n-button text size="small">模型</n-button>
-            <n-select v-model:value="formData.modelId" :options="models" filterable size="small" class="adaptive-select"
-              :render-label="renderLabel" />
+          <n-flex align="center">
+            <span class="modal-label">模型：</span>
+            <n-select 
+              v-model:value="formData.modelId" 
+              :options="models" 
+              filterable 
+              size="small" 
+              class="adaptive-select"
+              :render-label="renderLabel" 
+            />
           </n-flex>
         </n-flex>
       </n-card>
@@ -502,15 +614,115 @@ watch(
   </div>
 </template>
 
-<style scoped lang="less">
+<style scoped lang="scss">
+.chat-with-id-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+.chat-warp {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: calc(100vh - 80px);
+}
+
+.bubble-list-container {
+  flex: 1;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.thinking-chain-warp {
+  margin-bottom: 12px;
+}
+
+.chat-tools {
+  margin-bottom: 8px;
+}
+
+.chat-defaul-sender {
+  width: 100%;
+  margin-bottom: 22px;
+}
+
+.sender-header {
+  padding: 0 12px;
+  padding-top: 6px;
+}
+
+.sender-prefix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 8px;
+}
+
+.prev-next-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.4);
+  background-color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  z-index: 1;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
+}
+
+.thinking-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s;
+  
+  &.isThinking {
+    color: #626aef;
+    border-color: #626aef;
+    background-color: rgba(98, 106, 239, 0.1);
+  }
+}
+
+.modal-label {
+  width: 60px;
+  text-align: right;
+  font-size: 14px;
+}
+
+:deep(.el-bubble) {
+  padding: 0 12px;
+  padding-bottom: 24px;
+}
+
+:deep(.el-typewriter) {
+  border-radius: 12px;
+}
+
 :deep(.markdown-body) {
   background-color: transparent;
-}
-.isThinking {
-  color: #626aef;
-  border: 1px solid #626aef !important;
-  border-radius: 15px;
-  padding: 3px 12px;
-  font-weight: 700;
 }
 </style>
