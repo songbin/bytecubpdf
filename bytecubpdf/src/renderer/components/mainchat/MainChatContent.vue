@@ -214,37 +214,62 @@ const buildMessageItem = (role: 'system' | 'user' | 'assistant', content: string
         }
       }
     });
-onMounted(async () => {
+const initializeChatConfig = async () => {
   try {
-    await mainChatIndexDb;
-    const config = await mainChatIndexDb.getConfig();
-    if (config) {
-      formData.value = {
-        platformId: config.platformId || '',
-        modelId: config.modelId || '',
-        platformName: config.platformName || '',
-        modelName: config.modelName || '',
-      };
-      if (config.platformId) {
-        await handlePlatformChange(config.platformId);
-      }
-    }
+    // 1. 先加载平台列表（确保后续逻辑可用）
     const platformList = await llmManager.getPlatforms();
-    platforms.value = platformList.map((p) => ({
+    platforms.value = platformList.map(p => ({
       value: p.id,
       label: p.platformName,
     }));
-    if (formData.value.platformId == '') {
-      formData.value.platformId = platforms.value[0].value;
-      handlePlatformChange(formData.value.platformId);
+
+    // 2. 读取配置
+    const config = await mainChatIndexDb.getConfig();
+
+    // 3. 应用配置或默认值
+    if (config?.platformId) {
+      const platformExists = platforms.value.some(p => p.value === config.platformId);
+      if (platformExists) {
+        formData.value = {
+          platformId: config.platformId,
+          modelId: config.modelId || '',
+          platformName: config.platformName || '',
+          modelName: config.modelName || '',
+        };
+        await handlePlatformChange(config.platformId);
+        // 检查配置的 modelId 是否存在于当前模型列表中
+          const modelExists = models.value.some(m => m.value === config.modelId);
+          if (modelExists) {
+            formData.value.modelId = config.modelId || '';
+            formData.value.modelName = config.modelName || '';
+          } else if (models.value.length > 0) {
+            // 否则使用第一个模型作为默认值
+            formData.value.modelId = models.value[0].value;
+            formData.value.modelName = models.value[0].label;
+          }
+      } else {
+        // 配置的 platformId 不存在，使用默认
+        throw new Error('配置的平台不存在，可能已被移除');
+      }
+    } else {
+      // 无有效配置，使用默认平台
+      if (platforms.value.length > 0) {
+        formData.value.platformId = platforms.value[0].value;
+        await handlePlatformChange(platforms.value[0].value);
+      }
     }
-
-    handlePlatformChange(formData.value.platformId);
-    
-
   } catch (error) {
-    console.error('加载配置失败:', error);
+    console.error('初始化失败:', error);
+    // 出错时也尝试使用默认平台
+    if (platforms.value.length > 0 && formData.value.platformId === '') {
+      formData.value.platformId = platforms.value[0].value;
+      await handlePlatformChange(platforms.value[0].value);
+    }
   }
+}
+onMounted(async () => {
+   
+ await initializeChatConfig()
 
 });
 const copyMessageItem = (item:messageType) =>{
@@ -309,6 +334,25 @@ const deleteMessageItem = async (item:messageType) =>{
   }
   
 }
+const calcThinkingShowStatus = async (platformId:string,modelId:string) =>{
+    try{
+      showThinking.value = false
+      const platformBasicInfo = await llmManager.getPlatformBasicInfo(platformId);
+      if(platformBasicInfo){
+        if(LLM_PROTOCOL.ollama === platformBasicInfo.protocolType){
+          //如果modelId为deepseek-r1  qwen3  magistral granite3.2这里面其中一个，showThinkig就设置为true，否则设置为false
+          const baseModelId = modelId.split(':')[0]; // 提取冒号前的基础模型ID
+          if(['deepseek-r1','qwen3','magistral','granite3.2'].includes(baseModelId)){
+            showThinking.value = true
+          }else{
+            isThinking.value = false
+          }
+        }
+      }
+    }catch(error){
+      console.log(error)
+    }
+}
 watch(
   formData,
   async (newValue) => {
@@ -321,19 +365,8 @@ watch(
       platformName: formData.value.platformName,
       modelName: formData.value.modelName
     });
-    showThinking.value = false
-    const platformBasicInfo = await llmManager.getPlatformBasicInfo(newValue.platformId);
-    if(platformBasicInfo){
-      if(LLM_PROTOCOL.ollama === platformBasicInfo.protocolType){
-        //如果modelId为deepseek-r1  qwen3  magistral granite3.2这里面其中一个，showThinkig就设置为true，否则设置为false
-        const baseModelId = newValue.modelId.split(':')[0]; // 提取冒号前的基础模型ID
-        if(['deepseek-r1','qwen3','magistral','granite3.2'].includes(baseModelId)){
-          showThinking.value = true
-        }else{
-          isThinking.value = false
-        }
-      }
-    }
+   await calcThinkingShowStatus(newValue.platformId,newValue.modelId)
+
   },
   { deep: true }
 );
