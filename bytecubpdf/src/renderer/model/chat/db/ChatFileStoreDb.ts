@@ -9,6 +9,7 @@ export interface ChatFileStoreDb {
   file_content: string;
   /** 文件类型 */
   file_type: string;
+  file_size: number;
   /** 关联messageId */
   msg_id: string;
   /** 关联chatId */

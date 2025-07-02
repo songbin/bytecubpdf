@@ -16,8 +16,8 @@ export class ChatFileStoreManager {
 
     public async addFile(file: ChatFileStoreDb): Promise<number> {
         const result = await SqliteDbCore.executeQuery<{ lastInsertRowid: number }>(
-            'INSERT INTO file_store (file_name, file_md5, file_content, file_type, msg_id, chat_id) VALUES (?, ?, ?, ?, ?, ?)',
-            [file.file_name, file.file_md5, file.file_content, file.file_type, file.msg_id, file.chat_id]
+            'INSERT INTO file_store (file_name, file_md5, file_content, file_type, file_size, msg_id, chat_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [file.file_name, file.file_md5, file.file_content, file.file_type, file.file_size, file.msg_id, file.chat_id]
         );
         return result[0]?.lastInsertRowid || 0;
     }

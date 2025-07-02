@@ -1,6 +1,7 @@
 import { ChatMessageManager } from '@/renderer/service/manager/chat/ChatMessageManager';
 import { ChatMessageDb } from '@/renderer/model/chat/db/ChatMessageDb';
 import { messageType,FilesList } from '@/renderer/model/chat/ChatMessage'
+import {chatFileStoreService} from '@/renderer/service/chat/ChatFileStoreSerivce';
 import type { BubbleListItemProps, BubbleListProps } from 'vue-element-plus-x/types/BubbleList'
 import { useMessage } from 'naive-ui'
 /**
@@ -53,13 +54,21 @@ export class ChatMsgStorageService {
         create_time: message.nowTime,
         update_time: message.nowTime,
       }
+      
       return await this.messageManager.createMessage(msgDb);
     } catch (error) {
       console.error('保存聊天消息失败:', error);
       throw new Error(`消息存储失败: ${(error as Error).message}`);
     }
   }
-
+  async saveFileStore(chatId:string, msgId:string, fileList:FilesList[]){
+    fileList.forEach(async item => {
+      const fileName = item.file.name;
+      
+      
+       
+    })
+  }
   /**
    * 获取指定会话的消息列表
    * @param chatId 会话ID

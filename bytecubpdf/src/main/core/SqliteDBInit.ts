@@ -29,6 +29,7 @@ export class SqliteDBInit {
                 file_type TEXT NOT NULL, -- 文件类型
                 msg_id TEXT NOT NULL, -- 关联messageId
                 chat_id TEXT NOT NULL, -- 关联chatId
+                file_size INTEGER NOT NULL DEFAULT 0, -- 文件大小
                 create_time DATETIME DEFAULT CURRENT_TIMESTAMP, -- 创建时间
                 update_time DATETIME DEFAULT CURRENT_TIMESTAMP, -- 更新时间
                 ext1 TEXT NOT NULL DEFAULT '',  -- 扩展字段1

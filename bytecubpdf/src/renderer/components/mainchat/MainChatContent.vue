@@ -21,8 +21,7 @@ import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
 import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageService'
 import { LLM_PROTOCOL } from '@/renderer/constants/appconfig';
 import type { FilesCardProps } from 'vue-element-plus-x/types/FilesCard';
-import { SignalCellularConnectedNoInternet0BarFilled } from '@vicons/material';
-import { chatStorageService } from '@/renderer/service/chat/ChatStorageService';
+import { FileReaderUtil } from '@/renderer/utils/FileReaderUtil';
 const chatService = new ChatService()
 const message = useMessage()
 const llmManager = new LlmModelManager();
@@ -60,15 +59,16 @@ const senderValue = ref('')
 const messages = ref<BubbleListProps<messageType>['list']>([]);
 const { reset, open, onChange } = useFileDialog({
   // 允许所有图片文件，文档文件，音视频文件
-  accept: '.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt',
+  accept: '.docx,.xls,.xlsx,.pptx,.pdf,.txt,.md,.json,.csv,.xml,.yml,.yaml,.toml,.opml,.log,.ini,.properties,.sql,.js,.ts,.py,.html,.css,.rtf',
   directory: false, // 是否允许选择文件夹
-  multiple: false, // 是否允许多选
+  multiple: true, // 是否允许多选
 });
-onChange((files) => {
+onChange(async (files) => {
   if (!files){
     return
   }
-   
+  const text = await FileReaderUtil.parseFile(files[0])
+  console.log(text)
   if(uploadFilesList.value.length > 10){
     message.error('只允许最多上传10个文件')
     return
@@ -398,9 +398,11 @@ const openHeader = () =>{
   senderRef.value.openHeader()
 }
 const handleDeleteCard = (_item: FilesCardProps, index: number) =>{
-   //uploadFilesList.value.splice(index, 1);
-   uploadFilesList.value = []
-   closeHeader()
+   uploadFilesList.value.splice(index, 1);
+  //  uploadFilesList.value = []
+  if(uploadFilesList.value.length == 0){
+    closeHeader()
+  }
 }
 const calcThinkingShowStatus = async (platformId:string,modelId:string) =>{
     try{
