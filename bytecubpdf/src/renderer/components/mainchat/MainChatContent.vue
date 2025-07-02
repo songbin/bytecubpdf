@@ -72,8 +72,8 @@ onChange((files) => {
     return
   }
    
-  if(uploadFilesList.value.length > 0){
-    message.error('只允许上传一个文件')
+  if(uploadFilesList.value.length > 10){
+    message.error('只允许最多上传10个文件')
     return
   }
   for (let i = 0; i < files!.length; i++) {
@@ -264,16 +264,16 @@ const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: 
 }
 // 监听属性chatId的变化
 watch(() => props.chatId, async (newChatId, oldChatId) => {
+  console.log('newChatId',newChatId , 'oldChatId', oldChatId)
         if(!newChatId){
           messages.value = []
           disableSender.value = true
         }else{
-          
           disableSender.value = false
           await loadMsg(newChatId, props.chatName);
+          bubbleListRef.value?.scrollToBottom();
           senderHolder.value = 'ENTER=发送  SHIFT+ENTER=换行'
         }
-      
     });
 const initializeChatConfig = async () => {
   try {
