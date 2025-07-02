@@ -67,8 +67,7 @@ onChange(async (files) => {
   if (!files){
     return
   }
-  const text = await FileReaderUtil.parseFile(files[0])
-  console.log(text)
+ 
   if(uploadFilesList.value.length > 10){
     message.error('只允许最多上传10个文件')
     return

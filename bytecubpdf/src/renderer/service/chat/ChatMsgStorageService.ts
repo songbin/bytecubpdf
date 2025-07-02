@@ -4,6 +4,9 @@ import { messageType,FilesList } from '@/renderer/model/chat/ChatMessage'
 import {chatFileStoreService} from '@/renderer/service/chat/ChatFileStoreSerivce';
 import type { BubbleListItemProps, BubbleListProps } from 'vue-element-plus-x/types/BubbleList'
 import { useMessage } from 'naive-ui'
+import {FileReaderUtil} from '@/renderer/utils/FileReaderUtil';
+import { FileUtil } from '@/renderer/utils/FileUtil';
+import {ChatFileStoreDb} from '@/renderer/model/chat/db/ChatFileStoreDb';
 /**
  * 聊天消息存储服务 - 业务逻辑层
  * 封装数据库操作，处理业务规则和错误处理
@@ -41,7 +44,7 @@ export class ChatMsgStorageService {
     }
     
     try {
-        const content:string = message.content ? message.content : '';
+      const content:string = message.content ? message.content : '';
       const msgDb: ChatMessageDb = {
         id: 0,
         chat_id: message.chatId,
@@ -54,7 +57,7 @@ export class ChatMsgStorageService {
         create_time: message.nowTime,
         update_time: message.nowTime,
       }
-      
+      await this.saveFileStore(message.chatId, message.key, fileList);
       return await this.messageManager.createMessage(msgDb);
     } catch (error) {
       console.error('保存聊天消息失败:', error);
@@ -64,8 +67,24 @@ export class ChatMsgStorageService {
   async saveFileStore(chatId:string, msgId:string, fileList:FilesList[]){
     fileList.forEach(async item => {
       const fileName = item.file.name;
-      
-      
+      const fileMd5 = await FileUtil.getFileMd5(item.file);
+      const fileExist = await chatFileStoreService.checkFileExist(chatId, fileMd5);
+      if(!fileExist){
+          const text = await FileReaderUtil.parseFile(item.file)
+          const fileStoreDb:ChatFileStoreDb = {
+            id: 0,
+            file_name: fileName,
+            file_md5: fileMd5,
+            file_content: text,
+            file_type: item.file.type,
+            file_size: item.file.size,
+            msg_id: msgId,
+            chat_id: chatId,
+            create_time: new Date().toISOString(),
+            update_time: new Date().toISOString(),
+          }
+          await chatFileStoreService.addFile(fileStoreDb);
+       }
        
     })
   }

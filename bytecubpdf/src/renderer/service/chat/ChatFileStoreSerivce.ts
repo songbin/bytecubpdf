@@ -80,6 +80,25 @@ export class ChatFileStoreService {
             throw new Error('获取MD5文件时发生错误');
         }
     }
+    //根据chatid和md5查询数据
+    async getFileByChatIdAndMd5(chatId: string, md5: string): Promise<ChatFileStoreDb[]> {
+        try {
+            return await chatFileStoreManager.getFileByChatIdAndMd5(chatId, md5);
+        } catch (error) {
+            console.error('获取聊天MD5文件失败:', error);
+            throw new Error('获取聊天MD5文件时发生错误');
+        }
+    }
+
+    async checkFileExist(chatId:string, md5:string):Promise<Boolean>{
+        try {
+            const fileList = await this.getFileByChatIdAndMd5(chatId, md5);
+            return fileList.length > 0;
+        } catch (error) {
+            console.error('检查聊天MD5文件失败:', error);
+            throw new Error('检查聊天MD5文件时发生错误');
+        }
+    }
 }
 
 export const chatFileStoreService = ChatFileStoreService.getInstance();

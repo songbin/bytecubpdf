@@ -212,6 +212,11 @@ private static async parsePPTX(buffer: ArrayBuffer): Promise<string> {
    * @returns 转义后的文本
    */
   public static escapeForSQLite(text: string): string {
-    return text.replace(/'/g, "''")
+    return text
+      .replace(/\\/g, '\\\\')  // 转义反斜杠
+      .replace(/'/g, "''")      // 转义单引号
+      .replace(/\n/g, '\\n')   // 转义换行符
+      .replace(/\t/g, '\\t')   // 转义制表符
+      .replace(/\r/g, '\\r');  // 转义回车符
   }
 }
