@@ -15,7 +15,7 @@ import MainChatIndexDb from '@/renderer/service/indexdb/MainChatIndexDb';
 import { ChatService } from '@/renderer/service/chat/ChatService';
 import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
 import {buildId} from '@/shared/utils/StringUtil'
-import { messageType } from '@/renderer/model/chat/ChatMessage'
+import { messageType,FilesList } from '@/renderer/model/chat/ChatMessage'
 import { ChatMsgToLLM } from '@/renderer/service/chat/MessageConvert'
 import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
 import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageService'
@@ -36,9 +36,6 @@ const bubbleListRef = ref<BubbleListInstance | null>(null);
 const controller = ref<AbortController | null>(null);
 const isThinking = ref(false)
 const showThinking = ref(false)
-type FilesList = FilesCardProps & {
-  file: File;
-};
 /**上传的附件列表，聊天也用个这个*/
 const uploadFilesList = ref<FilesList[]>([]);
  
@@ -161,7 +158,7 @@ const handleSendMessage = async () => {
   
   messages.value.push(messageUserItem)
   try {
-    await chatMsgStorageService.saveMessage(messageUserItem)
+    await chatMsgStorageService.saveMessage(messageUserItem, uploadFilesList.value)
     senderValue.value = ''
     uploadFilesList.value = []
     await askSSE()
@@ -199,7 +196,7 @@ const askSSE = async () => {
       await nextTick();
     }
     try {
-      await chatMsgStorageService.saveMessage(messageAssistantItem)
+      await chatMsgStorageService.saveMessage(messageAssistantItem, [])
       senderLoading.value = false
     } catch (error) {
       message.error(`保存AI消息失败: ${error instanceof Error ? error.message : String(error)}`)

@@ -1,6 +1,6 @@
 import { ChatMessageManager } from '@/renderer/service/manager/chat/ChatMessageManager';
 import { ChatMessageDb } from '@/renderer/model/chat/db/ChatMessageDb';
-import { messageType } from '@/renderer/model/chat/ChatMessage'
+import { messageType,FilesList } from '@/renderer/model/chat/ChatMessage'
 import type { BubbleListItemProps, BubbleListProps } from 'vue-element-plus-x/types/BubbleList'
 import { useMessage } from 'naive-ui'
 /**
@@ -30,11 +30,15 @@ export class ChatMsgStorageService {
    * @param message 消息对象（不含id和时间戳）
    * @returns 新创建消息的ID
    */
-  async saveMessage(message: messageType): Promise<number> {
+  async saveMessage(message: messageType, fileList:FilesList[]): Promise<number> {
     if (!message.chatId || !message.key) {
       throw new Error('聊天ID和消息Key不能为空');
     }
-
+    let fileNameListStr = '[]'
+    if(fileList){
+      fileNameListStr = fileList.length > 0 ? JSON.stringify(fileList.map(item => item.file.name)):'[]';
+    }
+    
     try {
         const content:string = message.content ? message.content : '';
       const msgDb: ChatMessageDb = {
@@ -43,7 +47,7 @@ export class ChatMsgStorageService {
         msg_id: message.key,
         role: message.role,
         content: content,
-        file_list: message.fileList,
+        file_list: fileNameListStr,
         reasoning_content: message.reasoning_content,
         nowTime: message.nowTime,
         create_time: message.nowTime,

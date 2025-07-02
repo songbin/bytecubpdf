@@ -21,7 +21,7 @@ export class SqliteDBInit {
     //写一个文件存储列表创建的function，记录文件名 md5值 文件内容 文件类型 关联messageId chatId 
     private async createFileStoreTable(db:any) {
         await db.exec(`
-            CREATE TABLE IF NOT EXISTS file_store (
+            CREATE TABLE IF NOT EXISTS chat_file_store (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 file_name TEXT NOT NULL, -- 文件名
                 file_md5 TEXT NOT NULL, -- 文件md5值
@@ -54,11 +54,17 @@ export class SqliteDBInit {
             )
         `);
         //创建索引，索引有md5 chatid msgid 等
-        await db.exec('CREATE INDEX IF NOT EXISTS idx_file_store_file_md5 ON file_store(file_md5)');
-        await db.exec('CREATE INDEX IF NOT EXISTS idx_file_store_chat_id ON file_store(chat_id)');
-        await db.exec('CREATE INDEX IF NOT EXISTS idx_file_store_msg_id ON file_store(msg_id)');
-        //更新时间需要修改就更新
-        await db.exec('CREATE INDEX IF NOT EXISTS idx_file_store_update_time ON file_store(update_time)');
+        await db.exec('CREATE INDEX IF NOT EXISTS idx_chat_file_store_file_md5 ON chat_file_store(file_md5)');
+        await db.exec('CREATE INDEX IF NOT EXISTS idx_chat_file_store_chat_id ON chat_file_store(chat_id)');
+        await db.exec('CREATE INDEX IF NOT EXISTS idx_chat_file_store_msg_id ON chat_file_store(msg_id)');
+        await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_file_store_chat_msg ON chat_file_store(chat_id, msg_id)');
+        await db.exec(`
+            CREATE TRIGGER IF NOT EXISTS update_chat_file_store_timestamp 
+            AFTER UPDATE ON chat_file_store 
+            BEGIN
+                UPDATE chat_file_store SET update_time = CURRENT_TIMESTAMP WHERE id = OLD.id;
+            END
+        `);
     }
     //写一个聊天历史记录的表的创建function，是用于存储ai对话
     private async createChatMessageHistoryTable(db:any) {
@@ -67,6 +73,7 @@ export class SqliteDBInit {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 chat_id TEXT NOT NULL, -- 会话ID
                 msg_id TEXT NOT NULL, -- 唯一标识
+                 
                 nowTime TEXT NOT NULL,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
@@ -98,6 +105,7 @@ export class SqliteDBInit {
         `);
         await db.exec('CREATE INDEX IF NOT EXISTS idx_chat_message_history_chat_id ON chat_message_history(chat_id)');
         await db.exec('CREATE INDEX IF NOT EXISTS idx_chat_message_history_create_time ON chat_message_history(create_time)');
+        await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_message_history_chat_msg ON chat_message_history(chat_id, msg_id)');
         await db.exec(`
             CREATE TRIGGER IF NOT EXISTS update_chat_message_history_timestamp 
             AFTER UPDATE ON chat_message_history 
