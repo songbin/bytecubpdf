@@ -8,8 +8,7 @@ export type messageType = BubbleListItemProps & {
   thinlCollapse?: boolean;
   nowTime:string;
   chatId:string;
-  fileMd5?:string;
-  fileName?:string;
+  fileList?:string;
 }
 
 export type ChatModel = ConversationItem & {

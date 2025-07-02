@@ -156,12 +156,9 @@ const handleSendMessage = async () => {
   }
   const role = 'user'
   const content = senderValue.value
- 
+  
   const messageUserItem = await buildMessageItem(role, content)
-  const fileMd5 = await calcFileMd5()
-  if('' !== fileMd5){
-     chatStorageService.updateChatHistoryFileMd5(chatId.value, fileMd5)
-  }
+  
   messages.value.push(messageUserItem)
   try {
     await chatMsgStorageService.saveMessage(messageUserItem)
@@ -226,21 +223,7 @@ const parseThinkStatus = () => {
 
   return 'thinking'
 }
-const calcFileMd5 = async ():Promise<string> => {
-  if(uploadFilesList.value.length == 0){
-    return ''
-  }
-  const file: File = uploadFilesList.value[0].file
-  const md5 = await FileUtil.getFileMd5(file)
-  return md5
-}
-const getFileName = () => {
-  if(uploadFilesList.value.length == 0){
-    return ''
-  }
-  const file: File = uploadFilesList.value[0].file
-  return file.name
-}
+
 const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: string) => {
 
   const placement: messageType['placement'] = role === 'user' ? 'end' : 'start'
@@ -254,13 +237,14 @@ const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: 
   const key = buildId();
   const reasoning_content = ''//?: string
   const nowTime = new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-').replace(/\s/, ' ');
-  let fileName = ''
+  let fileList = '[]'
   if(role === 'user'){
-    fileName = getFileName()
+    const fileListStr = uploadFilesList.value.map((file) => file.name)
+    fileList = JSON.stringify(fileListStr)
   }
   return {
     key, // 唯一标识
-    fileName,
+    fileList,
     nowTime,
     role, // user | ai 自行更据模型定义
     placement, // start | end 气泡位置
@@ -491,8 +475,8 @@ watch(
             <div class="content-wrapper">
               {{ item.content }}  
               <!-- 判断item.fileName，如果存在则显示名字 -->
-              <div v-if="item.fileName">
-                 <FilesCard :name=item.fileName />
+              <div v-if="item.fileList">
+                 <FilesCard v-for="(fileName, index) in JSON.parse(item.fileList)" :key="index" :name="fileName" />
               </div>
             </div>
           </template>

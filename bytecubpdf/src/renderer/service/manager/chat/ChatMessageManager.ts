@@ -14,7 +14,7 @@ export class ChatMessageManager {
         const sanitizedValues = [
             this.sanitizeString(message.chat_id),
             this.sanitizeString(message.msg_id),
-            this.sanitizeString(message.file_name),
+            this.sanitizeString(message.file_list),
             this.sanitizeString(message.nowTime),
             this.sanitizeString(message.role),
             this.sanitizeString(message.content),
@@ -33,7 +33,7 @@ export class ChatMessageManager {
             INSERT INTO ${this.tableName} (
                 chat_id,
                 msg_id,
-                file_name,
+                file_list,
                 nowTime,
                 role,
                 content,
@@ -45,8 +45,10 @@ export class ChatMessageManager {
                 ext5,
                 ext6,
                 ext7,
-                ext8
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ext8,
+                create_time,
+                update_time
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         `, sanitizedValues);
         return result[0]?.lastInsertRowid || 0;
     }

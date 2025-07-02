@@ -16,7 +16,7 @@ export interface ChatMessageDb {
     content: string;
     // 推理内容
     reasoning_content?: string;
-    file_name?: string;
+    file_list?: string;//里面是[]文件名数组
     // 创建时间，默认为当前时间
     create_time?: string;
     // 更新时间，默认为当前时间

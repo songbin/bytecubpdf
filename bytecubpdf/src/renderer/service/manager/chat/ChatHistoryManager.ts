@@ -46,10 +46,7 @@ export class ChatHistoryManager {
          const offset = (Math.max(1, pageno) - 1) * pageSize;
         const sanitizedKeyword = this.sanitizeString(chatName);
         return SqliteDbCore.executeQuery<ChatHistory>(`
-            SELECT 
-                id, chat_id, chat_name, file_md5, 
-                create_time, update_time, 
-                ext1, ext2, ext3, ext4, ext5, ext6, ext7, ext8 
+            SELECT *
             FROM ${this.tableName}
             WHERE chat_name LIKE ?
             ORDER BY id DESC
@@ -75,16 +72,7 @@ export class ChatHistoryManager {
         `, [this.sanitizeString(newName), this.sanitizeString(chatId)]);
         return result[0]?.changes! > 0;
     }
-    //更新file_md5
-    async updateChatHistoryFileMd5(chatId: string, fileMd5: string): Promise<boolean> {
-        const result = await SqliteDbCore.executeQuery<{ changes: number }>(`
-            UPDATE ${this.tableName}
-            SET file_md5 = ?,
-                update_time = CURRENT_TIMESTAMP
-            WHERE chat_id = ?
-        `, [this.sanitizeString(fileMd5), this.sanitizeString(chatId)]);
-        return result[0]?.changes! > 0;
-    }
+
 
     async updateFileMd5AndContent(chatId: string, fileMd5: string, fileContent: string): Promise<boolean> {
         const result = await SqliteDbCore.executeQuery<{ changes: number }>(`

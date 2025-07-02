@@ -60,18 +60,8 @@ export class ChatStorageService {
     async getChatHistoryTotalCount(): Promise<number> {
         return this.chatHistoryManager.getChatHistoryTotalCount();
     }
-    // 更新聊天会话file_md5
-    async updateChatHistoryFileMd5(chatId: string, fileMd5: string): Promise<boolean> {
-        return await this.chatHistoryManager.updateChatHistoryFileMd5(chatId, fileMd5);
-    }
-    // 获取聊天会话file_md5
-    async getChatHistoryFileMd5(chatId: string): Promise<string> {
-        const result:ChatHistory|null = await this.chatHistoryManager.getChatHistoryByChatId(chatId);
-        if(null == result){
-            return '';
-        }
-        return result.file_md5 ?? '';
-    }
+ 
+ 
     
     // 更新聊天会话名称
     async updateChatHistoryName(chatId: string, chatName: string): Promise<boolean> {
