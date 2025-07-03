@@ -1,12 +1,13 @@
 import { ChatMessageManager } from '@/renderer/service/manager/chat/ChatMessageManager';
 import { ChatMessageDb } from '@/renderer/model/chat/db/ChatMessageDb';
 import { messageType,FilesList } from '@/renderer/model/chat/ChatMessage'
-import {chatFileStoreService} from '@/renderer/service/chat/ChatFileStoreSerivce';
+import {chatFileStoreService} from '@/renderer/service/chat/ChatFileStoreService';
 import type { BubbleListItemProps, BubbleListProps } from 'vue-element-plus-x/types/BubbleList'
 import { useMessage } from 'naive-ui'
 import {FileReaderUtil} from '@/renderer/utils/FileReaderUtil';
 import { FileUtil } from '@/renderer/utils/FileUtil';
 import {ChatFileStoreDb} from '@/renderer/model/chat/db/ChatFileStoreDb';
+import {ChatRole} from '@/renderer/model/chat/ChatConfig'
 /**
  * 聊天消息存储服务 - 业务逻辑层
  * 封装数据库操作，处理业务规则和错误处理
@@ -65,28 +66,28 @@ export class ChatMsgStorageService {
     }
   }
   async saveFileStore(chatId:string, msgId:string, fileList:FilesList[]){
-    fileList.forEach(async item => {
+    await Promise.all(fileList.map(async item => {
       const fileName = item.file.name;
       const fileMd5 = await FileUtil.getFileMd5(item.file);
       const fileExist = await chatFileStoreService.checkFileExist(chatId, fileMd5);
+      
       if(!fileExist){
-          const text = await FileReaderUtil.parseFile(item.file)
-          const fileStoreDb:ChatFileStoreDb = {
-            id: 0,
-            file_name: fileName,
-            file_md5: fileMd5,
-            file_content: text,
-            file_type: item.file.type,
-            file_size: item.file.size,
-            msg_id: msgId,
-            chat_id: chatId,
-            create_time: new Date().toISOString(),
-            update_time: new Date().toISOString(),
-          }
-          await chatFileStoreService.addFile(fileStoreDb);
-       }
-       
-    })
+        const text = await FileReaderUtil.parseFile(item.file);
+        const fileStoreDb:ChatFileStoreDb = {
+          id: 0,
+          file_name: fileName,
+          file_md5: fileMd5,
+          file_content: text,
+          file_type: item.file.type,
+          file_size: item.file.size,
+          msg_id: msgId,
+          chat_id: chatId,
+          create_time: new Date().toISOString(),
+          update_time: new Date().toISOString(),
+        };
+        await chatFileStoreService.addFile(fileStoreDb);
+      }
+    }));
   }
   /**
    * 获取指定会话的消息列表
@@ -101,7 +102,7 @@ export class ChatMsgStorageService {
     try {
       const result =  await this.messageManager.getMessagesByChatId(chatId);
       return result.map(item => {
-        const placement: messageType['placement'] = item.role === 'user' ? 'end' : 'start'
+        const placement: messageType['placement'] = item.role === ChatRole.USER ? 'end' : 'start'
         return {
             key: item.msg_id,
             content: item.content,
@@ -110,7 +111,7 @@ export class ChatMsgStorageService {
             reasoning_content: item.reasoning_content,
             nowTime: item.nowTime,
             thinkingStatus: 'end',
-            role: item.role as 'system' | 'user' | 'assistant',
+            role: item.role,
             create_time: item.create_time,
             update_time: item.update_time,
             placement,
@@ -121,6 +122,17 @@ export class ChatMsgStorageService {
       console.error(`获取会话[${chatId}]消息失败:`, error);
       throw new Error(`获取消息失败: ${(error as Error).message}`);
     }
+  }
+  async getMessageByChatAndMsgId(chatId: string, msgId:string): Promise<ChatMessageDb|null>{
+    if (!chatId || !msgId) {
+      throw new Error('会话ID和消息Key不能为空');
+    }
+    const result = await this.messageManager.getMessageByChatIdAndMsgId(chatId, msgId);
+    if(!result){
+      return null;
+    }
+
+    return result
   }
   /**
    * 批量删除指定会话中的多个消息
@@ -137,6 +149,7 @@ export class ChatMsgStorageService {
     }
 
     try {
+      await chatFileStoreService.deleteFileByChatAndMsgIds(chatId, keys);
       return await this.messageManager.deleteMessagesByChatIdAndKeys(chatId, keys);
     } catch (error) {
       console.error(`批量删除会话[${chatId}]中的消息失败:`, error);
@@ -178,6 +191,7 @@ export class ChatMsgStorageService {
     }
 
     try {
+      await chatFileStoreService.deleteFilesByChatAndMsg(chatId, key);
       return await this.messageManager.deleteMessageByChatIdAndKey(chatId, key);
     } catch (error) {
       console.error(`删除消息[${chatId}-${key}]失败:`, error);

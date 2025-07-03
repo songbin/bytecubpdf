@@ -9,10 +9,10 @@ export class LlmImageMessage {
 }
 
 export class LlmMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: string;
   content: string | LlmImageMessage[];
 
-  constructor(role: 'user' | 'assistant' | 'system', content: string | LlmImageMessage[]) {
+  constructor(role: string, content: string | LlmImageMessage[]) {
     this.role = role;
     this.content = content;
   }
@@ -97,11 +97,11 @@ export class LlmRequestModel {
     return JSON.stringify(this.requestParam);
   }
 
-  buildMessage(role:'user' | 'assistant' | 'system', content:string | LlmImageMessage[]): LlmMessage {
+  buildMessage(role:string, content:string | LlmImageMessage[]): LlmMessage {
     return new LlmMessage(role, content);
   }
 
-  buildImageMessage(role:'user' | 'assistant' | 'system', imageUrl: string): LlmMessage {
+  buildImageMessage(role:string, imageUrl: string): LlmMessage {
     return new LlmMessage(role, [new LlmImageMessage(imageUrl)]);
   }
 

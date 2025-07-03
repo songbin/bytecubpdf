@@ -61,7 +61,13 @@ export class ChatMessageManager {
             ORDER BY id ASC
         `, [this.sanitizeString(chatId)]);
     }
-
+    async getMessageByChatIdAndMsgId(chatId: string, msgId: string): Promise<ChatMessageDb | null> {
+        const result = await SqliteDbCore.executeQuery<ChatMessageDb>(`
+            SELECT * FROM ${this.tableName}
+            WHERE chat_id = ? AND msg_id = ?
+        `, [this.sanitizeString(chatId), this.sanitizeString(msgId)]);
+        return result[0] || null;
+    }
     /**
      * 批量删除指定会话中的多个消息
      * @param chatId 会话ID

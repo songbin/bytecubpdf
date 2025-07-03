@@ -7,11 +7,12 @@ import {CustomOllama} from '@/renderer/llm/custom/CustomOllama'
 import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
 import { LLMAdapter } from '@/renderer/llm/LLMAdapter';
 import { LlmRequestModel,LlmMessageList } from "@/renderer/llm/model/LlmRequestModel";
+import {ChatRole} from '@/renderer/model/chat/ChatConfig'
 export class ChatService {
   llmManager = new LlmModelManager()
   async call(platformId: string, modelId:string,temperature:number,maxTokens:number,prompt:string) {
     const messages = new LlmMessageList({
-        role: 'user', 
+        role: ChatRole.USER, 
         content: prompt
         });
     const adapter = await this._buildAdapter(platformId, modelId,temperature,maxTokens,false);
@@ -62,7 +63,7 @@ export class ChatService {
         // console.log(JSON.stringify(config))
          // 根据平台协议类型选择不同的AI客户端
         const messages = new LlmMessageList({
-            role: 'user', 
+            role: ChatRole.USER, 
             content: '你好'
             });
 

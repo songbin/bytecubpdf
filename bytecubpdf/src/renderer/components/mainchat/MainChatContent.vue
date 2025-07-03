@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
 import {FileUtil} from '@/renderer/utils/FileUtil'
+import {ChatRole} from '@/renderer/model/chat/ChatConfig'
 import type { BubbleListItemProps, BubbleListProps,BubbleListInstance } from 'vue-element-plus-x/types/BubbleList'
 import { BubbleList, MentionSender, Thinking,Attachments,FilesCard  } from 'vue-element-plus-x'
 import { useFileDialog } from '@vueuse/core';
@@ -150,7 +151,7 @@ const handleSendMessage = async () => {
     message.error('请配置密钥')
     return
   }
-  const role = 'user'
+  const role = ChatRole.USER
   const content = senderValue.value
   
   const messageUserItem = await buildMessageItem(role, content)
@@ -178,14 +179,17 @@ const askSSE = async () => {
     senderLoading.value = true
     bubbleListRef.value?.scrollToBottom();
     controller.value = new AbortController();
+    const llmMessages = await ChatMsgToLLM(messages.value)
     const stream = chatService.stream(formData.value.platformId,
       formData.value.modelId,
       0.7,
       4096,
-      ChatMsgToLLM(messages.value),controller.value.signal, isThinking.value)
+      llmMessages,controller.value.signal, isThinking.value)
 
 
-    const messageAssistantItem = await buildMessageItem('assistant', '')
+    const messageAssistantItem = await buildMessageItem(ChatRole.ASSISTANT, '')
+
+     
     messages.value.push(messageAssistantItem)
     for await (const chunk of stream) {
       const message:LlmResModel = chunk
@@ -194,6 +198,7 @@ const askSSE = async () => {
       messages.value[messages.value.length - 1].thinkingStatus = parseThinkStatus()
       await nextTick();
     }
+     
     try {
       await chatMsgStorageService.saveMessage(messageAssistantItem, [])
       senderLoading.value = false
@@ -220,21 +225,21 @@ const parseThinkStatus = () => {
   return 'thinking'
 }
 
-const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: string) => {
+const buildMessageItem = async (role: string, content: string) => {
 
-  const placement: messageType['placement'] = role === 'user' ? 'end' : 'start'
+  const placement: messageType['placement'] = role === ChatRole.USER ? 'end' : 'start'
   const loading = false
   const shape: messageType['shape'] = 'corner'
-  const variant: messageType['variant'] = role === 'system' ? 'filled' : 'outlined'
+  const variant: messageType['variant'] = role === ChatRole.SYSTEM ? 'filled' : 'outlined'
   const isMarkdown = true
-  const typing = role === 'assistant' ? true : false
-  const isFog = role === 'assistant' ? true : false
-  const avatar = role === 'user' ? userAvatar : aiAvatar
+  const typing = role === ChatRole.ASSISTANT ? true : false
+  const isFog = role === ChatRole.ASSISTANT ? true : false
+  const avatar = role === ChatRole.USER ? userAvatar : aiAvatar
   const key = buildId();
   const reasoning_content = ''//?: string
   const nowTime = new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-').replace(/\s/, ' ');
   let fileList = '[]'
-  if(role === 'user'){
+  if(role === ChatRole.USER){
     const fileListStr = uploadFilesList.value.map((file) => file.name)
     fileList = JSON.stringify(fileListStr)
   }
@@ -260,7 +265,7 @@ const buildMessageItem = async (role: 'system' | 'user' | 'assistant', content: 
 }
 // 监听属性chatId的变化
 watch(() => props.chatId, async (newChatId, oldChatId) => {
-  console.log('newChatId',newChatId , 'oldChatId', oldChatId)
+  // console.log('newChatId',newChatId , 'oldChatId', oldChatId)
         if(!newChatId){
           messages.value = []
           disableSender.value = true
@@ -332,7 +337,7 @@ const copyMessageItem = (item:messageType) =>{
   let content = item.content;
  
   if(content){
-    if(item.role == 'assistant'){
+    if(item.role == ChatRole.ASSISTANT){
       // content = content + '\n来自小书芽(DocFable.com)'
     }
     navigator.clipboard.writeText(content).then(() => {
@@ -350,7 +355,7 @@ const refreshMessage = async (item:messageType) =>{
     return;
   }
   let deleteMessages = []
-  if(item.role == 'user'){
+  if(item.role == ChatRole.USER){
     //保留当前item以及之前的item
     deleteMessages = messages.value.slice(index + 1);
     messages.value = messages.value.slice(0, index + 1);
@@ -456,7 +461,7 @@ watch(
           <template #header="{ item }">
             <div class="header-wrapper">
               <div class="header-name">
-                {{ item.role === 'user' ? item.nowTime + ' 用户' : '小书芽 ' + item.nowTime }}
+                {{ item.role === ChatRole.USER ? item.nowTime + ' 用户' : '小书芽 ' + item.nowTime }}
               </div>
             </div>
             <Thinking 

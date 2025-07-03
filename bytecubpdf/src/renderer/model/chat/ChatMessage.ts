@@ -4,7 +4,7 @@ import type { ConversationItem } from 'vue-element-plus-x/types/Conversations'
 import type { FilesCardProps } from 'vue-element-plus-x/types/FilesCard';
 export type messageType = BubbleListItemProps & {
   key: string;
-  role: 'system' | 'user' | 'assistant';
+  role: string;
   thinkingStatus?: ThinkingStatus;
   thinlCollapse?: boolean;
   nowTime:string;

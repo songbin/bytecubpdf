@@ -45,6 +45,15 @@ export class ChatFileStoreService {
         }
     }
 
+    async getFileByChatIdAndMsgId(chatId: string, msgId: string): Promise<ChatFileStoreDb[]> {
+        try {
+            return await chatFileStoreManager.getFileByChatIdAndMsgId(chatId, msgId);
+        } catch (error) {
+            console.error('获取聊天消息文件失败:', error);
+            throw new Error('获取聊天消息文件时发生错误');
+        }
+    }
+
     async updateFile(chatId: string, msgId:string, file: Partial<ChatFileStoreDb>): Promise<boolean> {
         try {
             return await chatFileStoreManager.updateFileByChatAndMsg(chatId, msgId, file);
@@ -66,6 +75,15 @@ export class ChatFileStoreService {
     async deleteFilesByChatAndMsg(chatId: string, msgId: string): Promise<boolean> {
         try {
             return await chatFileStoreManager.deleteFilesByChatAndMsg(chatId, msgId);
+        } catch (error) {
+            console.error('删除聊天消息文件失败:', error);
+            throw new Error('删除聊天消息文件时发生错误');
+        }
+    }
+
+    async deleteFileByChatAndMsgIds(chatId: string, msgIds: string[]): Promise<boolean> {
+        try {
+            return await chatFileStoreManager.deleteFilesByChatAndMsgIds(chatId, msgIds);
         } catch (error) {
             console.error('删除聊天消息文件失败:', error);
             throw new Error('删除聊天消息文件时发生错误');

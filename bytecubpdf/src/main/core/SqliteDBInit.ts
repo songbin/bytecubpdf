@@ -58,7 +58,6 @@ export class SqliteDBInit {
         await db.exec('CREATE INDEX IF NOT EXISTS idx_chat_file_store_file_md5 ON chat_file_store(file_md5)');
         await db.exec('CREATE INDEX IF NOT EXISTS idx_chat_file_store_chat_id ON chat_file_store(chat_id)');
         await db.exec('CREATE INDEX IF NOT EXISTS idx_chat_file_store_msg_id ON chat_file_store(msg_id)');
-        await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_file_store_chat_msg ON chat_file_store(chat_id, msg_id)');
         await db.exec(`
             CREATE TRIGGER IF NOT EXISTS update_chat_file_store_timestamp 
             AFTER UPDATE ON chat_file_store 
