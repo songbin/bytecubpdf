@@ -46,4 +46,28 @@ export class FileUtil{
       loadNext();
     });
   }
+
+  //实现一个根据file计算base64得方法
+  static async getFileBase64(file: File): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const fileReader = new FileReader();
+      fileReader.readAsDataURL(file);
+      fileReader.onload = (e) => {
+        try {
+          const base64 = e.target?.result as string;
+         
+          resolve(base64);
+        } catch (error) {
+          console.log(error)
+          reject(new Error('Failed to process file'));
+        }
+      };
+
+      fileReader.onerror = () => {
+        console.log('base64 读取失败')
+        reject(new Error('Failed to read file'));
+      };
+    });
+  }
+
 }

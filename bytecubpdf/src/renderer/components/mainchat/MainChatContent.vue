@@ -472,11 +472,11 @@ watch(
               class="thinking-chain-warp"
             />
           </template>
-          <template #content="{item}">
+          <template #content="{item}" >
             <div class="content-wrapper">
               {{ item.content }}  
               <!-- 判断item.fileName，如果存在则显示名字 -->
-              <div v-if="item.fileList">
+              <div v-if="item.fileList && item.fileList.length > 3">
                  <FilesCard v-for="(fileName, index) in JSON.parse(item.fileList)" :key="index" :name="fileName" />
               </div>
             </div>

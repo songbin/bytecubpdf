@@ -1,10 +1,17 @@
 export class LlmImageMessage {
-  type: 'input_image';
-  image_url: string;
+  type: 'input_image' | 'text';
+  image_url?: any;
+  text?:string;
 
-  constructor(image_url: string) {
-    this.type = 'input_image';
-    this.image_url = image_url;
+  constructor(data: string, type :'input_image' | 'text') {
+    this.type = type;
+    // console.log('type=====>', type, '\ndata',data)
+    if('text' === type){
+      this.text = data
+      
+    }else{
+      this.image_url = data
+    }
   }
 }
 
@@ -97,12 +104,12 @@ export class LlmRequestModel {
     return JSON.stringify(this.requestParam);
   }
 
-  buildMessage(role:string, content:string | LlmImageMessage[]): LlmMessage {
+  static buildMessage(role:string, content:string | LlmImageMessage[]): LlmMessage {
     return new LlmMessage(role, content);
   }
 
-  buildImageMessage(role:string, imageUrl: string): LlmMessage {
-    return new LlmMessage(role, [new LlmImageMessage(imageUrl)]);
+  static buildImageMessageContent(role:string, data: string, type:'input_image' | 'text'): LlmImageMessage {
+    return new LlmImageMessage(data, type);
   }
 
   messageToString( ){

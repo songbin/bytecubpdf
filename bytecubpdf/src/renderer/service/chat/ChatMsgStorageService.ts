@@ -3,11 +3,10 @@ import { ChatMessageDb } from '@/renderer/model/chat/db/ChatMessageDb';
 import { messageType,FilesList } from '@/renderer/model/chat/ChatMessage'
 import {chatFileStoreService} from '@/renderer/service/chat/ChatFileStoreService';
 import type { BubbleListItemProps, BubbleListProps } from 'vue-element-plus-x/types/BubbleList'
-import {AcceptFileType} from '@/renderer/model/chat/ChatConfig';
 import {FileReaderUtil} from '@/renderer/utils/FileReaderUtil';
 import { FileUtil } from '@/renderer/utils/FileUtil';
 import {ChatFileStoreDb} from '@/renderer/model/chat/db/ChatFileStoreDb';
-import {ChatRole} from '@/renderer/model/chat/ChatConfig'
+import {ChatRole,FileGroup,AcceptFileType} from '@/renderer/model/chat/ChatConfig'
 /**
  * 聊天消息存储服务 - 业务逻辑层
  * 封装数据库操作，处理业务规则和错误处理
@@ -72,7 +71,14 @@ export class ChatMsgStorageService {
       const fileExist = await chatFileStoreService.checkFileExist(chatId, fileMd5);
       
       if(!fileExist){
-        const text = await FileReaderUtil.parseFile(item.file);
+        let text = ''
+        const fileGroup = AcceptFileType.groupTypeByFileName(fileName)
+        if(fileGroup === FileGroup.IMAGE){
+          text = await FileUtil.getFileBase64(item.file);
+          
+        }else{
+          text = await FileReaderUtil.parseFile(item.file);
+        }
         const fileType = AcceptFileType.groupTypeByFileName(fileName)
         const fileStoreDb:ChatFileStoreDb = {
           id: 0,
