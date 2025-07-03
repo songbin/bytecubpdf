@@ -3,7 +3,7 @@ import { ChatMessageDb } from '@/renderer/model/chat/db/ChatMessageDb';
 import { messageType,FilesList } from '@/renderer/model/chat/ChatMessage'
 import {chatFileStoreService} from '@/renderer/service/chat/ChatFileStoreService';
 import type { BubbleListItemProps, BubbleListProps } from 'vue-element-plus-x/types/BubbleList'
-import { useMessage } from 'naive-ui'
+import {AcceptFileType} from '@/renderer/model/chat/ChatConfig';
 import {FileReaderUtil} from '@/renderer/utils/FileReaderUtil';
 import { FileUtil } from '@/renderer/utils/FileUtil';
 import {ChatFileStoreDb} from '@/renderer/model/chat/db/ChatFileStoreDb';
@@ -73,12 +73,13 @@ export class ChatMsgStorageService {
       
       if(!fileExist){
         const text = await FileReaderUtil.parseFile(item.file);
+        const fileType = AcceptFileType.groupTypeByFileName(fileName)
         const fileStoreDb:ChatFileStoreDb = {
           id: 0,
           file_name: fileName,
           file_md5: fileMd5,
           file_content: text,
-          file_type: item.file.type,
+          file_type: fileType,
           file_size: item.file.size,
           msg_id: msgId,
           chat_id: chatId,

@@ -150,6 +150,10 @@ export class ChatFileStoreManager {
         return result;
     }
 
+    public async deleteFilesByChatId(chatId: string): Promise<boolean> {
+        const result = await SqliteDbCore.executeQuery<{ changes: number }>(`DELETE FROM ${this.tableName} WHERE chat_id = ?`, [this.sanitizeString(chatId)]);
+        return result[0]?.changes! > 0;
+    }
    
 }
 

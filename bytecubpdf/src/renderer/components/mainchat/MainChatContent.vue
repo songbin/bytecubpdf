@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
-import {FileUtil} from '@/renderer/utils/FileUtil'
-import {ChatRole} from '@/renderer/model/chat/ChatConfig'
+import {ChatRole,AcceptFileType} from '@/renderer/model/chat/ChatConfig'
 import type { BubbleListItemProps, BubbleListProps,BubbleListInstance } from 'vue-element-plus-x/types/BubbleList'
 import { BubbleList, MentionSender, Thinking,Attachments,FilesCard  } from 'vue-element-plus-x'
 import { useFileDialog } from '@vueuse/core';
@@ -22,7 +21,6 @@ import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
 import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageService'
 import { LLM_PROTOCOL } from '@/renderer/constants/appconfig';
 import type { FilesCardProps } from 'vue-element-plus-x/types/FilesCard';
-import { FileReaderUtil } from '@/renderer/utils/FileReaderUtil';
 const chatService = new ChatService()
 const message = useMessage()
 const llmManager = new LlmModelManager();
@@ -60,7 +58,7 @@ const senderValue = ref('')
 const messages = ref<BubbleListProps<messageType>['list']>([]);
 const { reset, open, onChange } = useFileDialog({
   // 允许所有图片文件，文档文件，音视频文件
-  accept: '.docx,.xls,.xlsx,.pptx,.pdf,.txt,.md,.json,.csv,.xml,.yml,.yaml,.toml,.opml,.log,.ini,.properties,.sql,.js,.ts,.py,.html,.css,.rtf',
+  accept:  AcceptFileType.getTypeString(),
   directory: false, // 是否允许选择文件夹
   multiple: true, // 是否允许多选
 });

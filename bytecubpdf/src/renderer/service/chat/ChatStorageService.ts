@@ -2,6 +2,8 @@ import { ChatHistory } from '@/renderer/model/chat/db/ChatHistory';
 import { ChatHistoryManager } from '@/renderer/service/manager/chat/ChatHistoryManager';
 import { buildId } from '@/shared/utils/StringUtil';
 import { ChatModel } from '@/renderer/model/chat/ChatMessage';
+import { chatFileStoreService } from '@/renderer/service/chat/ChatFileStoreService';
+import { chatMsgStorageService } from '@/renderer/service/chat/ChatMsgStorageService';
 // const chatHistoryManager = new ChatHistoryManager();
 export class ChatStorageService {
     private static instance: ChatStorageService;
@@ -69,6 +71,8 @@ export class ChatStorageService {
     }
     // 删除聊天会话
     async deleteChatHistory(chatId: string): Promise<boolean> {
+        await chatMsgStorageService.clearChatMessages(chatId)
+        await chatFileStoreService.deleteFilesByChatId(chatId)
         return this.chatHistoryManager.deleteChatHistory(chatId);
     }
 

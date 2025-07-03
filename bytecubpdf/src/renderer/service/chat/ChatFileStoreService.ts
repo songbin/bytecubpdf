@@ -4,7 +4,7 @@
  */
 import { chatFileStoreManager } from '@/renderer/service/manager/chat/ChatFileStoreManager';
 import { ChatFileStoreDb } from '@/renderer/model/chat/db/ChatFileStoreDb';
-
+import { AcceptFileType } from '@/renderer/model/chat/ChatConfig';
 export class ChatFileStoreService {
     private static instance: ChatFileStoreService;
 
@@ -69,6 +69,15 @@ export class ChatFileStoreService {
         } catch (error) {
             console.error('删除文件失败:', error);
             throw new Error('删除文件时发生错误');
+        }
+    }
+
+    async deleteFilesByChatId(chatId: string): Promise<boolean> {
+        try {
+            return await chatFileStoreManager.deleteFilesByChatId(chatId);
+        } catch (error) {
+            console.error('删除聊天文件失败:', error);
+            throw new Error('删除聊天文件时发生错误');
         }
     }
 
