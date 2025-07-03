@@ -39,7 +39,7 @@ const buildContentPrompt = async (message:messageType):Promise<string|undefined>
     }
 
     const fileList:ChatFileStoreDb[] = await chatFileStoreService.getFileByChatIdAndMsgId(message.chatId, message.key)
-    console.log('查询到文件内容:', fileList)
+
     if(fileList.length == 0){
         return message.content
     }
