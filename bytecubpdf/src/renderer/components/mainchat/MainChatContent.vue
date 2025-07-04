@@ -2,7 +2,7 @@
 import { ref, onMounted, watch, nextTick } from 'vue';
 import {ChatRole,AcceptFileType} from '@/renderer/model/chat/ChatConfig'
 import type { BubbleListItemProps, BubbleListProps,BubbleListInstance } from 'vue-element-plus-x/types/BubbleList'
-import { BubbleList, MentionSender, Thinking,Attachments,FilesCard  } from 'vue-element-plus-x'
+import { BubbleList, MentionSender, Thinking,Attachments,FilesCard,Typewriter  } from 'vue-element-plus-x'
 import { useFileDialog } from '@vueuse/core';
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
@@ -177,7 +177,7 @@ const askSSE = async () => {
     senderLoading.value = true
     bubbleListRef.value?.scrollToBottom();
     controller.value = new AbortController();
-    const llmMessages = await ChatMsgToLLM(messages.value)
+    const llmMessages = await ChatMsgToLLM(messages.value,formData.value.platformId,formData.value.modelId)
     const stream = chatService.stream(formData.value.platformId,
       formData.value.modelId,
       0.7,
@@ -474,7 +474,8 @@ watch(
           </template>
           <template #content="{item}" >
             <div class="content-wrapper">
-              {{ item.content }}  
+              <!-- {{ item.content }}   -->
+              <Typewriter :content="item.content" :is-markdown="true" />
               <!-- 判断item.fileName，如果存在则显示名字 -->
               <div v-if="item.fileList && item.fileList.length > 3">
                  <FilesCard v-for="(fileName, index) in JSON.parse(item.fileList)" :key="index" :name="fileName" />

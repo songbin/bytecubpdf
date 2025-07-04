@@ -416,7 +416,7 @@ async function confirmModel() {
 async function removeModel(index: number) {
     try {
         const modelId = models.value[index].id
-        await llmManager.deleteModel(modelId)
+        await llmManager.deleteModel(formData.value.id, modelId)
         models.value.splice(index, 1)
         message.success(t('settings.model.messages.modelDeleteSuccess'))
     } catch (error) {

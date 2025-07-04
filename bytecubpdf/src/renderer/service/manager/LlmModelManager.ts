@@ -5,7 +5,7 @@ import SqliteDbCore from '@/renderer/service/core/SqliteDbCore';
 export class LlmModelManager {
     private readonly platformTable = 'llm_platforms';
     private readonly modelTable = 'llm_models';
-
+    
     // 添加或更新平台
     public async savePlatform(platform: Omit<SettingLLMPlatform, 'models'>): Promise<void> {
         const platformId = platform.id || crypto.randomUUID().replace(/-/g, '');
@@ -137,15 +137,16 @@ export class LlmModelManager {
     }
 
     // 获取单个模型
-    public async getModel(id: string): Promise<SettingLLMModel | null> {
+    public async getModel(platformId: string, modelId: string): Promise<SettingLLMModel | null> {
+
         const [model] = await SqliteDbCore.executeQuery<{
             id: string;
             platformId: string;
             name: string;
             types: string;
         }>(
-            `SELECT * FROM ${this.modelTable} WHERE id = ?`, 
-            [id]
+            `SELECT * FROM ${this.modelTable} WHERE platformId = ? AND id = ?`, 
+            [platformId, modelId]
         ) || [];
         
         if (!model) return null;
@@ -171,16 +172,16 @@ export class LlmModelManager {
     }
 
     // 删除模型
-    public async deleteModel(id: string): Promise<void> {
-        if (!id?.trim()) return;
+    public async deleteModel(platformId: string, modelId: string): Promise<void> {
+        if (!platformId?.trim() || !modelId?.trim()) return;
 
         try {
             // 静默处理不存在的情况
-            const existing = await this.getModel(id);
+            const existing = await this.getModel(platformId, modelId);
             if (!existing) return;
-
+            
             // 执行静默删除（不检查删除结果）
-            await SqliteDbCore.deleteData(this.modelTable, 'id = ?', [id]);
+            await SqliteDbCore.deleteData(this.modelTable, 'platformId = ? AND id = ?', [platformId, modelId]);
         } catch (error) {
             // 静默处理所有错误
             console.error('删除模型时发生静默错误:', error);

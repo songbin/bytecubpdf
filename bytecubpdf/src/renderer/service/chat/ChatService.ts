@@ -91,7 +91,8 @@ export class ChatService {
         if(!platform) {
             throw new Error('Platform not found')
         }
-        const modelInfo:SettingLLMModel|null = await this.llmManager.getModel(modelId);
+        const modelInfo:SettingLLMModel|null = await this.llmManager.getModel( platformId,modelId);
+
          if(!modelInfo) {
             throw new Error('model not found')
         }

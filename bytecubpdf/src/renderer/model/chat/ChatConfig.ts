@@ -50,3 +50,13 @@ export class AcceptFileType {
     }
 }
 
+
+export enum ModelFlag {
+    TEXT = 'text',
+    VISION = 'vision',
+    EMBEDDED = 'embedded',
+    MULTI = 'multi'
+}
+
+export type ModelType = ModelFlag
+

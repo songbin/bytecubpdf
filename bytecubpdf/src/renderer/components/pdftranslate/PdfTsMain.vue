@@ -536,7 +536,7 @@ const formatHistoryParams = async (resultData: any) => {
     : null;
 
   const model = formData.value.modelId
-    ? await llmManager.getModel(formData.value.modelId)
+    ? await llmManager.getModel(formData.value.platformId, formData.value.modelId)
     : null;
 
   
