@@ -1,9 +1,9 @@
 export class LlmImageMessage {
-  type: 'input_image' | 'text';
+  type: 'image_url' | 'text';
   image_url?: any;
   text?:string;
 
-  constructor(data: string, type :'input_image' | 'text') {
+  constructor(data: string, type :'image_url' | 'text') {
     this.type = type;
     // console.log('type=====>', type, '\ndata',data)
     if('text' === type){
@@ -54,7 +54,8 @@ export class LlmMessageList extends Array<LlmMessage> {
           role: message.role,
           content: message.content.map(imageMessage => ({
             type: imageMessage.type,
-            image_url: imageMessage.image_url
+            image_url: imageMessage.image_url,
+            text: imageMessage.text
           }))
         };
       }
@@ -108,7 +109,7 @@ export class LlmRequestModel {
     return new LlmMessage(role, content);
   }
 
-  static buildImageMessageContent(role:string, data: string, type:'input_image' | 'text'): LlmImageMessage {
+  static buildImageMessageContent(role:string, data: string, type:'image_url' | 'text'): LlmImageMessage {
     return new LlmImageMessage(data, type);
   }
 

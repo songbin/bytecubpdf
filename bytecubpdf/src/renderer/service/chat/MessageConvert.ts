@@ -21,6 +21,7 @@ export const ChatMsgToLLM = async (messages:BubbleListProps<messageType>['list']
         }
          
     }))
+    // console.log('llmMessages',JSON.stringify(  llmMessages ))
     return LlmMessageList.fromJsonArray(llmMessages)
 }
 
@@ -82,7 +83,7 @@ const buildContentPrompt = async (message:messageType):Promise<string | LlmImage
         const textTarget:LlmImageMessage = LlmRequestModel.buildImageMessageContent(message.role, textContent, 'text')
         targetResult.push(textTarget)
         for(let i = 0; i < image_base64.length; i++){
-            const imageTarget:LlmImageMessage = LlmRequestModel.buildImageMessageContent(message.role, image_base64[i], 'input_image')
+            const imageTarget:LlmImageMessage = LlmRequestModel.buildImageMessageContent(message.role, image_base64[i], 'image_url')
             targetResult.push(imageTarget)
         }
     }
