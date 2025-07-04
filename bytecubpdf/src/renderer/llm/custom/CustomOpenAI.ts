@@ -17,11 +17,19 @@ export class CustomOpenAI extends BaseLlmClient {
     }
    async call(messages: LlmMessageList): Promise<LlmResModel> {
         try {
+             let maxTokens = this.config.maxTokens;
+               if(this.config.modelName.toLowerCase().includes('glm-4v')){
+                    //GLM-V模型限制如果大于1024就设置为1024
+                    if(this.config.maxTokens > 1024){
+                        maxTokens = 1024;
+                    }
+
+               }
            const response = await this.llm.chat.completions.create({
                 model: this.config.modelName,
                 messages: messages.toJsonArray(),
                 temperature: this.config.temperature,
-                max_tokens: this.config.maxTokens,
+                max_tokens: maxTokens,
                 stream: false
             });
             return LlmResModel.fromObject(response, LLM_PROTOCOL.openai);
@@ -35,11 +43,20 @@ export class CustomOpenAI extends BaseLlmClient {
     async *stream(messages: LlmMessageList, signal: AbortSignal,thinking:boolean=false): AsyncGenerator<LlmResModel> {
 
         try{
+               //计算maxToken，如果模型名包括GLM-4V忽略大小写，则maxToken最大为1024
+               let maxTokens = this.config.maxTokens;
+               if(this.config.modelName.toLowerCase().includes('glm-4v')){
+                    //GLM-V模型限制如果大于1024就设置为1024
+                    if(this.config.maxTokens > 1024){
+                        maxTokens = 1024;
+                    }
+
+               }
                 const stream = await this.llm.chat.completions.create({
                         model: this.config.modelName,
                         messages: messages.toJsonArray(),
                         temperature: this.config.temperature,
-                        max_tokens: this.config.maxTokens,
+                        max_tokens: maxTokens,
                         stream: true
                     });
                 for await (const chunk of stream) {
