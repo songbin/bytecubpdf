@@ -1,4 +1,8 @@
 <script lang="ts" setup>
+defineOptions({
+  name: 'PdfCompareViewer'
+})
+
 import VuePdfEmbed from 'vue-pdf-embed'
 import { ref, watch, onMounted, nextTick, shallowRef, onBeforeUnmount } from 'vue'
 import {
@@ -13,6 +17,7 @@ import {
 // optional styles
 import 'vue-pdf-embed/dist/styles/annotationLayer.css'
 import 'vue-pdf-embed/dist/styles/textLayer.css'
+ 
 interface Props {
   filePathLeft: string
   filePathRight: string

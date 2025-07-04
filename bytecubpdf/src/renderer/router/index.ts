@@ -11,7 +11,8 @@ const routes: Array<RouteRecordRaw> = [
     name: 'MainChat',
     component: MainChatView,
     meta: {
-      title: '聊天'
+      title: '聊天',
+      keepAlive: true  // 需要缓存
     }
   },
   {
@@ -19,7 +20,8 @@ const routes: Array<RouteRecordRaw> = [
     name: 'PdfTranslate',
     component: PdfTranslateView,
     meta: {
-      title: '首页'
+      title: '首页',
+      keepAlive: true  // 需要缓存
     }
   },
  
@@ -37,7 +39,8 @@ const routes: Array<RouteRecordRaw> = [
         name: 'ModelSettings',
         component: ModelSettings,
         meta: {
-          title: '大模型设置'
+          title: '大模型设置',
+          keepAlive: true  // 需要缓存
         },
         props: (route) => ({  // 添加props传递
           platformId: route.params.platformId

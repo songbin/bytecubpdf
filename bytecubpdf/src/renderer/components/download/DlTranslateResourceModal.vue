@@ -85,6 +85,9 @@
   import { NProgress, NAlert, NSpace, NModal, NCard, NButton, NList, 
     NListItem, NCollapseTransition,useDialog,NSwitch,NThing,NTag,NFlex,NIcon } from 'naive-ui';
   import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
+  defineOptions({
+  name: 'DlTranslateResourceModal'
+})
   interface DownloadItem {
     name: string;
     progress: number;

@@ -225,7 +225,10 @@ import { Maximize, Close } from '@vicons/carbon';
 import MarkdownViewer from '@/renderer/components/pdftranslate/ocr/MarkdownView.vue'
 import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
 const historyManager = new TranslateHistoryManager();
+defineOptions({
+  name: 'OcrHistory'
 
+})
 // 表格列定义
 // 在导入部分添加 TableColumn 类型
 import { TableColumn } from 'naive-ui/es/data-table/src/interface';

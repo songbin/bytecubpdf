@@ -30,6 +30,10 @@
 </template>
 
 <script lang="ts" setup>
+defineOptions({
+  name: 'TermsManager'
+})
+
 import type { DataTableColumns } from 'naive-ui'
 import { NInput, NButton, NSpace, NDataTable,NPagination } from 'naive-ui'
 import { h, ref,onMounted } from 'vue'

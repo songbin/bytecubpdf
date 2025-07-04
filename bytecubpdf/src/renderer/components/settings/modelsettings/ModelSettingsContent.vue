@@ -169,6 +169,9 @@
 </template>
 
 <script lang="ts" setup>
+defineOptions({
+  name: 'ModelSettingsContent'
+})
 import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue' 

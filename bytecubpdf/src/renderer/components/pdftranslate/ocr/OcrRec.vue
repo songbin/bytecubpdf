@@ -143,6 +143,10 @@ import OcrRecIndexDb from '@/renderer/service/indexdb/OcrRecIndexDb';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { backendReady ,startCheckingBackendStatus, duration, formatDuration } from '@/renderer/service/backendStatus';
 import { TranslateHistoryManager } from '@/renderer/service/manager/TranslateHistoryManager';
+defineOptions({
+  name: 'OcrRec'
+
+})
 const { t } = useI18n();
 const message = useMessage();
 const uploadData = ref<Record<string, any>>({});
@@ -468,7 +472,7 @@ const formatHistoryParams = async (resultData: any) => {
     : null;
 
   const model = formData.value.modelId
-    ? await llmManager.getModel(formData.value.modelId)
+    ? await llmManager.getModel(formData.value.platformId, formData.value.modelId)
     : null;
 
   const params = {

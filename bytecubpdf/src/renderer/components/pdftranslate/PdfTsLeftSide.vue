@@ -1,4 +1,8 @@
 <script lang="ts" setup>
+defineOptions({
+  name: 'PdfTsLeftSide'
+})
+
 import { ref } from 'vue'
 import { NButton, NFlex, NIcon, NTabs, NTabPane } from 'naive-ui'
 import { DocumentAdd, RecordingFilled,ScanAlt,ListBoxes,LoadBalancerListener } from '@vicons/carbon'

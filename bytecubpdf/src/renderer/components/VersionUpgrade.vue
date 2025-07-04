@@ -39,11 +39,15 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, computed, onMounted, watch } from 'vue';
-  import axios from 'axios';
-  import { VERSION } from '@/shared/constants/dfconstants';
-  import { NModal, NButton, useDialog,useMessage } from 'naive-ui'; // 添加 useDialog
-  import {useVersionCheck} from '@/renderer/service/VersionCheck'
+import { ref, computed, onMounted, watch } from 'vue';
+import axios from 'axios';
+import { VERSION } from '@/shared/constants/dfconstants';
+import { NModal, NButton, useDialog,useMessage } from 'naive-ui'; // 添加 useDialog
+import {useVersionCheck} from '@/renderer/service/VersionCheck'
+
+defineOptions({
+  name: 'VersionUpgrade'
+})
   const message = useMessage();
   const { checkForUpdates, upgradeInfo, isModalVisible } = useVersionCheck()
   

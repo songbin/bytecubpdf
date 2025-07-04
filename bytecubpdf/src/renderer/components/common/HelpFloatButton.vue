@@ -28,11 +28,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed,defineOptions } from 'vue'
 import { NFloatButton, NIcon,NTooltip } from 'naive-ui'
 import { QuestionMarkFilled as QuestionMark } from '@vicons/material'
 import { STATISTICS } from '@/renderer/constants/appconfig'
-
+defineOptions({
+  name: 'HelpFloatButton'
+})
 const props = defineProps({
   url: {
     type: String,

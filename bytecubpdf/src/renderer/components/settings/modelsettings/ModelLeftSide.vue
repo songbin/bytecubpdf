@@ -70,6 +70,10 @@
   </div>
 </template>
 <script lang="ts" setup>
+defineOptions({
+  name: 'ModelLeftSide'
+})
+
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NIcon, NFlex, NInput, NCard, useDialog,NForm,NSelect,NFormItem,NModal } from 'naive-ui'

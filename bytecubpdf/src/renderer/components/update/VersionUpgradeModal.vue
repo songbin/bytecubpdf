@@ -16,6 +16,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { VERSION } from '@/shared/constants/dfconstants';
+defineOptions({
+  name: 'VersionUpgradeModal'
+})
 interface UpgradeInfo {
   version: string;
   buildNumber: number;

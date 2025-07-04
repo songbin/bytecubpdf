@@ -15,9 +15,10 @@
       />
     </n-layout-sider>
     <n-layout-content>
-      <keep-alive include="PdfTsMain">
+      <keep-alive include="PdfTsMain,OcrRec">
         <component :is="activeTab === 'function' ? activeFunctionComponent : activeSettingsComponent" />
       </keep-alive>
+       
       <DlTranslateResourceModal 
         :filesToDownload= filesToDownload
        />

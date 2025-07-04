@@ -19,6 +19,9 @@
 import { ref, onMounted } from 'vue';
 import { NProgress, NAlert, NSpace } from 'naive-ui';
 import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
+defineOptions({
+  name: 'DownloadComponent'
+})
 interface DownloadItem {
   name: string;
   progress: number;

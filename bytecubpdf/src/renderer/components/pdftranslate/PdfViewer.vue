@@ -17,6 +17,10 @@
 </template>
 
 <script lang="ts" setup>
+defineOptions({
+  name: 'PdfViewer'
+})
+
 import { ref } from 'vue'
 interface Props {
   filePath: string

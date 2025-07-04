@@ -1,4 +1,8 @@
 <script setup lang="ts">
+defineOptions({
+  name: 'MainChatLeftSide'
+})
+
 import { ref,onMounted } from 'vue'
 import { Conversations } from 'vue-element-plus-x'
 import type { ConversationItem, ConversationMenuCommand } from 'vue-element-plus-x/types/Conversations'
@@ -118,7 +122,7 @@ onMounted(async () => {
           <Conversations 
             v-model:active="activeChatId" 
             :items="chatList" 
-            :label-max-width="160" 
+            :label-max-width="100" 
             :show-tooltip="true"
             row-key="id" 
             tooltip-placement="right" 

@@ -21,6 +21,9 @@ import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
 import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageService'
 import { LLM_PROTOCOL } from '@/renderer/constants/appconfig';
 import type { FilesCardProps } from 'vue-element-plus-x/types/FilesCard';
+defineOptions({
+  name: 'MainChatContent'
+})
 const chatService = new ChatService()
 const message = useMessage()
 const llmManager = new LlmModelManager();

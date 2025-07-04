@@ -40,7 +40,9 @@
   import 'katex/dist/katex.min.css'
   import DOMPurify from 'dompurify'
   import { NButton, NIcon, NSpin, NAlert,useMessage } from 'naive-ui'
-  
+  defineOptions({
+  name: 'MarkdownView'
+})
   interface Props {
     source: string | null // Markdown内容或URL
     title?: string

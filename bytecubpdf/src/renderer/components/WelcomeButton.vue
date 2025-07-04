@@ -5,6 +5,10 @@
 </template>
 
 <script lang="ts" setup>
+defineOptions({
+  name: 'WelcomeButton'
+})
+
 const props = defineProps({
   buttonText: {
     type: String,

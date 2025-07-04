@@ -23,6 +23,10 @@
 </template>
   
   <script lang="ts" setup>
+  defineOptions({
+    name: 'ModelSettings'
+  })
+  
   import { ref,watch } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { NLayout, NLayoutSider, NLayoutContent, NIcon } from 'naive-ui'
