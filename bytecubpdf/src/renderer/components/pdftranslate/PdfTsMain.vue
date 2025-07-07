@@ -216,11 +216,13 @@ import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
 import PdfTsIndexDb from '@/renderer/service/indexdb/PdfTsIndexDb';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { translateTermManager } from '@/renderer/service/manager/TranslateTermManager';
+import { usePdfTranslateStore } from '@/renderer/stores/modules/PdfTranslateStore'
 import { termsService } from '@/renderer/service/translate/TermsService';
 import { TranslateHistoryManager } from '@/renderer/service/manager/TranslateHistoryManager';
 // 导入组件DownloadComponent
 import DlTranslateResourceModal from '@/renderer/components/download/DlTranslateResourceModal.vue'
 import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
+import { storeToRefs } from 'pinia'
 const historyManager = new TranslateHistoryManager();
 const filesToDownload = ref<FileDownloadItem[]>([])
 const { t } = useI18n();
@@ -250,18 +252,21 @@ const formData = ref({
   verifyScanned:true,//是否开启扫描版检测
 
 });
-const fileList = ref<UploadFileInfo[]>([]);
-const translatedText = ref('');
-const errorMessage = ref('');
-const isLoading = ref(false);
-const isTranslationCompleted = ref(false);
-const progressVisible = ref(false);
-const progressPercentage = ref(0);
-const statusMessage = ref('');
-const abortController = ref<AbortController | null>(null);
-const statusClass = ref('');
-const startTime = ref<number>(Date.now());
-const startCheckTime = ref<number>(Date.now());
+const store = usePdfTranslateStore()
+const {
+  statusClass,
+  progressPercentage,
+  statusMessage,
+  isLoading,
+  progressVisible,
+  isTranslationCompleted,
+  fileList,
+  translatedText,
+  errorMessage,
+  abortController,
+  startTime,
+  startCheckTime
+} = storeToRefs(store)
 
 // 平台和模型数据
 const platforms = ref<Array<{ value: string; label: string }>>([]);
@@ -637,17 +642,22 @@ const handleTranslate = async () => {
 };
  const startTranslate = async () =>{
   try {
-    isLoading.value = true;
-    progressVisible.value = true;
-    progressPercentage.value = 0;
-    startTime.value = Date.now();
-    statusMessage.value = '正在初始化翻译任务...';
-    statusClass.value = 'processing';
+    store.setIsLoading(true);
+    //isLoading.value = true;
+    //progressVisible.value = true;
+    store.setProgressVisible(true);
+    //progressPercentage.value = 0; 
+    store.setProgressPercentage(0)
+    store.setStartTime(Date.now());
+    store.setStatusMessage('正在初始化翻译任务...')
+    //statusClass.value = 'processing';
+    store.setStatusClass('processing')
 
     if (abortController.value) {
       abortController.value.abort();
     }
-    abortController.value = new AbortController();
+    //abortController.value = new AbortController();
+    store.setAbortController(new AbortController());
 
     await fetchEventSource('http://localhost:8089/pdf/translate', {
       method: 'POST',
@@ -655,7 +665,7 @@ const handleTranslate = async () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(await formatRequestData()),
-      signal: abortController.value.signal,
+      signal: abortController.value?.signal,
       openWhenHidden: true,
       async onopen(response) {
         if (!response.ok) {
@@ -670,19 +680,23 @@ const handleTranslate = async () => {
 
           if (data.core === 'pdfmath') {
             if (data.progress >= 90) {
-              statusMessage.value = '正在生成翻译文件...';
+              store.setStatusMessage('正在生成翻译文件...');
+              //statusMessage.value = '正在生成翻译文件...';
             } else {
-              statusMessage.value = `已翻译 ${data.progress}% | 用时 ${timeUsed}s | 剩余约 ${remainingTime}s`;
+              store.setStatusMessage(`已翻译 ${data.progress}% | 用时 ${timeUsed}s | 剩余约 ${remainingTime}s`);
+              //statusMessage.value = `已翻译 ${data.progress}% | 用时 ${timeUsed}s | 剩余约 ${remainingTime}s`;
             }
           } else if (data.core === 'babeldoc') {
             const stage = data.stage || '未知阶段';
             const currentPage = data.current_page || '?';
             const totalPages = data.total_pages || '?';
-            statusMessage.value = `已翻译 ${data.progress}% | ${stage}(${currentPage}/${totalPages}) | 用时 ${timeUsed}s`;
+            store.setStatusMessage(`已翻译 ${data.progress}% | ${stage}(${currentPage}/${totalPages}) | 用时 ${timeUsed}s`);
+            //statusMessage.value = `已翻译 ${data.progress}% | ${stage}(${currentPage}/${totalPages}) | 用时 ${timeUsed}s`;
           }
 
-          progressPercentage.value = data.progress;
-          statusClass.value = 'processing';
+          store.setProgressPercentage(data.progress);
+          //statusClass.value = 'processing';
+          store.setStatusClass('processing');
         } else if (data.status === 'completed') {
           const serverTimeUsed = data.time_used || Math.floor((Date.now() - startTime.value) / 1000);
           const totalPages = data.result.total_pages || 1;
@@ -691,10 +705,13 @@ const handleTranslate = async () => {
 
           translatedText.value = data.result;
           isTranslationCompleted.value = true;
-          progressPercentage.value = 100;
-          statusMessage.value = `🎉 翻译完成 | 总耗时 ${serverTimeUsed}s | 均速 ${speed}页/秒 | 每页耗时 ${speedPerPage}s`;
-          statusClass.value = 'success';
-          abortController.value = null;
+          store.setProgressPercentage(100);
+          store.setStatusMessage(`🎉 翻译完成 | 总耗时 ${serverTimeUsed}s | 均速 ${speed}页/秒 | 每页耗时 ${speedPerPage}s`);
+          //statusMessage.value = `🎉 翻译完成 | 总耗时 ${serverTimeUsed}s | 均速 ${speed}页/秒 | 每页耗时 ${speedPerPage}s`;
+          store.setStatusClass('success');
+          //statusClass.value = 'success';
+          store.setAbortController(null);
+          //abortController.value = null;
 
           // 在翻译完成处理逻辑中修改为：
           formatHistoryParams(data.result).then(history => {
@@ -702,21 +719,30 @@ const handleTranslate = async () => {
           });
           console.log('翻译完成:', data);
         } else if (data.status === 'error') {
-          errorMessage.value = data.message;
-          statusMessage.value = `⚠️ 翻译失败: ${data.message}`;
-          statusClass.value = 'error';
-          abortController.value?.abort();
+          store.setErrorMessage(data.message);
+          //errorMessage.value = data.message;
+          store.setStatusMessage(`⚠️ 翻译失败: ${data.message}`);
+          //statusMessage.value = `⚠️ 翻译失败: ${data.message}`;
+          store.setStatusClass('error');
+          //statusClass.value = 'error';
+          store.setAbortController(null);
+          //abortController.value?.abort();
         }
       },
       onerror(err) {
-        errorMessage.value = err.message;
-        statusMessage.value = `⚠️ 连接服务器失败: ${err.message}`;
-        statusClass.value = 'error';
-        abortController.value?.abort();
+        store.setErrorMessage(err.message);
+        //errorMessage.value = err.message;
+        store.setStatusMessage(`⚠️ 连接服务器失败: ${err.message}`);
+        //statusMessage.value = `⚠️ 连接服务器失败: ${err.message}`;
+        store.setStatusClass('error');
+        //statusClass.value = 'error';
+        store.setAbortController(null);
+        //abortController.value?.abort();
       },
     });
   } finally {
-    isLoading.value = false;
+    store.setIsLoading(false);
+    //isLoading.value = false;
   }
 }
 
@@ -724,10 +750,13 @@ const handleTranslate = async () => {
 const handleAbort = () => {
   if (abortController.value) {
     console.log('终止翻译任务');
+    
     abortController.value.abort();
-    statusMessage.value = '⏹️ 翻译已手动终止';
-    statusClass.value = 'error';
-    abortController.value = null;
+    store.setStatusMessage('⏹️ 翻译已手动终止');
+    //statusMessage.value = '⏹️ 翻译已手动终止';
+    store.setStatusClass('error');
+    //statusClass.value = 'error';
+    store.setAbortController(null);
   }
 };
 const handleTermsSwitchChange = async (value: boolean) => {

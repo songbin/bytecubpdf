@@ -4,6 +4,7 @@ import router from './router'
 import { i18n } from '../shared/i18n'
 import { LogLevel } from '@/shared/constants/dfconstants'
 // import ElementPlusX from 'vue-element-plus-x'
+import { createPinia } from 'pinia'
 import * as pdfjsLib from "pdfjs-dist";
 // 配置 pdfjs-dist 的 worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -41,7 +42,10 @@ if ((window as any).window.electronAPI) {
     });
 }
 const app = createApp(App)
+const pinia = createPinia()
+app.use(pinia)
 app.use(i18n) // 引入i18n,必须在use router之前
 app.use(router)
+
 // app.use(ElementPlusX)
 app.mount('#app')
