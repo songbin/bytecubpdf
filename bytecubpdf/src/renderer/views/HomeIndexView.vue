@@ -26,7 +26,7 @@ const toChat = () => {
         </n-card>
         <n-card title="聊天会话" hoverable @click="toChat" style="cursor: pointer;">
             1. 可以选择大模型,自由对话<br/>
-            2. 可以和文件对话(仅限文件内容，拒绝大模型胡乱联想)
+            2. 可以和文件对话(可限制文件内容对话，拒绝大模型胡乱联想)
         </n-card>
         <n-card title="其他功能" hoverable style="cursor: pointer;">敬请期待……</n-card>
        
