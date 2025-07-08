@@ -144,8 +144,12 @@
             {{ backendReady ? `服务已就绪` : `服务启动中...（${formatDuration(duration)}）` }}
 
           </n-text>
+          
           <n-button attr-type="button" size="small" type="success" @click="handleTranslate" :disabled="isLoading">
             {{ t('pdfts.main.tsform.buttons.translate') }}
+          </n-button>
+           <n-button attr-type="button" size="small" type="info" @click="toChatPdf"  >
+           和PDF对话
           </n-button>
           <n-button attr-type="button" size="small" type="error" @click="handleAbort" :disabled="!isLoading">
             {{ t('pdfts.main.tsform.buttons.stop') }}
@@ -565,7 +569,9 @@ const formatHistoryParams = async (resultData: any) => {
   };
   return params;
 };
-
+const toChatPdf = () => {
+  router.push({ name: 'MainChat' })
+}
 // 修改翻译完成的处理逻辑
 // 开始翻译任务
 const handleTranslate = async () => {

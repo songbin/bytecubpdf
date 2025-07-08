@@ -21,6 +21,8 @@ import type { ThinkingStatus } from 'vue-element-plus-x/types/Thinking';
 import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageService'
 import { LLM_PROTOCOL } from '@/renderer/constants/appconfig';
 import type { FilesCardProps } from 'vue-element-plus-x/types/FilesCard';
+import { usePdfTranslateStore } from '@/renderer/stores/modules/PdfTranslateStore'
+const store = usePdfTranslateStore()
 defineOptions({
   name: 'MainChatContent'
 })
@@ -96,8 +98,7 @@ onChange(async (files) => {
 });
 
 function handleUploadFiles() {
-  open();
-  
+  open(); 
 }
 const loadMsg = async (chat_id:string , chat_name:string) => {
   if (!chatId || !chatName) {

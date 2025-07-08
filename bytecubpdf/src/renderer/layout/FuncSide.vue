@@ -1,6 +1,9 @@
 <template>
    <!--功能区域，目前只有一个doc-->
    <n-flex vertical align="center" >
+     <n-button circle @click="router.push({ name: 'HomeIndex' })">
+      <n-icon size="20"><Home /></n-icon>
+    </n-button>
      <n-button circle @click="router.push({ name: 'MainChat' })">
       <n-icon size="20"><ChatBot /></n-icon>
     </n-button>
@@ -15,7 +18,7 @@
 
 <script lang="ts" setup>
 import { onMounted } from 'vue'
-import {Document,ChatBot} from '@vicons/carbon'
+import {Document,ChatBot,Home} from '@vicons/carbon'
 import {NButton, NIcon, NFlex} from 'naive-ui'
 import { useRouter } from 'vue-router' // 新增路由导入
 

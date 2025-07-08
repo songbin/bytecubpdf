@@ -4,10 +4,20 @@ import SettingsView from '@/renderer/views/SettingsView.vue'
 import AboutView from '@/renderer/views/AboutView.vue'
 import ModelSettings from  '@/renderer/components/settings/ModelSettings.vue'
 import MainChatView from '@/renderer/views/MainChatView.vue'
+import HomeIndexView from '@/renderer/views/HomeIndexView.vue'
 // 路由配置
 const routes: Array<RouteRecordRaw> = [
-   {
+  {
     path: '/',
+    name: 'HomeIndex',
+    component: HomeIndexView,
+    meta: {
+      title: '主页',
+      keepAlive: false  // 需要缓存
+    }
+  },
+  {
+    path: '/chat',
     name: 'MainChat',
     component: MainChatView,
     meta: {
