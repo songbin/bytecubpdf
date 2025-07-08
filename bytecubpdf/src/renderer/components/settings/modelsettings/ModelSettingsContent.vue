@@ -66,7 +66,11 @@
                             {{ t('settings.model.list') }}
                         </n-button>
                     </n-text>
-                    <n-flex vertical :style="{ gap: '8px' }">
+                    <n-flex vertical :style="{
+                        gap: '8px',
+                        maxHeight: '260px',
+                        overflow: 'auto'
+                    }">
                         <n-flex v-for="(model, index) in models" :key="model.id" align="center" :style="{
                             padding: '8px 12px',
                             background: index % 2 === 0 ? 'rgba(250, 250, 252, 0.8)' : 'transparent',
