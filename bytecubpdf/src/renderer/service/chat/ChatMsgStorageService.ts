@@ -75,7 +75,6 @@ export class ChatMsgStorageService {
         const fileGroup = AcceptFileType.groupTypeByFileName(fileName)
         if(fileGroup === FileGroup.IMAGE){
           text = await FileUtil.getFileBase64(item.file);
-          
         }else{
           text = await FileReaderUtil.parseFile(item.file);
         }
@@ -86,6 +85,7 @@ export class ChatMsgStorageService {
           file_md5: fileMd5,
           file_content: text,
           file_type: fileType,
+          file_extent: fileName.substring(fileName.lastIndexOf('.') + 1),
           file_size: item.file.size,
           msg_id: msgId,
           chat_id: chatId,

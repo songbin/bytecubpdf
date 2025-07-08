@@ -6,7 +6,7 @@ import { BubbleList, MentionSender, Thinking,Attachments,FilesCard,Typewriter  }
 import { useFileDialog } from '@vueuse/core';
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
-import { NFlex, NButton, NIcon, NSelect, NTag, NTooltip, NButtonGroup, useMessage, NModal, NCard } from 'naive-ui'
+import { NFlex, NButton, NIcon, NSelect, NCheckbox, NTooltip, NButtonGroup, useMessage, NModal, NCard } from 'naive-ui'
 import { Delete, CopyFile, Edit, SendAlt, Light,ArrowRight,ArrowLeft } from '@vicons/carbon'
 import { Refresh, Attach, Add, TrainOutline as TrainIcon,CloseCircleOutline } from '@vicons/ionicons5';
 import { PaperClipOutlined } from '@vicons/antd';
@@ -22,6 +22,9 @@ import {chatMsgStorageService} from '@/renderer/service/chat/ChatMsgStorageServi
 import { LLM_PROTOCOL } from '@/renderer/constants/appconfig';
 import type { FilesCardProps } from 'vue-element-plus-x/types/FilesCard';
 import { usePdfTranslateStore } from '@/renderer/stores/modules/PdfTranslateStore'
+import {ModelFlag,LLMChatConfig,FileGroup} from '@/renderer/model/chat/ChatConfig'
+import { chatFileStoreManager } from '@/renderer/service/manager/chat/ChatFileStoreManager';
+import { chatFileStoreService } from '@/renderer/service/chat/ChatFileStoreService';
 const store = usePdfTranslateStore()
 defineOptions({
   name: 'MainChatContent'
@@ -39,6 +42,8 @@ const bubbleListRef = ref<BubbleListInstance | null>(null);
 const controller = ref<AbortController | null>(null);
 const isThinking = ref(false)
 const showThinking = ref(false)
+const checkChatOnlyFile = ref(false)
+const showCheckFile = ref(false)
 /**上传的附件列表，聊天也用个这个*/
 const uploadFilesList = ref<FilesList[]>([]);
  
@@ -91,6 +96,11 @@ onChange(async (files) => {
       imgVariant: 'square', // 图片预览的形状
       url: URL.createObjectURL(file), // 图片预览地址
     }); 
+    console.log('file type->', file.name)
+    const fileType = AcceptFileType.groupTypeByFileName(file.name)
+    if (fileType === FileGroup.FILE) {
+      showCheckFile.value = true
+    }
   }
    
   // 重置文件选择器
@@ -110,11 +120,17 @@ const loadMsg = async (chat_id:string , chat_name:string) => {
   try {
     const msgList = await chatMsgStorageService.getMessagesByChatId(chat_id)
     messages.value = msgList
+    await calcShowFileCheck()
   } catch (error) {
     message.error(`获取消息失败: ${error instanceof Error ? error.message : String(error)}`)
     return
   }
   
+}
+const calcShowFileCheck = async () => {
+  //根据messages.value里的item，看里面的fileList是不是有值，有值就把showCheckFile设置为true
+  const fileList = await chatFileStoreService.getFilesByChatIdAndFileType(chatId.value, FileGroup.FILE)
+  showCheckFile.value = fileList.length > 0
 }
 const handlePlatformChange = async (platformId: string) => {
   const modelList = await llmManager.getModelsByPlatform(platformId);
@@ -181,7 +197,8 @@ const askSSE = async () => {
     senderLoading.value = true
     bubbleListRef.value?.scrollToBottom();
     controller.value = new AbortController();
-    const llmMessages = await ChatMsgToLLM(messages.value,formData.value.platformId,formData.value.modelId)
+    const llmChatConfig = LLMChatConfig.buildSmallConfig(formData.value.platformId,formData.value.modelId, checkChatOnlyFile.value)
+    const llmMessages = await ChatMsgToLLM(messages.value,llmChatConfig)
     const stream = chatService.stream(formData.value.platformId,
       formData.value.modelId,
       0.7,
@@ -244,6 +261,7 @@ const buildMessageItem = async (role: string, content: string) => {
   if(role === ChatRole.USER){
     const fileListStr = uploadFilesList.value.map((file) => file.name)
     fileList = JSON.stringify(fileListStr)
+
   }
   return {
     key, // 唯一标识
@@ -405,8 +423,9 @@ const openHeader = () =>{
 }
 const handleDeleteCard = (_item: FilesCardProps, index: number) =>{
    uploadFilesList.value.splice(index, 1);
-  //  uploadFilesList.value = []
   if(uploadFilesList.value.length == 0){
+    showCheckFile.value = false
+    checkChatOnlyFile.value = false
     closeHeader()
   }
 }
@@ -531,8 +550,24 @@ watch(
 
       <div class="chat-tools mb-8px">
         <n-flex>
-          <n-button size="tiny">PDF翻译</n-button>
-          <n-button size="tiny">图片OCR</n-button>
+          <n-button size="tiny" secondary @click="handleShowSelectModel()">
+              <template #icon>
+                <n-icon><TrainIcon /></n-icon>
+              </template>
+              {{ formData.platformName }} | {{ formData.modelName }}
+            </n-button>
+             <div 
+              :class="{ isThinking }" 
+              class="thinking-toggle"
+              @click="isThinking = !isThinking"
+              v-if="showThinking"
+            >
+              <n-icon><Light /></n-icon>
+              <span>深度思考</span>
+            </div>
+            <n-checkbox v-model:checked="checkChatOnlyFile" style="margin-right: 12px" v-if="showCheckFile">
+              文件对话
+            </n-checkbox>
         </n-flex>
       </div>
 
@@ -587,22 +622,9 @@ watch(
               </template>
             </n-button>
             
-            <n-button size="tiny" secondary @click="handleShowSelectModel()">
-              <template #icon>
-                <n-icon><TrainIcon /></n-icon>
-              </template>
-              {{ formData.platformName }} | {{ formData.modelName }}
-            </n-button>
+           
 
-            <div 
-              :class="{ isThinking }" 
-              class="thinking-toggle"
-              @click="isThinking = !isThinking"
-              v-if="showThinking"
-            >
-              <n-icon><Light /></n-icon>
-              <span>深度思考</span>
-            </div>
+           
           </div>
         </template>
       </MentionSender>

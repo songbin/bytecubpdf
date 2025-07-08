@@ -19,12 +19,13 @@ export class ChatFileStoreManager {
     }
     public async addFile(file: ChatFileStoreDb): Promise<number> {
         const result = await SqliteDbCore.executeQuery<{ lastInsertRowid: number }>(
-            `INSERT INTO ${this.tableName} (file_name, file_md5, file_content, file_type, file_size, msg_id, chat_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO ${this.tableName} (file_name, file_md5, file_content, file_type, file_extent, file_size, msg_id, chat_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 this.sanitizeString(file.file_name), 
                 this.sanitizeString(file.file_md5), 
                 file.file_content, 
                 this.sanitizeString(file.file_type), 
+                this.sanitizeString(file.file_extent),
                 file.file_size, 
                 this.sanitizeString(file.msg_id), 
                 this.sanitizeString(file.chat_id)
@@ -40,6 +41,9 @@ export class ChatFileStoreManager {
 
     public async getFilesByChatId(chatId: string): Promise<ChatFileStoreDb[]> {
         return await SqliteDbCore.executeQuery<ChatFileStoreDb>(`SELECT * FROM ${this.tableName} WHERE chat_id = ?`, [this.sanitizeString(chatId)]);
+    }
+    async getFilesByChatIdAndFileType(chatId: string, fileType: string): Promise<ChatFileStoreDb[]> {
+        return await SqliteDbCore.executeQuery<ChatFileStoreDb>(`SELECT * FROM ${this.tableName} WHERE chat_id = ? AND file_type = ?`, [this.sanitizeString(chatId), this.sanitizeString(fileType)]);
     }
 
     public async getFilesByMsgId(msgId: string): Promise<ChatFileStoreDb[]> {
@@ -70,6 +74,10 @@ export class ChatFileStoreManager {
         if (file.file_type !== undefined) {
             fields.push('file_type = ?');
             values.push(this.sanitizeString(file.file_type));
+        }
+        if (file.file_extent !== undefined) {
+            fields.push('file_extent = ?');
+            values.push(this.sanitizeString(file.file_extent));
         }
 
         if (fields.length === 0) {
@@ -109,6 +117,10 @@ export class ChatFileStoreManager {
         if (file.chat_id !== undefined) {
             fields.push('chat_id = ?');
             values.push(this.sanitizeString(file.chat_id));
+        }
+        if (file.file_extent !== undefined) {
+            fields.push('file_extent = ?');
+            values.push(this.sanitizeString(file.file_extent));
         }
 
         if (fields.length === 0) {

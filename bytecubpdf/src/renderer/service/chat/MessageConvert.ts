@@ -6,18 +6,84 @@ import {chatFileStoreService} from '@/renderer/service/chat/ChatFileStoreService
 import {ChatFileStoreDb} from '@/renderer/model/chat/db/ChatFileStoreDb'
 import {ChatRole,FileGroup,AcceptFileType} from '@/renderer/model/chat/ChatConfig'
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager' 
-import {ModelFlag} from '@/renderer/model/chat/ChatConfig'
+import {ModelFlag,LLMChatConfig} from '@/renderer/model/chat/ChatConfig'
 const llmModelManager:LlmModelManager = new LlmModelManager()
 /**
  * 把聊天的数据格式转化为大模型提问的数据格式
  * 
 */
-export const ChatMsgToLLM = async (messages:BubbleListProps<messageType>['list'], platformId: string, modelId: string): Promise<LlmMessageList> =>{
+export const ChatMsgToLLM = async (messages:BubbleListProps<messageType>['list'], chatConfig:LLMChatConfig): Promise<LlmMessageList> =>{
+    if(messages.length == 0){
+        throw new Error('messages is empty')
+    }
+    let chatId = ''
+    if(messages.length > 0){
+        chatId = messages[0].chatId
+    }
+    let chatOnlyFile:boolean = chatConfig.isOnlyFileChat ?? false
+    const fileList = await chatFileStoreService.getFilesByChatIdAndFileType(chatId, FileGroup.FILE)
+    if(fileList.length < 1){
+        chatOnlyFile = false
+    }
+    if(!chatOnlyFile){
+        return buildNormalMessages(messages, chatConfig)
+    }
+    
+    return buildChatFileMessages(messages, chatConfig)
+    
+}
 
+const buildChatFileMessages = async (messages:BubbleListProps<messageType>['list'], chatConfig:LLMChatConfig): Promise<LlmMessageList> =>{
+    //判断messages是空则报错
+    if(messages.length < 1) {
+        throw new Error('messages is empty')
+    }
+    let chatId =  ''
+    const llmMessages = await Promise.all(messages.map( async (message) => { 
+        chatId = message.chatId
+        return {
+            role: message.role,
+            content: message.content
+        } 
+    }))
+
+    //把最后一个meesage取出来，重新赋值
+    const lastContent = llmMessages[llmMessages.length - 1].content
+    const newLastContent = await buildChatFilePrompt(chatId, lastContent)
+    llmMessages[llmMessages.length - 1].content = newLastContent
+    return LlmMessageList.fromJsonArray(llmMessages)
+}
+ const buildChatFilePrompt = async (chatId: string, query?: string): Promise<string> => {
+    const fileList = await chatFileStoreService.getFilesByChatIdAndFileType(chatId, FileGroup.FILE)
+    if (fileList.length < 1) {
+        return query ?? ''
+    }
+
+    // 标记每个文档的编号和名称，并保留原始内容
+    const fileContent = fileList
+        .map((file, index) => {
+            return `### 文档 ${index + 1}: ${file.file_name}\n\n${file.file_content}\n\n---`
+        })
+        .join('\n')
+
+    const prompt = `你是一个专注于阅读和总结多份文档的语言模型，你的任务是根据以下提供的完整文档内容，回答用户的问题。
+        请注意以下几点：
+        1. 所有文档内容均已列出，请基于这些内容生成答案，避免引入外部知识。
+        2. 尽可能使用原文中的语句进行回答，确保信息准确无误。
+        3. 若问题涉及多个文档，请综合所有相关内容进行回答。
+        4. 回答需简洁明了，直接回应用户的问题，必要时可用 Markdown 格式排版。
+        以下是用户的问题：
+        **${query}**
+        以下是你要参考的文档内容：
+        ${fileContent}
+        请根据上述文档内容，返回一个简洁且准确的答案：`
+    return prompt
+}
+const buildNormalMessages = async (messages:BubbleListProps<messageType>['list'], chatConfig:LLMChatConfig): Promise<LlmMessageList> =>{
+    const platformId:string = chatConfig.platformId??""
+    const modelId:string = chatConfig.modelId??""
     const llmMessages = await Promise.all(messages.map( async (message) => {
         const content_prompt:string | LlmImageMessage[] = await buildContentPrompt(message, platformId, modelId)
-
-        
         return {
             role: message.role,
             content: content_prompt || message.content

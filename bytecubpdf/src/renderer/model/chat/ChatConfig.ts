@@ -60,3 +60,36 @@ export enum ModelFlag {
 
 export type ModelType = ModelFlag
 
+export class LLMChatConfig {
+    isOnlyFileChat?:boolean;//是否仅限文件对话
+    platformId?:string;
+    modelId?:string;
+    modelType?:ModelType;
+    maxTokens?:number;
+    temperature?:number;
+    topP?:number;
+    frequencyPenalty?:number;
+    presencePenalty?:number;
+    public static buildSmallConfig(platformId:string,modelId:string,isOnlyFileChat:boolean){
+        const config = new LLMChatConfig()
+        config.platformId = platformId
+        config.modelId = modelId
+        config.isOnlyFileChat = isOnlyFileChat
+        return config
+    }
+    public static buildConfig(platformId:string,modelId:string,modelType:ModelType,maxTokens:number,temperature:number,topP:number,frequencyPenalty:number,presencePenalty:number,isOnlyFileChat:boolean){
+        const config = new LLMChatConfig()
+        config.platformId = platformId
+        config.modelId = modelId
+        config.modelType = modelType
+        config.maxTokens = maxTokens
+        config.temperature = temperature
+        config.topP = topP
+        config.frequencyPenalty = frequencyPenalty
+        config.presencePenalty = presencePenalty
+        config.isOnlyFileChat = isOnlyFileChat
+        return config
+    }
+ 
+}
+

@@ -27,6 +27,7 @@ export class SqliteDBInit {
                 file_md5 TEXT NOT NULL, -- 文件md5值
                 file_content TEXT NOT NULL, -- 文件内容
                 file_type TEXT NOT NULL, -- 文件类型
+                file_extent TEXT NOT NULL, -- 文件后缀
                 msg_id TEXT NOT NULL, -- 关联messageId
                 chat_id TEXT NOT NULL, -- 关联chatId
                 file_size INTEGER NOT NULL DEFAULT 0, -- 文件大小

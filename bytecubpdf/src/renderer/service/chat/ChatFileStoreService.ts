@@ -35,6 +35,14 @@ export class ChatFileStoreService {
             throw new Error('获取聊天文件时发生错误');
         }
     }
+    async getFilesByChatIdAndFileType(chatId: string, fileType: string): Promise<ChatFileStoreDb[]> {
+        try {
+            return await chatFileStoreManager.getFilesByChatIdAndFileType(chatId, fileType);
+        } catch (error) {
+            console.error('获取聊天文件失败:', error);
+            throw new Error('获取聊天文件时发生错误');
+        }
+    }
 
     async getFilesByMsgId(msgId: string): Promise<ChatFileStoreDb[]> {
         try {
