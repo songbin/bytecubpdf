@@ -242,13 +242,13 @@ const formData = ref({
   platformId: '',
   modelId: '',
   engine: 'babeldoc',
-  threadCount: 4,
+  threadCount: 32,
   enableTerms: false, // 新增术语开关字段
   maxPages: 0, // 新增每页最大页数字段
   enableOCR: false,  // 新增OCR识别字段
   disableRichText: false,  // 新增禁用富文字段
   enableTable: false,  // 新增表格翻译字段
-  enableDual: false,  // 新增双语对照字段
+  enableDual: true,  // 新增双语对照字段
   verifyScanned:true,//是否开启扫描版检测
 
 });
