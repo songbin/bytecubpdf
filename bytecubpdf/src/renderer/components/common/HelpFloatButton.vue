@@ -1,35 +1,37 @@
 <template>
   <div class="float-container">
-    <n-tooltip trigger="hover" placement="right">
+    <div v-if="show">
+    <n-float-button-group shape="square" position="relative" placement="right" style="position: fixed;"  :right="10" :bottom="20">
+      <n-tooltip trigger="hover" >
         <template #trigger>
-    <n-float-button
-      :right="20"
-      :bottom="20"
-      type="primary"
-      @click="handleClick"
-      v-model:show="show"
-      style="position: fixed;"
-    >
-      <template #description>
-        <n-icon :component="QuestionMark" size="20" />
-      </template>
-    </n-float-button>
-    </template>
-    使用帮助,点击查看
-    </n-tooltip>
-    <!-- <iframe 
-      class="statistics-iframe"
-      :src="STATISTICS.getUrl(pageName)" 
-      height="2" 
-      width="100%" 
-      frameborder="0">
-    </iframe> -->
+          <n-float-button  @click="handleClick">
+            <template #description>
+              <n-icon :component="QuestionMark" size="20" />
+            </template>
+          </n-float-button>
+        </template>
+        点击打开本功能使用帮助
+      </n-tooltip>
+      <n-tooltip trigger="hover" placement="left-end">
+        <template #trigger>
+          <n-float-button  @click="closeHelp">
+            <template #description>
+               关闭
+            </template>
+          </n-float-button>
+        </template>
+        点击关闭帮助悬浮按钮
+      </n-tooltip>
+    </n-float-button-group>
+    </div>
+    <iframe class="statistics-iframe" :src="STATISTICS.getUrl(pageName)" height="2" width="100%" frameborder="0">
+    </iframe>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed,defineOptions } from 'vue'
-import { NFloatButton, NIcon,NTooltip } from 'naive-ui'
+import { ref, computed, defineOptions } from 'vue'
+import { NFloatButton, NIcon, NTooltip, NFloatButtonGroup } from 'naive-ui'
 import { QuestionMarkFilled as QuestionMark } from '@vicons/material'
 import { STATISTICS } from '@/renderer/constants/appconfig'
 defineOptions({
@@ -48,7 +50,10 @@ const pageName = computed(() => {
   const parts = props.url.split('/')
   return parts[parts.length - 1].replace('.html', '')
 })
-
+const closeHelp = () => {
+  console.log('closeHelp')
+  show.value = false
+}
 const handleClick = () => {
   const open = (window as any).window.electronAPI?.openExternal || window.open
   open(props.url)
@@ -67,6 +72,7 @@ const handleClick = () => {
 .n-float-button {
   pointer-events: auto;
 }
+
 .btn-text {
   margin-left: 8px;
 }

@@ -30,8 +30,8 @@ export enum LogLevel {
     ERROR = 3
   }
 export const VERSION = {
-    "version" : 'v0.5.5', //以后版本号前面要加个v，和version文件保持一致
-    "buildNumber" : 20250063001
+    "version" : 'v0.6.0', //以后版本号前面要加个v，和version文件保持一致
+    "buildNumber" : 20250070901
 }
 //下载模型字体等资源文件的请求参数格式
 export type FileDownloadItem = {

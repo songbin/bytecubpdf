@@ -2,7 +2,7 @@
 import { NCard,NFlex,NButton } from 'naive-ui';
 import { useRouter } from 'vue-router';
 import { ref } from 'vue';
-
+import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
 const router = useRouter();
 const toDocTools = () => {
     router.push({
@@ -31,7 +31,7 @@ const toChat = () => {
         <n-card title="其他功能" hoverable style="cursor: pointer;">敬请期待……</n-card>
        
     </n-flex>
-     
+     <HelpFloatButton url="https://www.docfable.com" />
   </div>
 </template>
 

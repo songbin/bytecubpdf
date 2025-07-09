@@ -25,6 +25,7 @@ import { usePdfTranslateStore } from '@/renderer/stores/modules/PdfTranslateStor
 import {ModelFlag,LLMChatConfig,FileGroup} from '@/renderer/model/chat/ChatConfig'
 import { chatFileStoreManager } from '@/renderer/service/manager/chat/ChatFileStoreManager';
 import { chatFileStoreService } from '@/renderer/service/chat/ChatFileStoreService';
+import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
 const store = usePdfTranslateStore()
 defineOptions({
   name: 'MainChatContent'
@@ -671,6 +672,8 @@ watch(
         </n-flex>
       </n-card>
     </n-modal>
+
+     <HelpFloatButton url="https://www.docfable.com/docs/usage/chat/mainchat.html" />
   </div>
 </template>
 
