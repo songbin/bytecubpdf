@@ -122,7 +122,7 @@ onMounted(async () => {
           <Conversations 
             v-model:active="activeChatId" 
             :items="chatList" 
-            :label-max-width="100" 
+            :label-max-width="180" 
             :show-tooltip="true"
             row-key="id" 
             tooltip-placement="right" 

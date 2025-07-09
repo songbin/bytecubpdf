@@ -8,7 +8,7 @@ import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
 import { NFlex, NButton, NIcon, NSelect, NCheckbox, NTooltip, NButtonGroup, useMessage, NModal, NCard } from 'naive-ui'
 import { Delete, CopyFile, Edit, SendAlt, Light,ArrowRight,ArrowLeft } from '@vicons/carbon'
-import { Refresh, Attach, Add, TrainOutline as TrainIcon,CloseCircleOutline } from '@vicons/ionicons5';
+import { Refresh, Attach, Add, TrainOutline as TrainIcon,CloseCircleOutline,HelpCircle } from '@vicons/ionicons5';
 import { PaperClipOutlined } from '@vicons/antd';
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
 import MainChatIndexDb from '@/renderer/service/indexdb/MainChatIndexDb';
@@ -566,7 +566,14 @@ watch(
               <span>深度思考</span>
             </div>
             <n-checkbox v-model:checked="checkChatOnlyFile" style="margin-right: 12px" v-if="showCheckFile">
-              文件对话
+               <n-tooltip trigger="hover">
+                <template #trigger>
+                  <n-icon size="large">
+                    <HelpCircle />
+                  </n-icon>
+                </template>
+                选中后，所有回答都讲严格基于上传文件内容，知识范围不会超过文件内容
+              </n-tooltip>文件对话
             </n-checkbox>
         </n-flex>
       </div>
