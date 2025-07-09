@@ -196,7 +196,7 @@
       </optional>
       <optional>
         <attribute name="formula_layout_id">
-          <data type="boolean"/>
+          <data type="int"/>
         </attribute>
       </optional>
       <ref name="PDFStyle"/>
@@ -321,6 +321,11 @@
       </attribute>
       <optional>
         <attribute name="scale">
+          <data type="float"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="optimal_scale">
           <data type="float"/>
         </attribute>
       </optional>

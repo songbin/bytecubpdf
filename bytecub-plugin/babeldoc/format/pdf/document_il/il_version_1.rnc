@@ -112,6 +112,7 @@ PDFParagraph =
     attribute xobjId { xsd:int }?,
     attribute unicode { xsd:string },
     attribute scale { xsd:float }?,
+    attribute optimal_scale { xsd:float }?,
     attribute vertical { xsd:boolean }?,
     attribute FirstLineIndent { xsd:boolean }?,
     attribute debug_id { xsd:string }?,

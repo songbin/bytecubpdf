@@ -922,7 +922,7 @@ def _do_translate_single(
         mono_watermark_first_page_doc_bytes = None
         dual_watermark_first_page_doc_bytes = None
 
-    Typesetting(translation_config).typsetting_document(docs)
+    Typesetting(translation_config).typesetting_document(docs)
     logger.debug(f"finish typsetting from {temp_pdf_path}")
     if translation_config.debug:
         xml_converter.write_json(

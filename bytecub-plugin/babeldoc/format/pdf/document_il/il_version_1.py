@@ -763,6 +763,12 @@ class PdfParagraph:
             "type": "Attribute",
         },
     )
+    optimal_scale: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
     vertical: bool | None = field(
         default=None,
         metadata={

@@ -58,6 +58,9 @@ pillow==11.2.1
 pyzstd>=0.17.0
 rtree>=1.4.0
 chardet>=5.2.0
+scipy>=1.15.3
+uharfbuzz>=0.50.2
+py-spy>=0.4.0
 # deprecation>=2.1.0
 # img2pdf>=0.5
 # packaging>=20

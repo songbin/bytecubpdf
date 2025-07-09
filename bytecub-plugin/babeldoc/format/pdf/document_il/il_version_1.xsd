@@ -103,7 +103,7 @@
       <xs:attribute name="advance" type="xs:float"/>
       <xs:attribute name="xobjId" type="xs:int"/>
       <xs:attribute name="debug_info" type="xs:boolean"/>
-      <xs:attribute name="formula_layout_id" type="xs:boolean"/>
+      <xs:attribute name="formula_layout_id" type="xs:int"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="visual_bbox">
@@ -185,6 +185,7 @@
       <xs:attribute name="xobjId" type="xs:int"/>
       <xs:attribute name="unicode" use="required" type="xs:string"/>
       <xs:attribute name="scale" type="xs:float"/>
+      <xs:attribute name="optimal_scale" type="xs:float"/>
       <xs:attribute name="vertical" type="xs:boolean"/>
       <xs:attribute name="FirstLineIndent" type="xs:boolean"/>
       <xs:attribute name="debug_id" type="xs:string"/>
