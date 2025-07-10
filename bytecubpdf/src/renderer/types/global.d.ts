@@ -25,7 +25,9 @@ declare global {
 
       // 配置接口
       getFileStoragePath: () => Promise<string | undefined>;
+      getLastFileStoragePath: () => Promise<string | undefined>;
       saveFileStoragePath: (path: string) => Promise<void>;
+      getInitPath: () => Promise<string>;
       DbInitTables: () => Promise<void>; // 新增初始化数据库表方法
 
       //系统路径

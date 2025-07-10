@@ -126,6 +126,12 @@ ipcMain.handle('openPath', async (_, path: string) => {
   ipcMain.handle('config:getFileStoragePath', () => {
     return configService.getFileStoragePath()
   })
+  ipcMain.handle('config:getLastFileStoragePath', () => {
+    return configService.getLastFileStoragePath()
+  })
+  ipcMain.handle('config:getInitPath', () => {
+    return BuildPath.getInitPath()
+  })
 
   ipcMain.handle('config:saveFileStoragePath', (_, path: string) => {
     configService.saveFileStoragePath(path)

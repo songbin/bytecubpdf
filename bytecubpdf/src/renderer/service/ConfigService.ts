@@ -16,11 +16,18 @@ class ConfigService {
 
   // 文件存储路径专用方法
   async getFileStoragePath(): Promise<string | undefined> {
-    return (window as any).window.electronAPI?.getFileStoragePath();
+    return window.electronAPI?.getFileStoragePath();
+  }
+
+  async getLastFileStoragePath(): Promise<string | undefined> {
+    return window.electronAPI?.getLastFileStoragePath();
+  }
+  async getInitPath(): Promise<string> {
+    return window.electronAPI?.getInitPath();
   }
 
   async saveFileStoragePath(path: string): Promise<void> {
-    return (window as any).window.electronAPI?.saveFileStoragePath(path);
+    return  window.electronAPI?.saveFileStoragePath(path);
   }
 }
 

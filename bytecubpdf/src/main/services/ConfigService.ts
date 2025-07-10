@@ -24,7 +24,12 @@ class ConfigService {
      */
     public saveFileStoragePath(path: string): void {
         this.loadConfig();
-        this.set('fileStoragePath', path);
+        const lastPath = this.get('fileStoragePath');
+        if (lastPath) {
+            this._setImMem('lastFileStoragePath', lastPath);
+        }
+        this._setImMem('fileStoragePath', path);
+        this.saveConfig()
     }
 
     /**
@@ -34,6 +39,19 @@ class ConfigService {
     public getFileStoragePath(): string | undefined {
         this.loadConfig();
         return this.get('fileStoragePath');
+    }
+
+    /**
+     * 从配置中获取上次文件存储路径
+     * @returns 上次文件存储路径，如果未设置则返回undefined
+     */
+    public getLastFileStoragePath(): string {
+        try {
+            this.loadConfig();
+            return this.get('lastFileStoragePath') || '';
+        } catch (e) {
+            return '';
+        }
     }
 
     private loadConfig() {
@@ -59,16 +77,21 @@ class ConfigService {
         }
     }
 
-    public get(key: string): any {
+    private get(key: string): any {
         // 获取配置项的值
         return this.config[key];
     }
-
-    public set(key: string, value: any): void {
+    
+    private set(key: string, value: any): void {
         // 设置配置项的值
         this.config[key] = value;
         // 保存配置
         this.saveConfig();
+    }
+    /**不保存到为你教案*/
+    private _setImMem(key: string, value: any): void {
+        // 设置配置项的值
+        this.config[key] = value;
     }
 }
 

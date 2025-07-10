@@ -32,6 +32,8 @@
           </n-input>
         </n-form-item>
       </n-form>
+      <n-tag>初始存储路径</n-tag> {{ originPath }}<br/>
+      <n-tag>上次存储路径</n-tag> {{ lastPath }}
     </n-card>
     <HelpFloatButton url="https://www.docfable.com/docs/usage/settingsmentor/system.html" />
   </div>
@@ -44,11 +46,12 @@
   
   import { ref, onMounted } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { NButton, NCard, NForm, NFormItem, NInput, NIcon, useMessage,useDialog } from 'naive-ui'
+  import { NButton, NCard,NTag, NForm, NFormItem, NInput, NIcon, useMessage,useDialog } from 'naive-ui'
   import { configService } from '@/renderer/service/ConfigService'
  import { SearchLocate } from '@vicons/carbon'
  import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue' 
-
+  const originPath = ref('')
+  const lastPath = ref('')
   const { t } = useI18n()
   const message = useMessage()
   const dialog = useDialog(); // 添加对话框 hook
@@ -65,7 +68,10 @@
     try {
       const path = await configService.getFileStoragePath()
       storageForm.value.storagePath = path || ''
+      originPath.value = await window.electronAPI?.getInitPath()
+      lastPath.value = await window.electronAPI?.getLastFileStoragePath() || ''
     } catch (error) {
+      console.log('获取路径失败', error)
       message.error(t('settings.storage.loadError'))
     } finally {
       loading.value = false
@@ -75,7 +81,7 @@
   // 处理文件夹选择
   const handleSelectFolder = async () => {
       try {
-          const path = await (window as any).window.electronAPI?.openDirectory()
+          const path = await window.electronAPI?.openDirectory()
           if (path) {
               storageForm.value.storagePath = path.replace(/\\/g, '/')
               await configService.saveFileStoragePath(storageForm.value.storagePath)

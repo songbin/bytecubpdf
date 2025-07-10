@@ -15,8 +15,13 @@ class BuildPath {
         }
         return rootDir; // 假设这里是你的根路径，你可以根据需要进行调整
     }
+    static getInitPath():string {
+        const rootDir = path.join(app.getPath('userData'), STORAGE_CONFIG.root);
+        return rootDir
+    }
     static getRootPath(): string {
-        const usePath = path.join(BuildPath.getRootDirFromConfig(), STORAGE_CONFIG.root);
+        // const usePath = path.join(BuildPath.getRootDirFromConfig(), STORAGE_CONFIG.root);
+        const usePath = BuildPath.getRootDirFromConfig()
         if (!fs.existsSync(usePath)) {
             fs.mkdirSync(usePath, { recursive: true });
         }

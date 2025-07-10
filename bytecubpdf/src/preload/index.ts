@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   DbRollback: () => ipcRenderer.invoke('db:rollback'),
   DbGetInstancePath: () => ipcRenderer.invoke('db:get-instance'),
   getFileStoragePath: () => ipcRenderer.invoke('config:getFileStoragePath'),
+  getLastFileStoragePath: () => ipcRenderer.invoke('config:getLastFileStoragePath'),
+  getInitPath: () => ipcRenderer.invoke('config:getInitPath'),
   saveFileStoragePath: (path: string) => ipcRenderer.invoke('config:saveFileStoragePath', path),
   DbInitTables: () => ipcRenderer.invoke('db:initTables'),
   // 下载目标资源文件
