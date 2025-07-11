@@ -8,6 +8,12 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { VERSION } from '@/shared/constants/dfconstants';
 import { UpgradeService } from '@/shared/services/UpgradeService';
+const https = require('https');
+// 分别设置连接和读取超时
+const agent = new https.Agent({
+  connectTimeout: 30000,  // 连接超时 30 秒
+  socketTimeout: 60000,  // 读取超时 60 秒
+});
 interface UpdateInfo {
   version: string;
   buildNumber: number;
@@ -180,9 +186,12 @@ export class UpdateManager {
     console.log('下载保存的路径是:', downloadPath);
   
     try {
-      const response = await axios.get(updateUrl, { responseType: 'stream' });
+      const response = await axios.get(updateUrl, { 
+        responseType: 'stream',
+        httpsAgent: agent,  // 如果是 http 请求，请使用 httpAgent
+        timeoutErrorMessage: '请求超时'
+      });
       response.data.pipe(this.downloadStream);
-  
       return new Promise((resolve, reject) => {
         this.downloadStream!.on('finish', async () => {
           try {
@@ -218,6 +227,7 @@ export class UpdateManager {
     } catch (error) {
       this.isDownloading = false;
       this.cleanupResources();
+      console.log('下载失败:', (error as Error).message);
       throw new Error(`请求失败: ${(error as Error).message}`);
     }
   }

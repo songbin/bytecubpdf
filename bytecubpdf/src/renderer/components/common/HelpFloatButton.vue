@@ -24,8 +24,8 @@
       </n-tooltip>
     </n-float-button-group>
     </div>
-    <iframe class="statistics-iframe" :src="STATISTICS.getUrl(pageName)" height="2" width="100%" frameborder="0">
-    </iframe>
+    <!-- <iframe class="statistics-iframe" :src="STATISTICS.getUrl(pageName)" height="2" width="100%" frameborder="0">
+    </iframe> -->
   </div>
 </template>
 
