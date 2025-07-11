@@ -30,7 +30,9 @@ export class CustomOpenAI extends BaseLlmClient {
                 messages: messages.toJsonArray(),
                 temperature: this.config.temperature,
                 max_tokens: maxTokens,
-                stream: false
+                stream: false,
+               
+                
             });
             return LlmResModel.fromObject(response, LLM_PROTOCOL.openai);
         } catch (error) {
@@ -57,7 +59,10 @@ export class CustomOpenAI extends BaseLlmClient {
                         messages: messages.toJsonArray(),
                         temperature: this.config.temperature,
                         max_tokens: maxTokens,
-                        stream: true
+                        stream: true,
+                        stream_options:{
+                            include_usage: true //在输出的最后一行显示所使用的Token数。
+                        }
                     });
                 for await (const chunk of stream) {
                     // 检查是否已中断
