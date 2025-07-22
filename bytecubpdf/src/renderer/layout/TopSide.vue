@@ -12,7 +12,7 @@
               </template>
               你的系统太陈旧了，请点击更新到最新版本
             </n-button>
-          <n-button text  @click="restartApp" v-if="isUpgradeReady">
+          <n-button text  @click="showUpgradeInfo" v-if="isUpgradeReady">
               <template #icon>
               <n-icon>
                 <CloudDownload />
@@ -135,6 +135,22 @@ const restartApp = async (e: MouseEvent) => {
   }
   console.log('重启升级应用成功')
 } 
+const showUpgradeInfo = async (e: MouseEvent) => {
+  dialog.info({
+        title: '版本更新',
+        content: () => h(VersionUpgradeModal, {
+          currentVersion: VERSION?.version,
+          upgradeInfo: upgradeInfo.value,
+          onUpgrade: handleUpdate,
+          onClose: closeModal
+        }),
+        negativeText: '重启升级',  // 修改为提醒按钮
+        positiveText: '稍后',     // 新增下载按钮
+        showIcon: false,
+        onNegativeClick: restartApp  // 绑定下载事件
+      })
+      checkForUpdates()
+}
 const toUpgrade = async (e: MouseEvent) => {
   dialog.info({
         title: '版本更新',

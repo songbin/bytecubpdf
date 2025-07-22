@@ -42,6 +42,7 @@ export async function initLlmPlatforms(db: Database) {
         { id: 'silicon', platformName: '硅基流动', protocolType: 'openai', apiKey: '', apiUrl: 'https://api.siliconflow.cn/v1' },
         { id: 'ollama', platformName: 'Ollama', protocolType: 'ollama', apiKey: '', apiUrl: 'http://127.0.0.1:11434' },
         { id: 'datascope', platformName: '阿里百炼云', protocolType: 'openai', apiKey: '', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
+        { id: 'openrouter', platformName: 'openrouter', protocolType: 'openai', apiKey: '', apiUrl: 'https://openrouter.ai/api/v1/' },
     ];
     try {
         await db.exec('BEGIN TRANSACTION');

@@ -47,6 +47,7 @@ export class Usage {
 export class Delta {
   content?: string;
   reasoning_content?: string | null;
+  reasoning?: string | null;
 
   constructor(data?: Partial<Delta>) {
     if (data) Object.assign(this, data);
@@ -85,6 +86,7 @@ export class LlmResModel {
   prompt_eval_duration?: number; //ollama协议
   eval_count?: number; //ollama协议
   eval_duration?: number; //ollama协议 
+  
 
 
   constructor(data?: Partial<LlmResModel>) {
@@ -127,7 +129,10 @@ export class LlmResModel {
   getReasoningContent(): string | null | undefined {
     switch(this.protocol_type){
       case LLM_PROTOCOL.openai:
-        return this.choices?.[0]?.delta?.reasoning_content;
+        const openRouter = this.choices?.[0]?.delta?.reasoning;
+        const notOpenRouter = this.choices?.[0]?.delta?.reasoning_content;
+
+        return openRouter || notOpenRouter;
       case LLM_PROTOCOL.ollama:
         return this.message?.thinking;
     }

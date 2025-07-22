@@ -158,7 +158,7 @@
                     </n-radio-group>
                 </n-form-item>
 
-                <n-form-item label="是否收费"> 
+                <!-- <n-form-item label="是否收费"> 
                     <n-switch v-model:value="currentModel.isFree">
                         <template #checked>
                         免费模型
@@ -167,7 +167,7 @@
                         收费模型
                         </template>
                     </n-switch>
-                </n-form-item>
+                </n-form-item> -->
             </n-form>
 
             <template #action>
