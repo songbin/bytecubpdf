@@ -10,6 +10,8 @@ export type messageType = BubbleListItemProps & {
   nowTime:string;
   chatId:string;
   fileList?:string;
+  reasoning_content?: string;
+  maxWidth?:string;
 }
 export type FilesList = FilesCardProps & {
   file: File;

@@ -118,11 +118,13 @@ export class ChatMsgStorageService {
             reasoning_content: item.reasoning_content,
             nowTime: item.nowTime,
             thinkingStatus: 'end',
+            thinlCollapse: false,
             role: item.role,
             create_time: item.create_time,
             update_time: item.update_time,
             placement,
-            isMarkdown: true
+            isMarkdown: true,
+            maxWidth:'80%'
         }
       })
     } catch (error) {

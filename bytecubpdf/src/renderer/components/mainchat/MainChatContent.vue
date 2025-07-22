@@ -2,7 +2,7 @@
 import { ref, onMounted, watch, nextTick } from 'vue';
 import {ChatRole,AcceptFileType} from '@/renderer/model/chat/ChatConfig'
 import type { BubbleListItemProps, BubbleListProps,BubbleListInstance } from 'vue-element-plus-x/types/BubbleList'
-import { BubbleList, MentionSender, Thinking,Attachments,FilesCard,Typewriter  } from 'vue-element-plus-x'
+import { BubbleList, MentionSender, Thinking,Attachments,FilesCard,Typewriter,XMarkdown  } from 'vue-element-plus-x'
 import { useFileDialog } from '@vueuse/core';
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
@@ -282,7 +282,9 @@ const buildMessageItem = async (role: string, content: string) => {
     avatar,
     avatarSize: '24px', // 头像占位大小
     avatarGap: '12px', // 头像与气泡之间的距离
-    chatId:chatId.value
+    chatId:chatId.value,
+    maxWidth:'80%'
+
   }
 }
 // 监听属性chatId的变化
@@ -482,6 +484,7 @@ watch(
           :list="messages" 
           ref="bubbleListRef" 
           max-height="calc(100vh - 320px)"
+          
         >
           <template #header="{ item }">
             <div class="header-wrapper">
@@ -502,7 +505,7 @@ watch(
           <template #content="{item}" >
             <div class="content-wrapper">
               <!-- {{ item.content }}   -->
-              <Typewriter :content="item.content" :is-markdown="true" />
+              <XMarkdown :markdown="item.content ?? ''"  />
               <!-- 判断item.fileName，如果存在则显示名字 -->
               <div v-if="item.fileList && item.fileList.length > 3">
                  <FilesCard v-for="(fileName, index) in JSON.parse(item.fileList)" :key="index" :name="fileName" />
@@ -709,6 +712,7 @@ watch(
 
 .thinking-chain-warp {
   margin-bottom: 12px;
+  max-width: 80%;
 }
 
 .chat-tools {

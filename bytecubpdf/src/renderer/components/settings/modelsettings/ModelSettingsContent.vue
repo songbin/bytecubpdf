@@ -42,7 +42,7 @@
                                 </n-button>
                             </n-input-group>
                         </n-form-item>
-                        <n-flex justify="end" v-if="['zhipu', 'deepseek', 'silicon'].includes(formData.id)">
+                        <n-flex justify="end" v-if="['zhipu', 'deepseek', 'silicon', 'datascope'].includes(formData.id)">
                             <n-button text size="tiny" type="info" @click="openGuide(formData.id)">
                                 {{formData.platformName}}密钥申请指南</n-button>
                         </n-flex>
