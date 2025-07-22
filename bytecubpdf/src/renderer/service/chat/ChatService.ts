@@ -69,7 +69,13 @@ export class ChatService {
 
          if (platform.protocolType === LLM_PROTOCOL.openai) {
             const customOpenAi = new CustomOpenAI( config)
-            await customOpenAi.call(messages)
+            //如果url里包含dashscope.aliyuncs.com则调用.stream
+            if(baseurl.includes('dashscope.aliyuncs.com')){
+                const signal = new AbortController().signal
+                await customOpenAi.call(messages)
+            }else{
+                await customOpenAi.call(messages)
+            }
         }else if (platform.protocolType === LLM_PROTOCOL.ollama) {
             //TODO 
             const ollama = new CustomOllama( config);

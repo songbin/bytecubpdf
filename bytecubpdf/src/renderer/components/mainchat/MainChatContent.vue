@@ -26,6 +26,7 @@ import {ModelFlag,LLMChatConfig,FileGroup} from '@/renderer/model/chat/ChatConfi
 import { chatFileStoreManager } from '@/renderer/service/manager/chat/ChatFileStoreManager';
 import { chatFileStoreService } from '@/renderer/service/chat/ChatFileStoreService';
 import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
+import {checkEnableThinkSwitch} from '@/renderer/service/chat/config/OpenAIModelsConfig'
 const store = usePdfTranslateStore()
 defineOptions({
   name: 'MainChatContent'
@@ -443,6 +444,8 @@ const calcThinkingShowStatus = async (platformId:string,modelId:string) =>{
           }else{
             isThinking.value = false
           }
+        }else if(LLM_PROTOCOL.openai === platformBasicInfo.protocolType){
+          showThinking.value = checkEnableThinkSwitch(modelId)
         }
       }
     }catch(error){
