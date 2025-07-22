@@ -114,7 +114,8 @@ export class LlmModelManager {
             id: model.id,
             platformId,
             name: model.name,
-            types: JSON.stringify(model.types)
+            types: JSON.stringify(model.types),
+            pricingType: model.pricingType,
         });
     }
     
@@ -130,9 +131,10 @@ export class LlmModelManager {
             `UPDATE ${this.modelTable} SET 
                 id = ?,
                 name = ?, 
-                types = ? 
+                types = ?,
+                pricingType = ?
             WHERE auto_id = ?`,
-            [model.id, model.name, JSON.stringify(model.types), model.auto_id]
+            [model.id, model.name, JSON.stringify(model.types), model.pricingType, model.auto_id]
         );
     }
 

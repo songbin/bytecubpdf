@@ -157,6 +157,17 @@
                         </n-space>
                     </n-radio-group>
                 </n-form-item>
+
+                <n-form-item label="是否收费"> 
+                    <n-switch v-model:value="currentModel.isFree">
+                        <template #checked>
+                        免费模型
+                        </template>
+                        <template #unchecked>
+                        收费模型
+                        </template>
+                    </n-switch>
+                </n-form-item>
             </n-form>
 
             <template #action>
@@ -277,6 +288,10 @@ const modelTypes = computed(() => [
     { value: 'multi', label: 'settings.model.types.multi' }
 ])
 
+const pricingTypes = computed(() => [
+    { value: 'free', label: '免费' },
+    { value: 'charge', label: '收费' }
+])
 // Rules
 const rules: FormRules = {
     platformName: {
@@ -394,7 +409,11 @@ async function confirmModel() {
     submitting.value = true
     try {
         await dialogFormRef.value?.validate()
-        
+        if(currentModel.value.isFree) {
+            currentModel.value.pricingType = 'free'
+        } else {
+            currentModel.value.pricingType = 'charge'
+        }
         const modelData: SettingLLMModel = {
             ...currentModel.value,
             platformId: props.platformId,

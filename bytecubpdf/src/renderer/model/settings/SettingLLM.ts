@@ -29,6 +29,7 @@ export interface SettingLLMModel {
     createdAt?: string;
     /** 更新时间 */
     updatedAt?: string;
+    isFree?: boolean;
 }
 
 export interface SettingLLMPlatform {
