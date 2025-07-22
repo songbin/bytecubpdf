@@ -20,8 +20,8 @@ class BuildPath {
         return rootDir
     }
     static getRootPath(): string {
-        // const usePath = path.join(BuildPath.getRootDirFromConfig(), STORAGE_CONFIG.root);
-        const usePath = BuildPath.getRootDirFromConfig()
+        const usePath = path.join(BuildPath.getRootDirFromConfig(), STORAGE_CONFIG.root);
+        //const usePath = BuildPath.getRootDirFromConfig()
         if (!fs.existsSync(usePath)) {
             fs.mkdirSync(usePath, { recursive: true });
         }
