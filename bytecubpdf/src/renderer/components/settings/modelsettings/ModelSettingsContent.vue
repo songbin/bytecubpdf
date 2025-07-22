@@ -42,7 +42,7 @@
                                 </n-button>
                             </n-input-group>
                         </n-form-item>
-                        <n-flex justify="end" v-if="['zhipu', 'deepseek', 'silicon', 'datascope'].includes(formData.id)">
+                        <n-flex justify="end" v-if="['zhipu', 'deepseek', 'silicon', 'datascope', 'openrouter'].includes(formData.id)">
                             <n-button text size="tiny" type="info" @click="openGuide(formData.id)">
                                 {{formData.platformName}}密钥申请指南</n-button>
                         </n-flex>
@@ -232,6 +232,8 @@ const openGuide = (id:string) =>{
         window.electronAPI.openExternal('https://www.docfable.com/docs/platform/deepseekguide.html')
     }else if (id == 'datascope'){
         window.electronAPI.openExternal('https://bailian.console.aliyun.com/?tab=model#/api-key')
+    }else if (id == 'openrouter'){
+        window.electronAPI.openExternal('https://openrouter.ai/settings/keys')
     }
     else{
         window.electronAPI.openExternal('https://www.docfable.com/docs/usage/settingsmentor/llm.html')

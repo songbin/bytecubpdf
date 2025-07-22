@@ -144,10 +144,10 @@ const showUpgradeInfo = async (e: MouseEvent) => {
           onUpgrade: handleUpdate,
           onClose: closeModal
         }),
-        negativeText: '重启升级',  // 修改为提醒按钮
-        positiveText: '稍后',     // 新增下载按钮
+        negativeText: '稍后',  // 修改为提醒按钮
+        positiveText: '重启升级',     // 新增下载按钮
         showIcon: false,
-        onNegativeClick: restartApp  // 绑定下载事件
+        onPositiveClick: restartApp  // 绑定下载事件
       })
       checkForUpdates()
 }
