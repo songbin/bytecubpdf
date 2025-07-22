@@ -298,7 +298,8 @@ export class SqliteDBInit {
                 { id: 'zhipu', platformName: '智谱AI', protocolType: 'openai', apiKey: '', apiUrl: 'https://open.bigmodel.cn/api/paas/v4' },
                 { id: 'deepseek', platformName: 'DeepSeek', protocolType: 'openai', apiKey: '', apiUrl: 'https://api.deepseek.com/v1' },
                 { id: 'silicon', platformName: '硅基流动', protocolType: 'openai', apiKey: '', apiUrl: 'https://api.siliconflow.cn/v1' },
-                { id: 'ollama', platformName: 'Ollama', protocolType: 'ollama', apiKey: '', apiUrl: 'http://127.0.0.1:11434' }
+                { id: 'ollama', platformName: 'Ollama', protocolType: 'ollama', apiKey: '', apiUrl: 'http://127.0.0.1:11434' },
+                { id: 'datascope', platformName: '阿里百炼云', protocolType: 'openai', apiKey: '', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
             ];
 
             for (const platform of platforms) {
@@ -337,6 +338,10 @@ export class SqliteDBInit {
                 { id: 'llama3-70b', platformId: 'ollama', name: 'Llama3-70B', type: '["text"]' },
                 { id: 'llama3-8b', platformId: 'ollama', name: 'Llama3-8B', type: '["text"]' },
                 { id: 'ZimaBlueAI/Qwen2.5-VL-7B-Instruct', platformId: 'ollama', name: 'ZimaBlueAI/Qwen2.5-VL-7B-Instruct', type: '["vision"]' },
+            
+                // 阿里百炼云模型
+                { id: 'qwen3-32b', platformId: 'datascope', name: 'qwen3-32b', type: '["text"]' },
+                { id: 'qwen3-235b-a22b', platformId: 'datascope', name: 'qwen3-235b-a22b', type: '["text"]' },
             ];
 
             for (const model of models) {

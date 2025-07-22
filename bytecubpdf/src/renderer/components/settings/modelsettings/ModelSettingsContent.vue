@@ -219,7 +219,10 @@ const openGuide = (id:string) =>{
         window.electronAPI.openExternal('https://www.docfable.com/docs/platform/chatglmguide.html')
     }else if (id === 'deepseek'){
         window.electronAPI.openExternal('https://www.docfable.com/docs/platform/deepseekguide.html')
-    }else{
+    }else if (id == 'datascope'){
+        window.electronAPI.openExternal('https://bailian.console.aliyun.com/?tab=model#/api-key')
+    }
+    else{
         window.electronAPI.openExternal('https://www.docfable.com/docs/usage/settingsmentor/llm.html')
     }
 }
