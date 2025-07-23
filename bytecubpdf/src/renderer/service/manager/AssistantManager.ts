@@ -113,3 +113,5 @@ export class AssistantManager {
         };
     }
 }
+
+export const assistantManager = new AssistantManager()

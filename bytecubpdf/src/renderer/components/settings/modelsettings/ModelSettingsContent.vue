@@ -1,6 +1,8 @@
 <template>
     <div>
-        <n-form ref="formRef" :model="formData" :rules="rules" label-placement="left" :label-width="80">
+        <n-tabs v-model:value="activeTab" type="card">
+            <n-tab-pane name="model" :tab="t('settings.model.tab')">
+                <n-form ref="formRef" :model="formData" :rules="rules" label-placement="left" :label-width="80">
             <n-flex vertical>
                 <n-flex vertical class="form-section">
                     <n-flex>
@@ -179,6 +181,11 @@
                 </n-button>
             </template>
         </n-modal>
+            </n-tab-pane>
+            <n-tab-pane name="assistant" :tab="t('settings.assistant.tab')">
+                <AssistantSettingsContent />
+            </n-tab-pane>
+        </n-tabs>
         <HelpFloatButton url="https://www.docfable.com/docs/usage/settingsmentor/llm.html" />
     </div>
 </template>
@@ -189,7 +196,8 @@ defineOptions({
 })
 import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue' 
+import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
+import AssistantSettingsContent from '@/renderer/components/settings/assistant/AssistantSettingsContent.vue' 
 import {
     NFlex,
     NText,
@@ -259,6 +267,7 @@ const formRef = ref<InstanceType<typeof NForm>>()
 const dialogFormRef = ref<InstanceType<typeof NForm>>()
 
 // Data
+const activeTab = ref('model')
 const formData = ref<Omit<SettingLLMPlatform, 'models'>>({
     id: '',
     platformName: '',

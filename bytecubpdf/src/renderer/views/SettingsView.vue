@@ -25,6 +25,7 @@ import { NLayout, NLayoutSider, NLayoutContent,NIcon } from 'naive-ui'
 import SettingsLeftSide from '@/renderer/components/settings/SettingsLeftSide.vue'
 import StorageSettings from '@/renderer/components/settings/StorageSettings.vue' 
 import ModelSettings from '@/renderer/components/settings/ModelSettings.vue' 
+import AssistantSettings from '@/renderer/components/settings/AssistantSettings.vue'
 
 // 当前激活的面板
 const activePanel = ref('model')
@@ -34,6 +35,7 @@ const activeComponent = computed(() => {
   return {
     storage: StorageSettings,
     model: ModelSettings, 
+    assistant: AssistantSettings
   }[activePanel.value]
 })
 

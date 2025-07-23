@@ -6,10 +6,12 @@ import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 const emit = defineEmits(['update:active'])
 import { DataBase,IbmCloudPakSystem } from '@vicons/carbon'
+import {AssistantFilled} from '@vicons/material'
 import { NButton, NIcon,NFlex } from 'naive-ui'
 const menuItems = [
   { key: 'storage', label: t('settings.leftside.buttons.system'), icon: DataBase },
   { key: 'model', label: t('settings.leftside.buttons.model'), icon: IbmCloudPakSystem },
+  { key: 'assistant', label: '助手管理', icon: AssistantFilled },
 ]
 const props = defineProps({
   active: {

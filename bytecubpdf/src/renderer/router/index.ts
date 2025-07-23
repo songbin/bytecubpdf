@@ -5,6 +5,8 @@ import AboutView from '@/renderer/views/AboutView.vue'
 import ModelSettings from  '@/renderer/components/settings/ModelSettings.vue'
 import MainChatView from '@/renderer/views/MainChatView.vue'
 import HomeIndexView from '@/renderer/views/HomeIndexView.vue'
+import AssistantSettings from '@/renderer/components/settings/AssistantSettings.vue'
+
 // 路由配置
 const routes: Array<RouteRecordRaw> = [
   {
@@ -54,6 +56,18 @@ const routes: Array<RouteRecordRaw> = [
         },
         props: (route) => ({  // 添加props传递
           platformId: route.params.platformId
+        })
+      },
+      {
+        path: 'assistant',
+        name: 'AssistantSettings',
+        component: AssistantSettings,
+        meta: {
+          title: '助手设置',
+          keepAlive: true  // 需要缓存
+        },
+        props: (route) => ({  // 添加props传递
+          assistantId: route.params.assistantId
         })
       }
     ]
