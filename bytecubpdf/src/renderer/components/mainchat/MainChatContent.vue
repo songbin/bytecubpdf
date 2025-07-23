@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick,h } from 'vue';
+import { useRouter } from 'vue-router';
 import {ChatRole,AcceptFileType} from '@/renderer/model/chat/ChatConfig'
 import type { BubbleListItemProps, BubbleListProps,BubbleListInstance } from 'vue-element-plus-x/types/BubbleList'
 import { BubbleList, MentionSender, Thinking,Attachments,FilesCard,Typewriter,XMarkdown  } from 'vue-element-plus-x'
@@ -31,6 +32,7 @@ const store = usePdfTranslateStore()
 defineOptions({
   name: 'MainChatContent'
 })
+const router = useRouter();
 const chatService = new ChatService()
 const message = useMessage()
 const llmManager = new LlmModelManager();
@@ -70,7 +72,7 @@ const renderAssiantHeader = () => {
     
     h(NInput, {size:'tiny',placeholder:'根据助手名搜索'}, { style: {  } }),
     h(NButton, { type: 'primary', size:'tiny',tertiary:true}, { default: () => '搜索' }),
-    h(NButton, { type: 'success',size:'tiny',tertiary:true }, { default: () => '新增' })
+    h(NButton, { type: 'success',size:'tiny',tertiary:true, onClick: gotoAssistantSetting }, { default: () => '新增' })
   ])
 }
 interface Assistant {
@@ -105,7 +107,11 @@ const handleAssistant = (assistantValue: string) => {
   const foundItem = assitantList.value.find(item => item.value === assistantValue);
   selectedAssistant.value = foundItem ? { name: foundItem.name, value: foundItem.value } : selectedAssistant.value
 }
-
+const gotoAssistantSetting = () => {
+   router.push({
+            path: '/settings/assistant',
+          });
+}
 // 示例调用
 const messages = ref<BubbleListProps<messageType>['list']>([]);
 const { reset, open, onChange } = useFileDialog({
