@@ -52,13 +52,18 @@ const rules: FormRules = {
   order_number: [
     {
       required: true,
-      message: '助手排序不能为空',
-      trigger: ['input', 'blur']
-    },
-    {
-      type: 'number',
-      min: 1,
-      message: '助手排序不能小于1',
+      validator(rule, value) {
+        if (value === null || value === undefined || value === '') {
+          return new Error('助手排序不能为空')
+        }
+        if (isNaN(Number(value))) {
+          return new Error('请输入有效数字')
+        }
+        if (Number(value) < 1) {
+          return new Error('助手排序不能小于1')
+        }
+        return true
+      },
       trigger: ['input', 'blur']
     }
   ]
@@ -135,19 +140,14 @@ watch(
 <template>
   <div style="padding: 20px;">
     <n-card :bordered="false" :style="{ background: 'rgba(250, 250, 252, 0.8)' }">
-      <n-form
-        ref="formRef"
-        :model="assistantForm"
-        :rules="rules"
-        label-placement="left"
-        :label-width="100"
-      >
+      <n-form ref="formRef" :model="assistantForm" :rules="rules" label-placement="left" :label-width="100">
         <n-form-item label="助手名称" path="name">
           <NInput v-model:value="assistantForm.name" placeholder="助手名称" />
         </n-form-item>
 
         <n-form-item label="助手排序" path="order_number">
-          <n-input-number v-model:value="assistantForm.order_number" :min="1" placeholder="助手排序" />
+          <n-input-number v-model:value="assistantForm.order_number" :min="1" placeholder="助手排序"
+            :parse="(value) => Number(value)" />
         </n-form-item>
 
         <n-form-item label="助手描述" path="description">
@@ -155,13 +155,8 @@ watch(
         </n-form-item>
 
         <n-form-item label="提示词内容" path="prompt">
-          <n-input
-            type="textarea"
-            v-model:value="assistantForm.prompt"
-            placeholder="提示词内容"
-            :rows="6"
-            resize="vertical"
-          />
+          <n-input type="textarea" v-model:value="assistantForm.prompt" placeholder="提示词内容" :rows="6"
+            resize="vertical" />
         </n-form-item>
 
         <n-form-item :style="{ marginLeft: '100px', marginTop: '20px' }">

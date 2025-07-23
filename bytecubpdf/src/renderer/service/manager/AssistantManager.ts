@@ -49,12 +49,12 @@ export class AssistantManager {
                     description = ?
                 WHERE id = ?
             `, [
-                assistant.is_enabled,
+                assistant.is_enabled ?? 1,
                 assistant.name,
-                assistant.order_number,
-                assistant.prompt_content,
-                assistant.prompt_maker_content,
-                assistant.description,
+                assistant.order_number ?? 1,
+                assistant.prompt_content ?? '',
+                assistant.prompt_maker_content ?? '',
+                assistant.description ?? '',
                 assistant.id
             ]);
         }
