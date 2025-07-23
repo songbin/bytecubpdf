@@ -37,11 +37,12 @@
   const sideKey = ref(0) // 用于强制刷新左侧菜单
  
   const handleEditAssistant = async (id: number) => {
+    console.log('编辑助手:', id)
     assistantId.value = id
     contentKey.value = contentKey.value + 1
   }
  
-  // 监听路由参数变化
+//   // 监听路由参数变化
 //   watch(() => route.params.assistantId, (newId) => {
 //     assistantId.value = newId as string | undefined
 //     console.log('路由参数变化:', newId)

@@ -10,6 +10,7 @@
   },
   "platformName": "平台名称",
   "platformNamePlaceholder": "请输入平台名称",
+  "tab": "模型设置",
   "protocolType": "协议类型",
   "protocolTypePlaceholder": "请选择协议类型",
   "apiKey": "API密钥",

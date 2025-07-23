@@ -182,9 +182,7 @@
             </template>
         </n-modal>
             </n-tab-pane>
-            <n-tab-pane name="assistant" :tab="t('settings.assistant.tab')">
-                <AssistantSettingsContent />
-            </n-tab-pane>
+           
         </n-tabs>
         <HelpFloatButton url="https://www.docfable.com/docs/usage/settingsmentor/llm.html" />
     </div>
@@ -197,7 +195,6 @@ defineOptions({
 import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
-import AssistantSettingsContent from '@/renderer/components/settings/assistant/AssistantSettingsContent.vue' 
 import {
     NFlex,
     NText,
@@ -215,7 +212,9 @@ import {
     NRadioGroup,
     NSwitch,
     NInputGroup,
-    FormRules
+    FormRules,
+    NTabs,
+    NTabPane
 } from 'naive-ui'
 import { Add, TrashCan, Edit } from '@vicons/carbon'
 import { useI18n } from 'vue-i18n'

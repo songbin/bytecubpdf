@@ -89,7 +89,7 @@ const showAddDialog = ref(false)
 const loadAssistants = async () => {
   assistants.value = await assistantManager.getAssistants()
   if (assistants.value.length > 0 ) {
-      handleEditAssistant(assistants.value[0].id)
+      handleEditAssistant(assistants.value[0])
   }
 }
 
