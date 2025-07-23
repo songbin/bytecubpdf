@@ -12,7 +12,7 @@ import { createLlmPlatforms, initLlmPlatforms } from './dbtable/LlmPlatforms';
 import { createLlmModelsTable, initLlmModels, alterLlmModels ,alterLlmModelsData} from './dbtable/LlmModels';
 import { createTranslateHistory } from './dbtable/TranslateHistory';
 import { createTranslateTerms } from './dbtable/TranslateTerms';
-
+import {AssistantInitData,createAssistantTable} from './dbtable/Assistant'
 
 export class SqliteDBInit {
     private static instance: SqliteDBInit;
@@ -57,6 +57,7 @@ export class SqliteDBInit {
         await createLlmModelsTable(this.db)
         await createTranslateHistory(this.db)
         await createTranslateTerms(this.db)
+        await createAssistantTable(this.db)
 
     }
     private async alterTable(): Promise<void> {
@@ -75,6 +76,7 @@ export class SqliteDBInit {
             await initSysDictTable(this.db)
             await initLlmPlatforms(this.db)
             await initLlmModels(this.db)
+            await AssistantInitData(this.db)
             console.log('数据库初始化数据完成');
         } catch (err) {
             console.error('数据库初始化数据失败:', err);

@@ -20,7 +20,7 @@ export async function initialize() {
     configService.saveFileStoragePath(defaultStoragePath);
     storagePath = defaultStoragePath;
   }
-   await sqliteDBInit.initTables();
+   sqliteDBInit.initTables();//这里不使用await等待了，要让系统尽快起来
   //  await warmup();
   // const failedFiles :FileDownloadItem[] = await verifyFileDownloads();
   // if (failedFiles.length > 0) {

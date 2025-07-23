@@ -1,0 +1,31 @@
+export interface Assistant {
+  id: number;
+  is_enabled: number;
+  name: string;
+  order_number: number;
+  prompt_content: string;
+  prompt_maker_content: string;
+  description: string;
+  create_time: string;
+  update_time: string;
+  ext1?: string;
+  ext2?: string;
+  ext3?: string;
+  ext4?: string;
+  ext5?: string;
+  ext6?: string;
+  ext7?: string;
+  ext8?: string;
+  ext9?: string;
+  ext10?: string;
+  ext11?: string;
+  ext12?: string;
+  ext13?: string;
+  ext14?: string;
+  ext15?: string;
+  ext16?: string;
+  ext17?: string;
+  ext18?: string;
+  ext19?: string;
+  ext20?: string;
+}
