@@ -5,6 +5,8 @@ export interface MainChatConfig {
   modelId?: string;
   platformName?:string;
   modelName?:string;
+  assistantId?:string;
+  assistantName?:string;
 }
 
 export default class MainChatIndexDb {

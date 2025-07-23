@@ -54,11 +54,21 @@ const showCheckFile = ref(false)
 /**上传的附件列表，聊天也用个这个*/
 const uploadFilesList = ref<FilesList[]>([]);
 const assistantSearchKey = ref('')
-const formData = ref({
+type ChatConfigModel = {
+  platformId: string;
+  platformName: string;
+  modelId: string;
+  modelName: string;
+  assistantId?: string;
+  assistantName?: string;
+}
+const formData = ref<ChatConfigModel>({
   platformId: '',
   platformName: '',
   modelId: '',
   modelName: '',
+  assistantId: 'default',
+  assistantName: '默认助手',
 })
 //定义接受来自父组件的属性chatId和chatName
 const props = defineProps<{
@@ -94,13 +104,15 @@ const assistantList = ref<AssistantChat[]>([])
 
 const selectedAssistant = ref<AssistantChat>({
   name: '默认助手',
-  value: 'default', 
+  value: '1', 
 })
 const handleAssistant = (assistantValue: string) => {
   message.info(`切换助手为: ${assistantList.value.find(item => item.value === assistantValue)?.name}`)
   // 只保留name和value属性
   const foundItem = assistantList.value.find(item => item.value === assistantValue);
   selectedAssistant.value = foundItem ? { name: foundItem.name, value: foundItem.value } : selectedAssistant.value
+  formData.value.assistantId = selectedAssistant?.value.value || 'default'
+  formData.value.assistantName = selectedAssistant?.value.name || '默认助手'
 }
 const gotoAssistantSetting = () => {
    router.push({
@@ -362,7 +374,14 @@ const initializeChatConfig = async () => {
 
     // 2. 读取配置
     const config = await mainChatIndexDb.getConfig();
-
+    console.log('config',JSON.stringify(config))
+    // 2.1 读取助手配置
+    if (config?.assistantId) {
+      selectedAssistant.value = {
+        name: config.assistantName || '',
+        value: config.assistantId || '',
+      };
+    }
     // 3. 应用配置或默认值
     if (config?.platformId) {
       const platformExists = platforms.value.some(p => p.value === config.platformId);
@@ -516,7 +535,9 @@ watch(
       platformId: newValue.platformId,
       modelId: newValue.modelId,
       platformName: formData.value.platformName,
-      modelName: formData.value.modelName
+      modelName: formData.value.modelName,
+      assistantId: selectedAssistant.value.value,
+      assistantName: selectedAssistant.value.name,
     });
    await calcThinkingShowStatus(newValue.platformId,newValue.modelId)
 
