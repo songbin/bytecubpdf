@@ -7,6 +7,7 @@ export async function createAssistantTable(db: Database) {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             is_enabled INTEGER NOT NULL DEFAULT 1, -- 启用/禁用标志(1:启用,0:禁用)
             name TEXT NOT NULL, -- 助手名称
+            group_name TEXT NOT NULL DEFAULT '', -- 分组字段
             order_number INTEGER NOT NULL DEFAULT 0, -- 排序
             prompt_content TEXT NOT NULL DEFAULT '', -- 提示词内容
             prompt_maker_content TEXT NOT NULL DEFAULT '', -- 提示词制作内容

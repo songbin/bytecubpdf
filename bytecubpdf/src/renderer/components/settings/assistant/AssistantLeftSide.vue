@@ -95,7 +95,6 @@ const loadAssistants = async () => {
 
 const handleDeleteAssistant = async (id: number) => {
   //id转化为number
-  
   await assistantManager.deleteAssistant(id)
   await loadAssistants()
 }
@@ -155,11 +154,12 @@ const confirmAddAssistant = async () => {
       name: newAssistant.value.assistantName,
       order_number: newAssistant.value.order_number
     }
-    await assistantManager.saveAssistant(assistantData)
+    const newId = await assistantManager.saveAssistant(assistantData)
     // 刷新助手列表
     await loadAssistants()
     showAddDialog.value = false
- 
+    // 新增助手成功后，自动选中新助手
+    handleEditAssistant({ id: newId, name: assistantData.name })
   } catch (error) {
     console.error('添加助手失败:', error)
   }

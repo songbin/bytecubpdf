@@ -5,7 +5,7 @@ export class AssistantManager {
     private readonly tableName = 'assistant';
     
     // 保存或更新助手
-    public async saveAssistant(assistant: Partial<Assistant>): Promise<void> {
+    public async saveAssistant(assistant: Partial<Assistant>): Promise<number> {
         if (!assistant.id) {
             // 新增助手
             await SqliteDbCore.insertData(this.tableName, {
@@ -37,6 +37,10 @@ export class AssistantManager {
                 ext19: assistant.ext19 ?? '',
                 ext20: assistant.ext20 ?? ''
             });
+
+            // 获取新插入的ID
+            const [result] = await SqliteDbCore.executeQuery('SELECT last_insert_rowid() as id');
+            return result?.id;
         } else {
             // 更新现有助手
             await SqliteDbCore.executeQuery(`
@@ -57,6 +61,7 @@ export class AssistantManager {
                 assistant.description ?? '',
                 assistant.id
             ]);
+            return assistant.id;
         }
     }
 

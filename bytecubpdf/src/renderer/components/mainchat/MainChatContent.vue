@@ -28,6 +28,9 @@ import { chatFileStoreManager } from '@/renderer/service/manager/chat/ChatFileSt
 import { chatFileStoreService } from '@/renderer/service/chat/ChatFileStoreService';
 import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
 import {checkEnableThinkSwitch} from '@/renderer/service/chat/config/OpenAIModelsConfig'
+import { assistantService } from '@/renderer/service/AssistantService';
+import { Assistant } from '@/renderer/model/assistant/AssistantDb';
+
 const store = usePdfTranslateStore()
 defineOptions({
   name: 'MainChatContent'
@@ -75,36 +78,27 @@ const renderAssiantHeader = () => {
     h(NButton, { type: 'success',size:'tiny',tertiary:true, onClick: gotoAssistantSetting }, { default: () => '新增' })
   ])
 }
-interface Assistant {
+type AssistantChat ={
   name?: string;
   value: string;
   type?:string,
   render?:()=>any,
 }
-const assitantList = ref<Assistant[]>([
-   {
-          value: 'header',
-          type: 'render',
-          render: renderAssiantHeader
-        },
-  {
-    name: '默认助手',
-    value: 'default'
-  },
-  {
-    name: '计算机翻译助手',
-    value: 'pc'
-  },
-])
+const assistantsHeader = {
+  value: 'header',
+  type: 'render',
+  render: renderAssiantHeader
+}
+const assistantList = ref<AssistantChat[]>([])
 
-const selectedAssistant = ref<Assistant>({
+const selectedAssistant = ref<AssistantChat>({
   name: '默认助手',
   value: 'default', 
 })
 const handleAssistant = (assistantValue: string) => {
-  message.info(`切换助手为: ${assistantValue} -> ${assitantList.value.find(item => item.value === assistantValue)?.name}`)
+  message.info(`切换助手为: ${assistantValue} -> ${assistantList.value.find(item => item.value === assistantValue)?.name}`)
   // 只保留name和value属性
-  const foundItem = assitantList.value.find(item => item.value === assistantValue);
+  const foundItem = assistantList.value.find(item => item.value === assistantValue);
   selectedAssistant.value = foundItem ? { name: foundItem.name, value: foundItem.value } : selectedAssistant.value
 }
 const gotoAssistantSetting = () => {
@@ -346,6 +340,16 @@ watch(() => props.chatId, async (newChatId, oldChatId) => {
           senderHolder.value = 'ENTER=发送  SHIFT+ENTER=换行'
         }
     });
+const loadAssistantList = async () => {
+  const assistants = await assistantService.getAllAssistants();
+  assistantList.value = assistants.map((assistant: Assistant): AssistantChat => {
+    return {
+      name: assistant.name,
+      value: assistant.id.toString(),
+    };
+  });
+  assistantList.value.unshift(assistantsHeader)
+}
 const initializeChatConfig = async () => {
   try {
     // 1. 先加载平台列表（确保后续逻辑可用）
@@ -401,6 +405,7 @@ const initializeChatConfig = async () => {
 }
 onMounted(async () => {
  await initializeChatConfig()
+ await loadAssistantList()
 //  senderRef.value.openHeader()
 });
 const copyMessageItem = (item:messageType) =>{
@@ -686,7 +691,7 @@ watch(
                       size="small"
                       key-field="value"
                       label-field="name"
-                      :options="assitantList"
+                      :options="assistantList"
                       @select="handleAssistant">
                   <n-button> {{ selectedAssistant.name }} </n-button>
             </n-dropdown>
