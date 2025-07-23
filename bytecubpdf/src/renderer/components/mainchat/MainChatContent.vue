@@ -53,7 +53,7 @@ const checkChatOnlyFile = ref(false)
 const showCheckFile = ref(false)
 /**上传的附件列表，聊天也用个这个*/
 const uploadFilesList = ref<FilesList[]>([]);
- 
+const assistantSearchKey = ref('')
 const formData = ref({
   platformId: '',
   platformName: '',
@@ -71,12 +71,13 @@ const models = ref<Array<{ value: string; label: string }>>([]);
 const senderRef = ref();
 const senderValue = ref('')
 const renderAssiantHeader = () => {
-  return h(NInputGroup, null, [
-    
-    h(NInput, {size:'tiny',placeholder:'根据助手名搜索'}, { style: {  } }),
-    h(NButton, { type: 'primary', size:'tiny',tertiary:true}, { default: () => '搜索' }),
-    h(NButton, { type: 'success',size:'tiny',tertiary:true, onClick: gotoAssistantSetting }, { default: () => '新增' })
-  ])
+  return h(NInputGroup, null, {
+      default: () => [
+        h(NInput, {size:'tiny',placeholder:'显示10条,找不到就搜索', value: assistantSearchKey.value, onInput: (val) => assistantSearchKey.value = val}),
+        h(NButton, { type: 'primary', size:'tiny',tertiary:true, onClick: loadAssistantList }, { default: () => '搜索' }),
+        h(NButton, { type: 'success',size:'tiny',tertiary:true, onClick: gotoAssistantSetting }, { default: () => '新增' })
+      ]
+    })
 }
 type AssistantChat ={
   name?: string;
@@ -96,7 +97,7 @@ const selectedAssistant = ref<AssistantChat>({
   value: 'default', 
 })
 const handleAssistant = (assistantValue: string) => {
-  message.info(`切换助手为: ${assistantValue} -> ${assistantList.value.find(item => item.value === assistantValue)?.name}`)
+  message.info(`切换助手为: ${assistantList.value.find(item => item.value === assistantValue)?.name}`)
   // 只保留name和value属性
   const foundItem = assistantList.value.find(item => item.value === assistantValue);
   selectedAssistant.value = foundItem ? { name: foundItem.name, value: foundItem.value } : selectedAssistant.value
@@ -341,7 +342,7 @@ watch(() => props.chatId, async (newChatId, oldChatId) => {
         }
     });
 const loadAssistantList = async () => {
-  const assistants = await assistantService.getAllAssistants();
+  const { list: assistants } = await assistantService.searchAssistants(1, 10, assistantSearchKey.value);
   assistantList.value = assistants.map((assistant: Assistant): AssistantChat => {
     return {
       name: assistant.name,
