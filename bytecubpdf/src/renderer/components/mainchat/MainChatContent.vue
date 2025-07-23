@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue';
+import { ref, onMounted, watch, nextTick,h } from 'vue';
 import {ChatRole,AcceptFileType} from '@/renderer/model/chat/ChatConfig'
 import type { BubbleListItemProps, BubbleListProps,BubbleListInstance } from 'vue-element-plus-x/types/BubbleList'
 import { BubbleList, MentionSender, Thinking,Attachments,FilesCard,Typewriter,XMarkdown  } from 'vue-element-plus-x'
 import { useFileDialog } from '@vueuse/core';
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
-import { NFlex, NButton, NIcon, NSelect, NCheckbox, NTooltip, NButtonGroup, useMessage, NModal, NCard } from 'naive-ui'
+import { NFlex, NAvatar,NText,NButton, NIcon, NSelect, NCheckbox, NTooltip, NDropdown, useMessage, NModal, NCard, NInputGroup, NInput } from 'naive-ui'
 import { Delete, CopyFile, Edit, SendAlt, Light,ArrowRight,ArrowLeft } from '@vicons/carbon'
 import { Refresh, Attach, Add, TrainOutline as TrainIcon,CloseCircleOutline,HelpCircle } from '@vicons/ionicons5';
 import { PaperClipOutlined } from '@vicons/antd';
@@ -65,6 +65,46 @@ const platforms = ref<Array<{ value: string; label: string }>>([]);
 const models = ref<Array<{ value: string; label: string }>>([]);
 const senderRef = ref();
 const senderValue = ref('')
+const renderAssiantHeader = () => {
+  return h(NInputGroup, null, [
+    
+    h(NInput, {size:'tiny',placeholder:'根据助手名搜索'}, { style: {  } }),
+    h(NButton, { type: 'primary', size:'tiny',tertiary:true}, { default: () => '搜索' }),
+    h(NButton, { type: 'success',size:'tiny',tertiary:true }, { default: () => '新增' })
+  ])
+}
+interface Assistant {
+  name?: string;
+  value: string;
+  type?:string,
+  render?:()=>any,
+}
+const assitantList = ref<Assistant[]>([
+   {
+          value: 'header',
+          type: 'render',
+          render: renderAssiantHeader
+        },
+  {
+    name: '默认助手',
+    value: 'default'
+  },
+  {
+    name: '计算机翻译助手',
+    value: 'pc'
+  },
+])
+
+const selectedAssistant = ref<Assistant>({
+  name: '默认助手',
+  value: 'default', 
+})
+const handleAssistant = (assistantValue: string) => {
+  message.info(`切换助手为: ${assistantValue} -> ${assitantList.value.find(item => item.value === assistantValue)?.name}`)
+  // 只保留name和value属性
+  const foundItem = assitantList.value.find(item => item.value === assistantValue);
+  selectedAssistant.value = foundItem ? { name: foundItem.name, value: foundItem.value } : selectedAssistant.value
+}
 
 // 示例调用
 const messages = ref<BubbleListProps<messageType>['list']>([]);
@@ -635,10 +675,16 @@ watch(
                 <n-icon><PaperClipOutlined /></n-icon>
               </template>
             </n-button>
-            
-           
+            <n-dropdown trigger="hover"
+                      placement="bottom-start"
+                      size="small"
+                      key-field="value"
+                      label-field="name"
+                      :options="assitantList"
+                      @select="handleAssistant">
+                  <n-button> {{ selectedAssistant.name }} </n-button>
+            </n-dropdown>
 
-           
           </div>
         </template>
       </MentionSender>

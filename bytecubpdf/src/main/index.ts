@@ -113,7 +113,7 @@ function runCoreServer(mainWindow: any) {
           });
         }
       });
-    }, 2000);
+    }, 1000);
   });
 }
 // 封装执行 .bat 脚本的函数
@@ -198,6 +198,7 @@ function createWindow(): void {
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
     mainWindow.webContents.openDevTools()
+    console.log('开发环境')
   } else {
     mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'))
     // mainWindow.webContents.openDevTools()
