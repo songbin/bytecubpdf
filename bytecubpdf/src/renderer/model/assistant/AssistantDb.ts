@@ -1,5 +1,6 @@
 export interface Assistant {
   id: number;
+  assistant_code: string;
   is_enabled: number;
   name: string;
   order_number: number;

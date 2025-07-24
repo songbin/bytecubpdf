@@ -45,6 +45,7 @@ export async function initLlmModels(db: Database) {
         { id: 'deepseek-ai/DeepSeek-R1', platformId: 'silicon', name: 'DeepSeek-R1', type: '["text"]', pricingType: 'charge' },
         { id: 'Pro/deepseek-ai/DeepSeek-V3', platformId: 'silicon', name: 'DeepSeek-V3(Pro)', type: '["text"]', pricingType: 'charge' },
         { id: 'Pro/deepseek-ai/DeepSeek-R1', platformId: 'silicon', name: 'DeepSeek-R1(Pro)', type: '["text"]', pricingType: 'charge' },
+        { id: 'moonshotai/Kimi-K2-Instruct', platformId: 'silicon', name: 'moonshotai/Kimi-K2-Instruct', type: '["text"]', pricingType: 'charge' },
         { id: 'Qwen/Qwen2.5-VL-72B-Instruct', platformId: 'silicon', name: 'Qwen/Qwen2.5-VL-72B-Instruct', type: '["vision"]', pricingType: 'charge' },
 
         // Ollama模型

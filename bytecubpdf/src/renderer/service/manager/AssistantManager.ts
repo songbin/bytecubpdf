@@ -8,7 +8,9 @@ export class AssistantManager {
     public async saveAssistant(assistant: Partial<Assistant>): Promise<number> {
         if (!assistant.id) {
             // 新增助手
+            const assistant_code = assistant.assistant_code || crypto.randomUUID().replace(/-/g, '');
             await SqliteDbCore.insertData(this.tableName, {
+                assistant_code,
                 is_enabled: assistant.is_enabled ?? 1,
                 name: assistant.name,
                 order_number: assistant.order_number ?? 0,

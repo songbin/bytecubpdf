@@ -5,6 +5,7 @@ export async function createAssistantTable(db: Database) {
     await db.exec(`
         CREATE TABLE IF NOT EXISTS assistant (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            assistant_code TEXT NOT NULL DEFAULT '', -- 助手编码
             is_enabled INTEGER NOT NULL DEFAULT 1, -- 启用/禁用标志(1:启用,0:禁用)
             name TEXT NOT NULL, -- 助手名称
             group_name TEXT NOT NULL DEFAULT '', -- 分组字段
@@ -40,7 +41,8 @@ export async function createAssistantTable(db: Database) {
     // 创建索引
     await db.exec('CREATE INDEX IF NOT EXISTS idx_assistant_name ON assistant(name)');
     await db.exec('CREATE INDEX IF NOT EXISTS idx_assistant_create_time ON assistant(create_time)');
-
+    //assistant_code是唯一索引
+    await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_assistant_code ON assistant(assistant_code)');
     // 创建更新时间触发器
     await db.exec(`
         CREATE TRIGGER IF NOT EXISTS update_assistant_timestamp 
@@ -52,12 +54,64 @@ export async function createAssistantTable(db: Database) {
 }
 
 export async function AssistantInitData(db: Database) {
-     // 初始化一个默认助手，名字是默认助手，其他都是空
-     await db.exec(`
-         INSERT INTO assistant (name) 
-         SELECT '默认助手' 
-         WHERE NOT EXISTS (
-             SELECT 1 FROM assistant WHERE name = '默认助手'
-         )
-     `);
+    // 初始化一个默认助手，名字是默认助手，其他都是空
+    const prompt_default = '你是一个专业的助手，你的任务是根据用户的问题，生成符合要求的内容。'
+    const prompt_assistant_generate = `
+    你是一个专业的提示词生成引擎，你的唯一功能是将用户输入的自然语言需求，精准转化为结构清晰、语义完整、可直接用于大语言模型的高质量提示词。请严格遵循以下规则：
+
+    1. 深刻理解用户输入的意图，包括目标、角色、任务、风格、受众和输出格式等隐含信息。
+    2. 将输入内容重构为一条标准、高效、无歧义的提示词，采用“角色 + 任务 + 要求 + 输出格式”的结构。
+    3. 补充合理细节以增强可执行性，但绝不添加用户未提及的功能或偏离原意。
+    4. 输出必须是纯提示词文本，不包含任何额外内容：
+    - 不加前缀（如“优化后的提示词：”）
+    - 不加引号
+    - 不解释、不举例、不说明
+    - 不输出\`或任何标记符号
+    5. 输出结果应可直接复制用于大语言模型交互。
+    `;
+    const initAssistants = [
+        {
+            assistant_code: 'default',
+            is_enabled: 1,
+            name: '默认助手',
+            group_name: '',
+            order_number: 0,
+            prompt_content: prompt_default,
+            prompt_maker_content: '',
+            description: '',
+        },
+        {
+            assistant_code: 'assistant_generate',
+            is_enabled: 1,
+            name: '助手生成器',
+            group_name: '',
+            order_number: 0,
+            prompt_content: prompt_assistant_generate,
+            prompt_maker_content: '',
+            description: '',
+        }
+    ]
+
+    //遍历initAssistants，根据assistant_code查询，如果查不到就写入
+    for (const assistant of initAssistants) {
+        const assistantInfo = await db.get(`SELECT * FROM assistant WHERE assistant_code = ?`, assistant.assistant_code);
+        if (!assistantInfo) {
+            // 使用 db.run 代替 db.exec，并将参数作为数组传入
+            await db.run(
+                `INSERT INTO assistant 
+                (assistant_code, is_enabled, name, group_name, order_number, prompt_content, prompt_maker_content, description) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    assistant.assistant_code,
+                    assistant.is_enabled,
+                    assistant.name,
+                    assistant.group_name,
+                    assistant.order_number,
+                    assistant.prompt_content,
+                    assistant.prompt_maker_content,
+                    assistant.description
+                ]
+            );
+        }
+    }
 }
