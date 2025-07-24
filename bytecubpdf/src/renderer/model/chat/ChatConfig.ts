@@ -70,14 +70,16 @@ export class LLMChatConfig {
     topP?:number;
     frequencyPenalty?:number;
     presencePenalty?:number;
-    public static buildSmallConfig(platformId:string,modelId:string,isOnlyFileChat:boolean){
+    assistantId?:string;
+    public static buildSmallConfig(platformId:string,modelId:string,isOnlyFileChat:boolean, assistantId?:string){
         const config = new LLMChatConfig()
         config.platformId = platformId
         config.modelId = modelId
         config.isOnlyFileChat = isOnlyFileChat
+        config.assistantId = assistantId
         return config
     }
-    public static buildConfig(platformId:string,modelId:string,modelType:ModelType,maxTokens:number,temperature:number,topP:number,frequencyPenalty:number,presencePenalty:number,isOnlyFileChat:boolean){
+    public static buildConfig(platformId:string,modelId:string,modelType:ModelType,maxTokens:number,temperature:number,topP:number,frequencyPenalty:number,presencePenalty:number,isOnlyFileChat:boolean, assistantId?:string){
         const config = new LLMChatConfig()
         config.platformId = platformId
         config.modelId = modelId
@@ -88,6 +90,7 @@ export class LLMChatConfig {
         config.frequencyPenalty = frequencyPenalty
         config.presencePenalty = presencePenalty
         config.isOnlyFileChat = isOnlyFileChat
+        config.assistantId = assistantId
         return config
     }
  

@@ -151,11 +151,11 @@ watch(
             :parse="(value) => Number(value)" />
         </n-form-item>
 
-        <n-form-item label="助手描述" path="description">
+        <!-- <n-form-item label="助手描述" path="description">
           <NInput v-model:value="assistantForm.description" placeholder="助手描述" />
-        </n-form-item>
+        </n-form-item> -->
 
-        <n-form-item label="提示词内容" path="prompt">
+        <n-form-item label="助手定位描述" path="prompt">
           <n-input type="textarea" v-model:value="assistantForm.prompt" placeholder="提示词内容" :rows="6"
             resize="vertical" />
         </n-form-item>

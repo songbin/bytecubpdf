@@ -248,7 +248,7 @@ const askSSE = async () => {
     senderLoading.value = true
     bubbleListRef.value?.scrollToBottom();
     controller.value = new AbortController();
-    const llmChatConfig = LLMChatConfig.buildSmallConfig(formData.value.platformId,formData.value.modelId, checkChatOnlyFile.value)
+    const llmChatConfig = LLMChatConfig.buildSmallConfig(formData.value.platformId,formData.value.modelId, checkChatOnlyFile.value, selectedAssistant.value.value)
     const llmMessages = await ChatMsgToLLM(messages.value,llmChatConfig)
     const stream = chatService.stream(formData.value.platformId,
       formData.value.modelId,

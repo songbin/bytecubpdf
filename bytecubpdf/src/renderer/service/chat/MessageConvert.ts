@@ -7,6 +7,8 @@ import {ChatFileStoreDb} from '@/renderer/model/chat/db/ChatFileStoreDb'
 import {ChatRole,FileGroup,AcceptFileType} from '@/renderer/model/chat/ChatConfig'
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager' 
 import {ModelFlag,LLMChatConfig} from '@/renderer/model/chat/ChatConfig'
+import { Assistant } from '@/renderer/model/assistant/AssistantDb'
+import { assistantService } from '@/renderer/service/AssistantService';
 const llmModelManager:LlmModelManager = new LlmModelManager()
 /**
  * 把聊天的数据格式转化为大模型提问的数据格式
@@ -16,6 +18,7 @@ export const ChatMsgToLLM = async (messages:BubbleListProps<messageType>['list']
     if(messages.length == 0){
         throw new Error('messages is empty')
     }
+    let resultMessages = null
     let chatId = ''
     if(messages.length > 0){
         chatId = messages[0].chatId
@@ -26,13 +29,43 @@ export const ChatMsgToLLM = async (messages:BubbleListProps<messageType>['list']
         chatOnlyFile = false
     }
     if(!chatOnlyFile){
-        return buildNormalMessages(messages, chatConfig)
+        resultMessages = await buildNormalMessages(messages, chatConfig)
+    }else{
+        resultMessages = await buildChatFileMessages(messages, chatConfig)
     }
-    
-    return buildChatFileMessages(messages, chatConfig)
+    resultMessages = await rebuildMessagesForSystemAssistant(resultMessages, chatConfig)
+    return resultMessages
     
 }
+const rebuildMessagesForSystemAssistant = async (messages:LlmMessageList, chatConfig:LLMChatConfig): Promise<LlmMessageList> => {
+     
+    
+    //根据chatConfig里的assistantId从数据库取出assistant的配置
+    const assistantId:number = Number(chatConfig.assistantId)
+    const assistantInfo:Assistant|null = await assistantService.getAssistantById(assistantId)
+    console.log('assistantId', assistantId, 'assistantInfo->', JSON.stringify(assistantInfo))
+    if(assistantInfo == null){
+          return messages
+    }
+    if(messages.length < 1) {
+        messages.push({
+            role: ChatRole.SYSTEM,
+            content: assistantInfo.prompt_content,
+        })
+    }
+    const firstMessage = messages[0]
+    if(firstMessage.role == ChatRole.SYSTEM){
+        firstMessage.content = assistantInfo.prompt_content
+    }else{
+        messages.unshift({
+            role: ChatRole.SYSTEM,
+            content: assistantInfo.prompt_content,
+        })
+    }
+    console.log(JSON.stringify(messages))
+    return messages
 
+}
 const buildChatFileMessages = async (messages:BubbleListProps<messageType>['list'], chatConfig:LLMChatConfig): Promise<LlmMessageList> =>{
     //判断messages是空则报错
     if(messages.length < 1) {
