@@ -7,9 +7,8 @@ import { BubbleList, MentionSender, Thinking,Attachments,FilesCard,Typewriter,XM
 import { useFileDialog } from '@vueuse/core';
 import aiAvatar from '@/renderer/assets/avatars/ai-avatar.png'
 import userAvatar from '@/renderer/assets/avatars/user-avatar.png'
-import type { SelectOption } from 'naive-ui'
-import { NFlex, NAvatar,NPopselect,NButton, NIcon, NSelect, NCheckbox, NTooltip, NDropdown, useMessage, NModal, NCard, NInputGroup, NInput } from 'naive-ui'
-import { Delete,Search, CopyFile, Edit, SendAlt, Light,ArrowRight,ArrowLeft } from '@vicons/carbon'
+import { NFlex, NAvatar,NText,NButton, NIcon, NSelect, NCheckbox, NTooltip, NDropdown, useMessage, NModal, NCard, NInputGroup, NInput } from 'naive-ui'
+import { Delete, CopyFile, Edit, SendAlt, Light,ArrowRight,ArrowLeft } from '@vicons/carbon'
 import { Refresh, Attach, Add, TrainOutline as TrainIcon,CloseCircleOutline,HelpCircle } from '@vicons/ionicons5';
 import { PaperClipOutlined } from '@vicons/antd';
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
@@ -91,24 +90,29 @@ const renderAssiantHeader = () => {
     })
 }
 type AssistantChat ={
-  label?: string;
-  value?: string;
+  name?: string;
+  value: string;
+  type?:string,
+  render?:()=>any,
 }
- 
+const assistantsHeader = {
+  value: 'header',
+  type: 'render',
+  render: renderAssiantHeader
+}
 const assistantList = ref<AssistantChat[]>([])
 
 const selectedAssistant = ref<AssistantChat>({
-  label: '默认助手',
+  name: '默认助手',
   value: '1', 
 })
-const handleAssistant = (assistantValue: string, option: SelectOption) => {
-  message.info(`切换助手为: ${assistantList.value.find(item => item.value === assistantValue)?.label}`)
-  //option的label和value强制转为string
-  option.label = option.label?.toString()
-  option.value = option.value?.toString()
-  selectedAssistant.value = { label: option.label, value: option.value } 
+const handleAssistant = (assistantValue: string) => {
+  message.info(`切换助手为: ${assistantList.value.find(item => item.value === assistantValue)?.name}`)
+  // 只保留name和value属性
+  const foundItem = assistantList.value.find(item => item.value === assistantValue);
+  selectedAssistant.value = foundItem ? { name: foundItem.name, value: foundItem.value } : selectedAssistant.value
   formData.value.assistantId = selectedAssistant?.value.value || 'default'
-  formData.value.assistantName = selectedAssistant?.value.label || '默认助手'
+  formData.value.assistantName = selectedAssistant?.value.name || '默认助手'
 }
 const gotoAssistantSetting = () => {
    router.push({
@@ -350,24 +354,14 @@ watch(() => props.chatId, async (newChatId, oldChatId) => {
         }
     });
 const loadAssistantList = async () => {
-  const assistants = await assistantService.getAllAssistants()
+  const { list: assistants } = await assistantService.searchAssistants(1, 10, assistantSearchKey.value);
   assistantList.value = assistants.map((assistant: Assistant): AssistantChat => {
     return {
-      label: assistant.name,
+      name: assistant.name,
       value: assistant.id.toString(),
     };
   });
-}
- 
-const searchAssistants = async () => {
-  const {list:assistants} = await assistantService.searchAssistants(1, 100, assistantSearchKey.value);
-  console.log('searchKey', assistantSearchKey.value, 'assistants',assistants)
-  assistantList.value = assistants.map((assistant: Assistant): AssistantChat => {
-    return {
-      label: assistant.name,
-      value: assistant.id.toString(),
-    };
-  });
+  assistantList.value.unshift(assistantsHeader)
 }
 const initializeChatConfig = async () => {
   try {
@@ -384,7 +378,7 @@ const initializeChatConfig = async () => {
     // 2.1 读取助手配置
     if (config?.assistantId) {
       selectedAssistant.value = {
-        label: config.assistantName || '',
+        name: config.assistantName || '',
         value: config.assistantId || '',
       };
     }
@@ -543,7 +537,7 @@ watch(
       platformName: formData.value.platformName,
       modelName: formData.value.modelName,
       assistantId: selectedAssistant.value.value,
-      assistantName: selectedAssistant.value.label,
+      assistantName: selectedAssistant.value.name,
     });
    await calcThinkingShowStatus(newValue.platformId,newValue.modelId)
 
@@ -714,26 +708,16 @@ watch(
                 <n-icon><PaperClipOutlined /></n-icon>
               </template>
             </n-button>
-             <n-popselect v-model:value="selectedAssistant.value" :options="assistantList" 
-                  @update:value="handleAssistant"
-                  trigger="hover" scrollable>
-                <n-button size="tiny">{{ selectedAssistant.label || '弹出选择' }}</n-button>
-                <template #header>
-                  <n-input-group size="small">
-                    <n-input  size="tiny" v-model:value="assistantSearchKey"  placeholder='根据名称搜索' clearable>
-                      <template #suffix>
-                      <n-icon :component="Search" />
-                    </template>
-                    </n-input>
-                    <n-button type="primary"  size="tiny"  @click="searchAssistants">
-                      搜索
-                    </n-button>
-                    <n-button type="primary"  size="tiny" ghost @click="gotoAssistantSetting">
-                      新增助手
-                    </n-button>
-                  </n-input-group>
-                </template>
-            </n-popselect>
+            <n-dropdown trigger="hover"
+                      placement="bottom-start"
+                      size="small"
+                      key-field="value"
+                      label-field="name"
+                      :options="assistantList"
+                      @select="handleAssistant">
+                  <n-button> {{ selectedAssistant.name }} </n-button>
+            </n-dropdown>
+
           </div>
         </template>
       </MentionSender>

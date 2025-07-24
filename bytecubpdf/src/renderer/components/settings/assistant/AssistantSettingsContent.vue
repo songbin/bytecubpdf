@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { NForm, NFormItem, NInput, NInputNumber, NButton, useMessage, NCard, FormRules } from 'naive-ui'
 import { assistantManager } from '@/renderer/service/manager/AssistantManager'
 import { Assistant } from '@/renderer/model/assistant/AssistantDb'
+import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
 
 const props = defineProps<{
   id?: number
@@ -166,6 +167,7 @@ watch(
         </n-form-item>
       </n-form>
     </n-card>
+    <HelpFloatButton url="https://www.docfable.com/docs/usage/settings/assistant.html" />
   </div>
 </template>
 
