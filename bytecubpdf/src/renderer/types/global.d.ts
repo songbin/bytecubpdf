@@ -66,6 +66,8 @@ declare global {
       
       verifyFileDownloads: () => Promise<FileDownloadItem[]>; // 新增验证文件下载方法
       verifyFilePathDownloads: () => Promise<FileDownloadItem[]>; // 新增验证文件下载方法 
+      //file ipc下的
+      deleteFile: (filePath: string) => Promise<boolean>; // 新增删除文件方法 
     };
 }
 }

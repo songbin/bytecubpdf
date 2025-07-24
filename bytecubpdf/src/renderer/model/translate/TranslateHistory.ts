@@ -28,7 +28,7 @@ export interface TranslateHistory {
   translationEngine: string;
   /** 扩展字段1-8 */
   ext1?: string;
-  ext2?: string;
+  ext2?: string;//原生对照文件路径
   ext3?: string;
   ext4?: string;
   ext5?: string;

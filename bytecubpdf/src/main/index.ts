@@ -3,6 +3,7 @@ import path from 'path'
 import iconv from 'iconv-lite';
 import { setupI18n, t } from '../shared/i18n/electron'
 import { setupIPCHandlers } from './ipc'
+import { FileIpcSetup } from './FileIpc';
 import { initialize } from './core/Initialize'
 import BuildPath from './core/BuildPath';
 import { pluginLogger } from './core/PluginLog';
@@ -236,6 +237,7 @@ app.whenReady().then(() => {
   // }
   createWindow()
   setupIPCHandlers() // 初始化所有 IPC 处理器
+  FileIpcSetup()
   initialize() // 初始化应用
   updateManager.checkForUpdates() // 启动时自动检查更新
   // macOS应用激活事件处理

@@ -67,7 +67,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getUpgradeDownPath: () => ipcRenderer.invoke('upgrade:getDownPath'),
   setUpgradeStatus: (status: boolean, filePath: string) => ipcRenderer.invoke('upgrade:setStatus', status, filePath),
   
-
+  //File ipc
+  deleteFile: (filePath: string) => ipcRenderer.invoke('file:delete-file', filePath), 
   //重启应用
   restartApp: () => ipcRenderer.invoke('app:restart'),
   // 系统信息

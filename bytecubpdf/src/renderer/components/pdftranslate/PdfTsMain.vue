@@ -316,7 +316,7 @@ onMounted(async () => {
         threadCount: config.threadCount || 4,
         enableTerms: config.enableTerms || false,
         maxPages: config.maxPages || 0, // 新增每页最大页数字段
-        // enableOCR: config.enableOCR || false,  // 新增OCR识别字段
+        enableOCR:  false,  // 新增OCR识别字段
         disableRichText: config.disableRichText || false,  // 新增富文字段
         enableTable: config.enableTable || false,  // 新增表格翻译字段
         enableDual: config.enableDual || false,  // 新增双语对照字段

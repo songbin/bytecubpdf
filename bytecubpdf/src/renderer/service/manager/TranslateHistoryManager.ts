@@ -10,7 +10,13 @@ export class TranslateHistoryManager {
             ? value.replace(/'/g, "''") 
             : String(value ?? '');
     }
-
+    //根据id获取实体内容
+    async queryHistory(id: number): Promise<TranslateHistory | null> {
+        const result = await SqliteDbCore.executeQuery<TranslateHistory>(`
+            SELECT * FROM ${this.tableName} WHERE id = ?
+        `, [id]);
+        return result[0] || null;
+    }
     async createHistory(history: Omit<TranslateHistory, 'id'|'createdAt'>): Promise<number> {
         // 对字符串字段统一进行安全处理
         const sanitizedValues = [

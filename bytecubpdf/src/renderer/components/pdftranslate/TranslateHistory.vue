@@ -237,6 +237,16 @@ const columns: TableColumn<TranslateHistory>[] = [
           },
           () => '对比'
         ),
+        h(
+          NButton,
+          {
+            size: 'small',
+            type: 'warning',
+            text: true,
+            onClick: () => handleDelete(row.id),
+          },
+          () => '删除'
+        ),
       ]);
     },
   },
@@ -312,9 +322,9 @@ const handleViewSource = async (path: string) => {
 
 const handleViewTarget = async (path: string) => {
   try {
-    const uploadDir = await (window as any).window.electronAPI?.getTranslateDirPath();
+    const uploadDir = await window.electronAPI?.getTranslateDirPath();
     if (!uploadDir) throw new Error('无法获取上传目录路径');
-    const fullPath = await (window as any).window.electronAPI?.pathJoin(uploadDir, path);
+    const fullPath = await window.electronAPI?.pathJoin(uploadDir, path);
     currentPdfPath.value = fullPath;
     showPdfViewer.value = true;
   } catch (error) {
@@ -331,7 +341,42 @@ const handleClosePdfViewer = () => {
 const showCompareViewer = ref(false);
 const currentPdfLeft = ref('');
 const currentPdfRight = ref('');
-
+const handleDelete = async (id: number|undefined) => {
+  if (!id) {
+    message.error('记录不存在');
+    return;
+  }
+  try {
+    const history = await historyManager.queryHistory(id);
+    if (!history) throw new Error('记录不存在');
+    
+    const sourceFile = history.sourceFile;
+    const targetFile = history.targetFile;
+    const nativeFile = history.ext2;//双语pdf
+    const [uploadDir, translateDir] = await Promise.all([
+      (window as any).window.electronAPI?.getUploadDirPath(),
+      (window as any).window.electronAPI?.getTranslateDirPath(),
+    ]);
+    if (!uploadDir || !translateDir) throw new Error('路径获取失败');
+    //三个文件，只要不为空 就删除文件
+    if (sourceFile) {
+      const sourcePath = await window.electronAPI?.pathJoin(uploadDir, sourceFile);
+      await window.electronAPI?.deleteFile(sourcePath);
+    }
+    if (targetFile) {
+      const targetPath = await window.electronAPI?.pathJoin(translateDir, targetFile);
+      await window.electronAPI?.deleteFile(targetPath);
+    }
+    if (nativeFile) {
+      const nativePath = await window.electronAPI?.pathJoin(translateDir, nativeFile);
+      await window.electronAPI?.deleteFile(nativePath);
+    }
+    await historyManager.deleteHistory(id);
+    loadData();
+  } catch (error) {
+    message.error(`删除失败: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
 const handleCompare = async (source: string, target: string) => {
   try {
     const [uploadDir, translateDir] = await Promise.all([
@@ -339,8 +384,10 @@ const handleCompare = async (source: string, target: string) => {
       (window as any).window.electronAPI?.getTranslateDirPath(),
     ]);
     if (!uploadDir || !translateDir) throw new Error('路径获取失败');
-    currentPdfLeft.value = `${uploadDir}\\${source}`;
-    currentPdfRight.value = `${translateDir}\\${target}`;
+    // currentPdfLeft.value = `${uploadDir}\\${source}`;
+    // currentPdfRight.value = `${translateDir}\\${target}`;
+    currentPdfLeft.value = await window.electronAPI?.pathJoin(uploadDir, source);
+    currentPdfRight.value = await window.electronAPI?.pathJoin(translateDir, target);
     showCompareViewer.value = true;
   } catch (error) {
     message.error(`打开对比失败: ${error instanceof Error ? error.message : String(error)}`);
