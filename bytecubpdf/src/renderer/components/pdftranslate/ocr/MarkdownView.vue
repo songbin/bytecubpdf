@@ -21,8 +21,9 @@
           v-else-if="htmlContent"
           class="rendered-markdown"
           :style="{ transform: `scale(${scale / 100})` }"
-          v-html="htmlContent"
-        ></div>
+       
+        > <XMarkdown :markdown=htmlContent  />
+      </div>
         <div 
           v-else 
           class="empty"
@@ -40,6 +41,7 @@
   import 'katex/dist/katex.min.css'
   import DOMPurify from 'dompurify'
   import { NButton, NIcon, NSpin, NAlert,useMessage } from 'naive-ui'
+  import { XMarkdown  } from 'vue-element-plus-x'
   defineOptions({
   name: 'MarkdownView'
 })

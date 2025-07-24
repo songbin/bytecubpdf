@@ -86,10 +86,11 @@
         </div>
       </template>
     
-      <MarkdownViewer
+       <MarkdownViewer
         :source="markdownSource"
         title="文档预览"
       />
+      
     </n-modal>
 
     <!-- PDF 对比预览弹窗 -->
@@ -215,7 +216,7 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue';
 import { Folder } from '@vicons/carbon';
-import { NDataTable, NFlex, NPagination, NSpace, NButton, NTooltip, NModal, NIcon, NButtonGroup, useMessage } from 'naive-ui';
+import { NDataTable, NFlex, NPagination, useDialog, NSpace, NButton, NTooltip, NModal, NIcon, NButtonGroup, useMessage } from 'naive-ui';
 import { h } from 'vue';
 import { TranslateHistory } from '@/renderer/model/translate/TranslateHistory';
 import { TranslateHistoryManager } from '@/renderer/service/manager/TranslateHistoryManager';
@@ -224,7 +225,9 @@ import PdfCompareViewer from '../PdfCompareViewer.vue';
 import { Maximize, Close } from '@vicons/carbon';
 import MarkdownViewer from '@/renderer/components/pdftranslate/ocr/MarkdownView.vue'
 import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
+
 const historyManager = new TranslateHistoryManager();
+const dialog = useDialog()
 defineOptions({
   name: 'OcrHistory'
 
@@ -346,6 +349,16 @@ const columns: TableColumn<TranslateHistory>[] = [
           },
           () => '导出word'
         ),
+        h(
+          NButton,
+          {
+            size: 'small',
+            type: 'success',
+            text: true,
+            onClick: () => handleDelete(row.id),
+          },
+          () => '删除'
+        ),
       ]);
     },
   },
@@ -464,9 +477,62 @@ const handleSourceCloseViewer = () => {
     showPdfViewer.value = false;
     currentPdfPath.value = '';
 };
+const handleDelete = async (id: number|undefined) => {
+  dialog.warning({
+      title: '确认删除',
+      content: '确认删除记录以及对应文件？',
+      positiveText: '确认',
+      negativeText: '取消',
+      onPositiveClick: async () => {
+        await fileDelete(id);
+      }
+    })
+}
+const fileDelete = async (id: number|undefined) => {
+  if (!id) return;
+  try {
+    const history = await historyManager.queryHistory(id);
+    if (!history) throw new Error('记录不存在');
+    const fileType = history.ext2;
+    const sourceFile = history.sourceFile;
+    const docxFile = history.ext3;//DOCX
+    const mdFile = history.ext4;//md文件
+    const [pdfDir, wordDir, mdDir, imageDir] = await Promise.all([
+      window.electronAPI?.getUploadDirPath(),
+      window.electronAPI?.getUploadOcrResultDocxPath(),
+      window.electronAPI?.getUploadOcrResultMdPath(),
+      window.electronAPI?.getUploadOcrImagePath(),
+    ]);
+    if (!pdfDir || !wordDir || !mdDir || !imageDir) throw new Error('路径获取失败');
+    //三个文件，只要不为空 就删除文件
+    if (sourceFile) {
+      let uploadDir = pdfDir;
+      if(fileType == 'image'){
+        uploadDir = imageDir;
+      }else if(fileType == 'pdf'){
+        uploadDir = pdfDir;
+      }
+      const sourcePath = await window.electronAPI?.pathJoin(uploadDir, sourceFile);
+      await window.electronAPI?.deleteFile(sourcePath);
+    }
+    if (docxFile) {
+      const targetPath = await window.electronAPI?.pathJoin(wordDir, docxFile);
+      await window.electronAPI?.deleteFile(targetPath);
+    }
+    if (mdFile) {
+      const nativePath = await window.electronAPI?.pathJoin(mdDir, mdFile);
+      await window.electronAPI?.deleteFile(nativePath);
+    }
+    await historyManager.deleteHistory(id);
+    loadData();
+  } catch (error) {
+    message.error(`删除失败: ${error instanceof Error ? error.message : String(error)}`);
+  }
+   
+}
 const handleViewWordTarget = async (path: string| undefined) => {
   try {
-    const uploadDir = await (window as any).window.electronAPI?.getUploadOcrResultDocxPath();
+    const uploadDir = await window.electronAPI?.getUploadOcrResultDocxPath();
     if (!uploadDir) throw new Error('无法获取word文档目录路径');
     const fullPath = await (window as any).window.electronAPI?.pathJoin(uploadDir, path);
     currentPdfPath.value = fullPath;
