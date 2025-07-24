@@ -81,6 +81,7 @@ class PdfMathService:
         cancellation_event=None,
         term_dict = None,
         no_dual: bool = True,  # 新增禁用双页翻译字段
+        system_prompt: str = "",  # 新增系统提示字段
     ):
         save_path = os.path.join(os.getcwd(), TSConstants.translate_folder)
         if not ModelInstance.value:
@@ -91,7 +92,7 @@ class PdfMathService:
         
         
         envs = cls._build_envs(service, model_name, api_key,base_url, 
-        term_dict=term_dict, engine=TSCore.pdfmath)
+        term_dict=term_dict, engine=TSCore.pdfmath, system_prompt=system_prompt)
         
         
         param = {
@@ -118,11 +119,14 @@ class PdfMathService:
         
     @classmethod
     def _build_envs(cls, service:str, model_name:str, 
-    api_key:str, base_url:str, term_dict:dict = {}, engine:str = '') -> Dict:
+    api_key:str, base_url:str, term_dict:dict = {}, engine:str = '',
+    system_prompt: str = "",  # 新增系统提示字段
+    ) -> Dict:
         # 先构建基础配置
         envs = {
             ENVDict.TERM_DICT: term_dict,
-            ENVDict.ENGINE: engine
+            ENVDict.ENGINE: engine,
+            ENVDict.SYSTEM_PROMPT: system_prompt,  # 新增系统提示字段
         }
         
         # 根据服务类型添加特定配置

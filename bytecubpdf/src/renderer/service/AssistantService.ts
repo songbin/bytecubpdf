@@ -93,7 +93,17 @@ export class AssistantService {
       return [];
     }
   }
-
+  public async getAssistantByIdString(id: string): Promise<Assistant | null> {
+    try {
+      if (!id) return null;
+      const idNumber = Number(id);
+      if(isNaN(idNumber)) return null;
+      return await assistantManager.getAssistant(idNumber);
+    } catch (error) {
+      message.error(`获取助手信息失败: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }
   /**
    * 根据ID获取助手
    * @param id 助手ID

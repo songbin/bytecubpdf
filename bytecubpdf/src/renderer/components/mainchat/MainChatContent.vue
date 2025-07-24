@@ -31,6 +31,7 @@ import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
 import {checkEnableThinkSwitch} from '@/renderer/service/chat/config/OpenAIModelsConfig'
 import { assistantService } from '@/renderer/service/AssistantService';
 import { Assistant } from '@/renderer/model/assistant/AssistantDb';
+import {AssistantOption} from '@/renderer/model/assistant/AssistantOption'
 
 const store = usePdfTranslateStore()
 defineOptions({
@@ -90,14 +91,11 @@ const renderAssiantHeader = () => {
       ]
     })
 }
-type AssistantChat ={
-  label?: string;
-  value?: string;
-}
- 
-const assistantList = ref<AssistantChat[]>([])
 
-const selectedAssistant = ref<AssistantChat>({
+ 
+const assistantList = ref<AssistantOption[]>([])
+
+const selectedAssistant = ref<AssistantOption>({
   label: '默认助手',
   value: '1', 
 })
@@ -351,7 +349,7 @@ watch(() => props.chatId, async (newChatId, oldChatId) => {
     });
 const loadAssistantList = async () => {
   const assistants = await assistantService.getAllAssistants()
-  assistantList.value = assistants.map((assistant: Assistant): AssistantChat => {
+  assistantList.value = assistants.map((assistant: Assistant): AssistantOption => {
     return {
       label: assistant.name,
       value: assistant.id.toString(),
@@ -362,7 +360,7 @@ const loadAssistantList = async () => {
 const searchAssistants = async () => {
   const {list:assistants} = await assistantService.searchAssistants(1, 100, assistantSearchKey.value);
   console.log('searchKey', assistantSearchKey.value, 'assistants',assistants)
-  assistantList.value = assistants.map((assistant: Assistant): AssistantChat => {
+  assistantList.value = assistants.map((assistant: Assistant): AssistantOption => {
     return {
       label: assistant.name,
       value: assistant.id.toString(),

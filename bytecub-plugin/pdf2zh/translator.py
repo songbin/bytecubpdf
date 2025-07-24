@@ -1,6 +1,7 @@
 import html
 import json
 import logging
+from math import log
 import os
 import re
 import unicodedata
@@ -182,6 +183,9 @@ class BaseTranslator:
        # logging.info(f"glossary_str: {glossary_str}")
         if has_term_dict:
             return [{
+                "role": "system",
+                "content": self.envs[ENVDict.SYSTEM_PROMPT],
+            },{
                 "role": "user",
                 "content": (
                      "You are a professional translation engine.\n"
@@ -194,7 +198,10 @@ class BaseTranslator:
                 )
             }]
         else:
-            return [
+            return [{
+                "role": "system",
+                "content": self.envs[ENVDict.SYSTEM_PROMPT],
+            },
                 {
                     "role": "user",
                     "content": (
@@ -515,7 +522,7 @@ class OpenAITranslator(BaseTranslator):
         if has_term_dict:
             processed_text, mapping = self.pre_process(text, term_dict)
             text = processed_text
-        
+        # logger.info(f"prompt: {self.prompt(text, self.prompttext)}")
         response = self.client.chat.completions.create(
             model=self.model,
             **self.options,

@@ -39,6 +39,10 @@
             <n-select v-model:value="formData.modelId" :options="models"
               :placeholder="t('pdfts.main.tsform.modelPlaceholder')" filterable size="small" />
           </n-form-item>
+           <n-form-item label="模型助手" :show-feedback="false" :style="{ marginBottom: 0 }">
+            <n-select v-model:value="formData.assistantId" :options="assistantList"
+              placeholder="请选择助手" filterable size="small" />
+          </n-form-item>
         </n-flex>
         <n-flex class="form-section" vertical size="small" >
           <n-flex>
@@ -227,6 +231,9 @@ import { TranslateHistoryManager } from '@/renderer/service/manager/TranslateHis
 import DlTranslateResourceModal from '@/renderer/components/download/DlTranslateResourceModal.vue'
 import { FileDownloadItem,DownloadProgress } from '@/shared/constants/dfconstants';
 import { storeToRefs } from 'pinia'
+import {assistantService} from '@/renderer/service/AssistantService'
+import {AssistantOption} from '@/renderer/model/assistant/AssistantOption'
+import {Assistant} from '@/renderer/model/assistant/AssistantDb'
 const historyManager = new TranslateHistoryManager();
 const filesToDownload = ref<FileDownloadItem[]>([])
 const { t } = useI18n();
@@ -239,12 +246,14 @@ const uploadData = ref<Record<string, any>>({});
 import { UPLOAD_BIZ } from '@/renderer/constants/appconfig'
 //是否在翻译前先进行扫描版检测
 const verifyScanned = ref(false)
+const assistantList = ref<AssistantOption[]>([])
 // 数据绑定
 const formData = ref({
   sourceLang: '',
   targetLang: '',
   platformId: '',
   modelId: '',
+  assistantId: '',
   engine: 'babeldoc',
   threadCount: 32,
   enableTerms: false, // 新增术语开关字段
@@ -276,7 +285,15 @@ const {
 const platforms = ref<Array<{ value: string; label: string }>>([]);
 const models = ref<Array<{ value: string; label: string }>>([]);
 import { backendReady, startCheckingBackendStatus, duration, formatDuration } from '@/renderer/service/backendStatus';
-
+const loadAssistantList = async () => {
+  const assistants = await assistantService.getAllAssistants()
+  assistantList.value = assistants.map((assistant: Assistant): AssistantOption => {
+    return {
+      label: assistant.name,
+      value: assistant.id.toString(),
+    };
+  });
+}
 // 初始化平台数据
 onMounted(async () => {
   try {
@@ -293,12 +310,13 @@ onMounted(async () => {
         sourceLang: config.sourceLang || '',
         targetLang: config.targetLang || '',
         platformId: config.platformId || '',
+        assistantId: config.assistantId || '',
         modelId: config.modelId || '',
         engine: config.engine || '',
         threadCount: config.threadCount || 4,
         enableTerms: config.enableTerms || false,
         maxPages: config.maxPages || 0, // 新增每页最大页数字段
-        enableOCR: config.enableOCR || false,  // 新增OCR识别字段
+        // enableOCR: config.enableOCR || false,  // 新增OCR识别字段
         disableRichText: config.disableRichText || false,  // 新增富文字段
         enableTable: config.enableTable || false,  // 新增表格翻译字段
         enableDual: config.enableDual || false,  // 新增双语对照字段
@@ -314,7 +332,7 @@ onMounted(async () => {
       label: p.platformName,
     }));
 
-
+    await loadAssistantList()
   } catch (error) {
     console.error('加载配置失败:', error);
   }
@@ -354,6 +372,7 @@ watch(
       sourceLang: newValue.sourceLang,
       targetLang: newValue.targetLang,
       platformId: newValue.platformId,
+      assistantId: newValue.assistantId,
       modelId: newValue.modelId,
       engine: newValue.engine,
       threadCount: newValue.threadCount,
@@ -516,12 +535,14 @@ const formatRequestData = async () => {
     });
   }
 
-  console.log('获取的术语列表:', termsResponse); // 打印获取的术语列表
-
+  // console.log('获取的术语列表:', termsResponse); // 打印获取的术语列表
+  const assistant = await assistantService.getAssistantByIdString(formData.value.assistantId)
+  const system_prompt = assistant?.prompt_content || ''
   return {
     sourceLanguage: formData.value.sourceLang,
     targetLanguage: formData.value.targetLang,
     platform: protocolType,
+    system_prompt: system_prompt,
     model: formData.value.modelId,
     translate_engine: formData.value.engine,
     threads: formData.value.threadCount,

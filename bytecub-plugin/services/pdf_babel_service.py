@@ -41,6 +41,7 @@ class PdfBabelSerive:
         disable_rich_text: bool = False,  # 新增禁用富文字段
         enable_table: bool = False,  # 新增表格翻译字段
         no_dual: bool = True,  # 新增禁用双页翻译字段
+        system_prompt: str = "",  # 新增系统提示字段
     ):
         # 检查文件是否存在
         if not os.path.exists(file_path):
@@ -53,7 +54,7 @@ class PdfBabelSerive:
         from config.ts_constants import TSCore
         
         envs = PdfMathService._build_envs(service, model_name, api_key,base_url, 
-        term_dict=term_dict, engine=TSCore.babeldoc)
+        term_dict=term_dict, engine=TSCore.babeldoc, system_prompt=system_prompt)
         # 构建翻译器
         translator =  cls.__query_platform(service_name, lang_in, lang_out, service_model, envs, None)
         save_path = os.path.join(os.getcwd(), TSConstants.translate_folder)

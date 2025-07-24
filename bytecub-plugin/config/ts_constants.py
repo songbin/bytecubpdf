@@ -29,6 +29,7 @@ class TSCore():
 class ENVDict():
    TERM_DICT:str = 'TERM_DICT'
    ENGINE:str = 'ENGINE'
+   SYSTEM_PROMPT:str = 'SYSTEM_PROMPT'  # 新增系统提示字段
 
 class TSStatus():
    processing:str = 'processing'

@@ -46,6 +46,7 @@ class TranslateRequestModel(BaseModel):
     file_path: str
     sourceLanguage: str
     targetLanguage: str
+    system_prompt: str
     platform: str
     model: str
     apiKey: str
@@ -289,6 +290,7 @@ class PdfController:
                         cancellation_event=cancellation_event,
                         term_dict=request.term_dict,
                         no_dual = no_dual,  # 新增禁用双页翻译字段
+                        system_prompt = request.system_prompt,  # 新增系统提示字段
                     )
                     dual_file_name = dual_file_name if dual_file_name else ''
                     final_result = {
@@ -323,7 +325,8 @@ class PdfController:
                         enable_ocr = request.enable_ocr,  # 新增OCR识别字段
                         disable_rich_text = request.disable_rich_text,  # 新增禁用富文字段
                         enable_table = request.enable_table,  # 新增表格翻译字段
-                        no_dual = no_dual
+                        no_dual = no_dual,
+                        system_prompt = request.system_prompt,  # 新增系统提示字段
                     )
                     dual_file_name = dual_file_name if dual_file_name else ''
                     final_result = {

@@ -4,6 +4,7 @@ export interface PdfTranslateConfig {
   sourceLang: string;
   targetLang: string;
   platformId?: string;
+  assistantId?: string;
   modelId?: string;
   engine: string;
   threadCount: number;
