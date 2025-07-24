@@ -118,7 +118,7 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue';
 import { Folder } from '@vicons/carbon';
-import { NDataTable, NFlex, NPagination, NSpace, NButton, NTooltip, NModal, NIcon, NButtonGroup, useMessage } from 'naive-ui';
+import { NDataTable, NFlex, NPagination, NSpace, useDialog,NButton, NTooltip, NModal, NIcon, NButtonGroup, useMessage } from 'naive-ui';
 import { h } from 'vue';
 import { TranslateHistory } from '@/renderer/model/translate/TranslateHistory';
 import { TranslateHistoryManager } from '@/renderer/service/manager/TranslateHistoryManager';
@@ -127,6 +127,7 @@ import PdfCompareViewer from './PdfCompareViewer.vue';
 import { Maximize, Close } from '@vicons/carbon';
 import HelpFloatButton from '@/renderer/components/common/HelpFloatButton.vue'
 const historyManager = new TranslateHistoryManager();
+const dialog = useDialog()
 defineOptions({
   name: 'TranslateHistory'
 })
@@ -342,6 +343,18 @@ const showCompareViewer = ref(false);
 const currentPdfLeft = ref('');
 const currentPdfRight = ref('');
 const handleDelete = async (id: number|undefined) => {
+ 
+    dialog.warning({
+    title: '确认删除',
+    content: '确认删除记录以及对应文件？',
+    positiveText: '确认',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      await fileDelete(id);
+    }
+  })
+}
+const fileDelete = async (id: number|undefined) => {
   if (!id) {
     message.error('记录不存在');
     return;
