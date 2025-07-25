@@ -167,7 +167,7 @@ watch(
         </n-form-item>
       </n-form>
     </n-card>
-    <HelpFloatButton url="https://www.docfable.com/docs/usage/settings/assistant.html" />
+    <HelpFloatButton url="https://www.docfable.com/docs/usage/settingsmentor/assistant.html" />
   </div>
 </template>
 

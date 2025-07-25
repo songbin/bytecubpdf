@@ -238,9 +238,9 @@ const openGuide = (id:string) =>{
     }else if (id === 'deepseek'){
         window.electronAPI.openExternal('https://www.docfable.com/docs/platform/deepseekguide.html')
     }else if (id == 'datascope'){
-        window.electronAPI.openExternal('https://bailian.console.aliyun.com/?tab=model#/api-key')
+        window.electronAPI.openExternal('https://www.docfable.com/docs/platform/bailianguide.html')
     }else if (id == 'openrouter'){
-        window.electronAPI.openExternal('https://openrouter.ai/settings/keys')
+        window.electronAPI.openExternal('https://www.docfable.com/docs/platform/opentouterguide.html')
     }
     else{
         window.electronAPI.openExternal('https://www.docfable.com/docs/usage/settingsmentor/llm.html')
