@@ -70,6 +70,8 @@ npm install --force
 
 感谢原作者的杰出贡献！
 ## 界面截图
+![1.png](images/assistant.png)
+![2.png](images/assiatant2.png)
 ![1.png](images/1.png)
 ![2.png](images/2.png) 
 ![3.png](images/3.png)
