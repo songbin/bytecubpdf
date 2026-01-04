@@ -1,0 +1,11 @@
+# UV 配置文件 - 使用中国境内镜像源
+
+# 默认使用清华大学 PyPI 镜像
+index-url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+
+# 额外的镜像源（备用）
+extra-index-url = [
+    "https://mirrors.aliyun.com/pypi/simple/",
+    "https://pypi.douban.com/simple/",
+    "https://pypi.mirrors.ustc.edu.cn/simple/"
+]
