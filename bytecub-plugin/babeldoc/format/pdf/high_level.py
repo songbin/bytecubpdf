@@ -787,6 +787,7 @@ def do_translate(
         return result
 
     except Exception as e:
+        logger.exception("translate error:")
         if translation_config.debug:
             logger.exception("translate error:")
         else:

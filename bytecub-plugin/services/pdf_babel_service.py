@@ -143,7 +143,7 @@ class PdfBabelSerive:
                                 if isinstance(error_msg, ScannedPDFError):
                                     raise ScannedPDFError("Scanned PDF detected, please enable OCR recognition")
                                 else:
-                                    logger.info(f"Translation failed: {str(event['error'])}")
+                                    logger.warning_ext(f"Translation failed: {str(event['error'])}")
                                     raise Exception(str(event['error']))
                             if event["type"] == "progress_update" and callback:
                                 try:

@@ -541,13 +541,16 @@ class OpenAITranslator(BaseTranslator):
         return content
 
     def get_formular_placeholder(self, id: int):
-        return "{{v" + str(id) + "}}"
+        #return "{{v" + str(id) + "}}"
+        return f"{{v{id}}}"
 
     def get_rich_text_left_placeholder(self, id: int):
-        return self.get_formular_placeholder(id)
+        #return self.get_formular_placeholder(id)
+        return f"{{v{id}}}"
 
     def get_rich_text_right_placeholder(self, id: int):
-        return self.get_formular_placeholder(id + 1)
+        #return self.get_formular_placeholder(id + 1)
+        return f"{{v{id}}}"
 
 
 class AzureOpenAITranslator(BaseTranslator):
