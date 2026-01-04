@@ -519,6 +519,9 @@ class TranslateResult:
         self.auto_extracted_glossary_path = auto_extracted_glossary_path
         self.total_valid_character_count = None
         self.total_valid_text_token_count = None
+        self.total_pages = total_pages
+        self.source_base_name = source_base_name
+        self.mono_out_file_name = mono_out_file_name
 
     def __str__(self):
         """Return a human-readable string representation of the translation result."""
