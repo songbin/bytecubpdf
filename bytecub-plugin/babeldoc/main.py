@@ -740,7 +740,7 @@ async def main():
                 if config.debug:
                     logger.debug(event)
                 if event["type"] == "error":
-                    logger.error(f"Error: {event['error']}")
+                    logger.error(f"Error: {str(event['error'])}")
                     break
                 if event["type"] == "finish":
                     result = event["translate_result"]
