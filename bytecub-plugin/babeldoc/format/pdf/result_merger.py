@@ -142,6 +142,7 @@ class ResultMerger:
                 f.write(
                     self.config.shared_context_cross_split_part.auto_extracted_glossary.to_csv()
                 )
+
         # Create merged result
         merged_result = TranslateResult(
             mono_pdf_path=merged_mono_path,

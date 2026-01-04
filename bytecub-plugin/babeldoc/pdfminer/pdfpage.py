@@ -80,7 +80,10 @@ class PDFPage:
             log.exception(f"try to fix mediabox failed: {attrs}")
 
         self.mediabox = self._parse_mediabox(self.attrs.get("MediaBox"))
-        self.cropbox = self._parse_cropbox(self.attrs.get("CropBox"), self.mediabox)
+        try:
+            self.cropbox = self._parse_cropbox(self.attrs.get("CropBox"), self.mediabox)
+        except Exception:
+            self.cropbox = self.mediabox
         self.contents = self._parse_contents(self.attrs.get("Contents"))
 
         self.rotate = (int_value(self.attrs.get("Rotate", 0)) + 360) % 360

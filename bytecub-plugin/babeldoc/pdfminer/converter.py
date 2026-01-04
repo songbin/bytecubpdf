@@ -8,6 +8,7 @@ from typing import TextIO
 from typing import TypeVar
 from typing import cast
 
+from babeldoc.format.pdf.document_il import il_version_1
 from babeldoc.pdfminer.image import ImageWriter
 from babeldoc.pdfminer.layout import LAParams
 from babeldoc.pdfminer.layout import LTAnno
@@ -111,7 +112,7 @@ class PDFLayoutAnalyzer(PDFTextDevice):
     ) -> None:
         """Paint paths described in section 4.4 of the PDF reference manual"""
         shape = "".join(x[0] for x in path)
-
+        current_clip_paths = self.il_creater.current_clip_paths.copy()
         if shape[:1] != "m":
             # Per PDF Reference Section 4.4.1, "path construction operators may
             # be invoked in any sequence, but the first one invoked must be m
@@ -121,11 +122,11 @@ class PDFLayoutAnalyzer(PDFTextDevice):
             # do not begin with the `m` operator are invalid.
             pass
 
-        elif shape.count("m") > 1:
-            # recurse if there are multiple m's in this shape
-            for m in re.finditer(r"m[^m]+", shape):
-                subpath = path[m.start(0) : m.end(0)]
-                self.paint_path(gstate, stroke, fill, evenodd, subpath)
+        # elif shape.count("m") > 1:
+        #     # recurse if there are multiple m's in this shape
+        #     for m in re.finditer(r"m[^m]+", shape):
+        #         subpath = path[m.start(0) : m.end(0)]
+        #         self.paint_path(gstate, stroke, fill, evenodd, subpath)
 
         else:
             # Although the 'h' command does not not literally provide a
@@ -160,6 +161,10 @@ class PDFLayoutAnalyzer(PDFTextDevice):
                 shape = shape[:-2] + "h"
                 pts.pop()
 
+            passthrough_instruction = (
+                self.il_creater.passthrough_per_char_instruction.copy()
+            )
+            xobj_id = self.il_creater.xobj_id
             if shape in {"mlh", "ml"}:
                 # single line segment
                 #
@@ -177,6 +182,12 @@ class PDFLayoutAnalyzer(PDFTextDevice):
                     original_path=transformed_path,
                     dashing_style=gstate.dash,
                 )
+                line.passthrough_instruction = passthrough_instruction
+                line.xobj_id = xobj_id
+                line.render_order = self.il_creater.get_render_order_and_increase()
+                line.ctm = self.ctm
+                line.raw_path = path.copy()
+                line.clip_paths = current_clip_paths
                 self.cur_item.add(line)
 
             elif shape in {"mlllh", "mllll"}:
@@ -198,6 +209,12 @@ class PDFLayoutAnalyzer(PDFTextDevice):
                         transformed_path,
                         gstate.dash,
                     )
+                    rect.passthrough_instruction = passthrough_instruction
+                    rect.xobj_id = xobj_id
+                    rect.render_order = self.il_creater.get_render_order_and_increase()
+                    rect.ctm = self.ctm
+                    rect.raw_path = path.copy()
+                    rect.clip_paths = current_clip_paths
                     self.cur_item.add(rect)
                 else:
                     curve = LTCurve(
@@ -211,6 +228,12 @@ class PDFLayoutAnalyzer(PDFTextDevice):
                         transformed_path,
                         gstate.dash,
                     )
+                    curve.passthrough_instruction = passthrough_instruction
+                    curve.xobj_id = xobj_id
+                    curve.render_order = self.il_creater.get_render_order_and_increase()
+                    curve.ctm = self.ctm
+                    curve.raw_path = path.copy()
+                    curve.clip_paths = current_clip_paths
                     self.cur_item.add(curve)
             else:
                 curve = LTCurve(
@@ -224,6 +247,12 @@ class PDFLayoutAnalyzer(PDFTextDevice):
                     transformed_path,
                     gstate.dash,
                 )
+                curve.passthrough_instruction = passthrough_instruction
+                curve.xobj_id = xobj_id
+                curve.render_order = self.il_creater.get_render_order_and_increase()
+                curve.ctm = self.ctm
+                curve.raw_path = path.copy()
+                curve.clip_paths = current_clip_paths
                 self.cur_item.add(curve)
 
     def render_char(

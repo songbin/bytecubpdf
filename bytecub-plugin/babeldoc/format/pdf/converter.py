@@ -9,6 +9,7 @@ from babeldoc.format.pdf.document_il.frontend.il_creater import ILCreater
 from babeldoc.pdfminer.converter import PDFConverter
 from babeldoc.pdfminer.layout import LTChar
 from babeldoc.pdfminer.layout import LTComponent
+from babeldoc.pdfminer.layout import LTCurve
 from babeldoc.pdfminer.layout import LTFigure
 from babeldoc.pdfminer.layout import LTLine
 from babeldoc.pdfminer.layout import LTPage
@@ -91,8 +92,10 @@ class PDFConverterEx(PDFConverter):
             text = self.handle_undefined_char(font, cid)
         textwidth = font.char_width(cid)
         textdisp = font.char_disp(cid)
-
-        if not hasattr(font, "xobj_id"):
+        font_id = font.font_id_temp
+        if font_id is not None:
+            pass
+        elif not hasattr(font, "xobj_id"):
             log.debug(
                 f"Font {font.fontname} does not have xobj_id attribute.",
             )
@@ -115,6 +118,7 @@ class PDFConverterEx(PDFConverter):
             graphicstate,
             self.il_creater.xobj_id,
             font_id,
+            self.il_creater.get_render_order_and_increase(),
         )
         self.cur_item.add(item)
         item.cid = cid  # hack 插入原字符编码
@@ -139,6 +143,7 @@ class AWLTChar(LTChar):
         graphicstate: PDFGraphicState,
         xobj_id: int,
         font_id: str,
+        render_order: int,
     ) -> None:
         LTText.__init__(self)
         self._text = text
@@ -149,6 +154,7 @@ class AWLTChar(LTChar):
         self.xobj_id = xobj_id
         self.adv = textwidth * fontsize * scaling
         self.aw_font_id = font_id
+        self.render_order = render_order
         # compute the boundary rectangle.
         if font.is_vertical():
             # vertical
@@ -378,18 +384,21 @@ class TranslateConverter(PDFConverterEx):
                 # 图表
                 self.il_creater.on_pdf_figure(child)
                 pass
-            elif isinstance(child, LTLine):     # 线条
-                continue
-                layout = self.layout[ltpage.pageid]
-                # ltpage.height 可能是 fig 里面的高度，这里统一用 layout.shape
-                h, w = layout.shape
-                # 读取当前线条在 layout 中的类别
-                cx, cy = np.clip(int(child.x0), 0, w - 1), np.clip(int(child.y0), 0, h - 1)
-                cls = layout[cy, cx]
-                if vstk and cls == xt_cls:      # 公式线条
-                    vlstk.append(child)
-                else:                           # 全局线条
-                    lstk.append(child)
+            # elif isinstance(child, LTLine):     # 线条
+            #     continue
+            #     layout = self.layout[ltpage.pageid]
+            #     # ltpage.height 可能是 fig 里面的高度，这里统一用 layout.shape
+            #     h, w = layout.shape
+            #     # 读取当前线条在 layout 中的类别
+            #     cx, cy = np.clip(int(child.x0), 0, w - 1), np.clip(int(child.y0), 0, h - 1)
+            #     cls = layout[cy, cx]
+            #     if vstk and cls == xt_cls:      # 公式线条
+            #         vlstk.append(child)
+            #     else:                           # 全局线条
+            #         lstk.append(child)
+            elif isinstance(child, LTCurve):
+                self.il_creater.on_lt_curve(child)
+                pass
             else:
                 pass
         return

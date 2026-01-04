@@ -42,6 +42,12 @@
       <zeroOrMore>
         <ref name="PDFCharacter"/>
       </zeroOrMore>
+      <zeroOrMore>
+        <ref name="PDFCurve"/>
+      </zeroOrMore>
+      <zeroOrMore>
+        <ref name="PDFForm"/>
+      </zeroOrMore>
       <attribute name="pageNumber">
         <data type="int"/>
       </attribute>
@@ -199,6 +205,16 @@
           <data type="int"/>
         </attribute>
       </optional>
+      <optional>
+        <attribute name="renderOrder">
+          <data type="int"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="subRenderOrder">
+          <data type="int"/>
+        </attribute>
+      </optional>
       <ref name="PDFStyle"/>
       <ref name="Box"/>
       <optional>
@@ -224,73 +240,6 @@
   </define>
   <define name="GraphicState">
     <element name="graphicState">
-      <optional>
-        <attribute name="linewidth">
-          <data type="float"/>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="dash">
-          <list>
-            <oneOrMore>
-              <data type="float"/>
-            </oneOrMore>
-          </list>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="flatness">
-          <data type="float"/>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="intent">
-          <data type="string"/>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="linecap">
-          <data type="int"/>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="linejoin">
-          <data type="int"/>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="miterlimit">
-          <data type="float"/>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="ncolor">
-          <list>
-            <oneOrMore>
-              <data type="float"/>
-            </oneOrMore>
-          </list>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="scolor">
-          <list>
-            <oneOrMore>
-              <data type="float"/>
-            </oneOrMore>
-          </list>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="strokingColorSpaceName">
-          <data type="string"/>
-        </attribute>
-      </optional>
-      <optional>
-        <attribute name="nonStrokingColorSpaceName">
-          <data type="string"/>
-        </attribute>
-      </optional>
       <optional>
         <attribute name="passthroughPerCharInstruction">
           <data type="string"/>
@@ -354,6 +303,11 @@
           <data type="int"/>
         </attribute>
       </optional>
+      <optional>
+        <attribute name="renderOrder">
+          <data type="int"/>
+        </attribute>
+      </optional>
       <ref name="Box"/>
       <ref name="PDFStyle"/>
       <zeroOrMore>
@@ -378,6 +332,11 @@
       <oneOrMore>
         <ref name="PDFCharacter"/>
       </oneOrMore>
+      <optional>
+        <attribute name="renderOrder">
+          <data type="int"/>
+        </attribute>
+      </optional>
     </element>
   </define>
   <define name="PDFSameStyleCharacters">
@@ -410,6 +369,12 @@
       <oneOrMore>
         <ref name="PDFCharacter"/>
       </oneOrMore>
+      <zeroOrMore>
+        <ref name="PDFCurve"/>
+      </zeroOrMore>
+      <zeroOrMore>
+        <ref name="PDFForm"/>
+      </zeroOrMore>
       <attribute name="x_offset">
         <data type="float"/>
       </attribute>
@@ -419,6 +384,16 @@
       <optional>
         <attribute name="x_advance">
           <data type="float"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="lineId">
+          <data type="int"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="is_corner_mark">
+          <data type="boolean"/>
         </attribute>
       </optional>
     </element>
@@ -452,6 +427,219 @@
           <data type="float"/>
         </attribute>
       </optional>
+      <optional>
+        <attribute name="renderOrder">
+          <data type="int"/>
+        </attribute>
+      </optional>
+    </element>
+  </define>
+  <define name="PDFCurve">
+    <element name="pdfCurve">
+      <ref name="Box"/>
+      <ref name="GraphicState"/>
+      <zeroOrMore>
+        <ref name="PDFPath"/>
+      </zeroOrMore>
+      <zeroOrMore>
+        <ref name="PDFOriginalPath"/>
+      </zeroOrMore>
+      <optional>
+        <attribute name="debug_info">
+          <data type="boolean"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="fill_background">
+          <data type="boolean"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="stroke_path">
+          <data type="boolean"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="evenodd">
+          <data type="boolean"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="xobjId">
+          <data type="int"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="renderOrder">
+          <data type="int"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="ctm">
+          <list>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+          </list>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="relocation_transform">
+          <list>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+          </list>
+        </attribute>
+      </optional>
+    </element>
+  </define>
+  <define name="PDFOriginalPath">
+    <element name="pdfOriginalPath">
+      <ref name="PDFPath"/>
+    </element>
+  </define>
+  <define name="PDFPath">
+    <element name="pdfPath">
+      <attribute name="x">
+        <data type="float"/>
+      </attribute>
+      <attribute name="y">
+        <data type="float"/>
+      </attribute>
+      <attribute name="op">
+        <data type="string"/>
+      </attribute>
+      <optional>
+        <attribute name="has_xy">
+          <data type="boolean"/>
+        </attribute>
+      </optional>
+    </element>
+  </define>
+  <define name="PDFForm">
+    <element name="pdfForm">
+      <attribute name="xobjId">
+        <data type="int"/>
+      </attribute>
+      <ref name="Box"/>
+      <ref name="GraphicState"/>
+      <ref name="PDFMatrix"/>
+      <ref name="PDFAffineTransform"/>
+      <optional>
+        <attribute name="ctm">
+          <list>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+          </list>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="relocation_transform">
+          <list>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+            <data type="float"/>
+          </list>
+        </attribute>
+      </optional>
+      <attribute name="renderOrder">
+        <data type="int"/>
+      </attribute>
+      <attribute name="formType">
+        <data type="string"/>
+      </attribute>
+      <ref name="PDFFormSubtype"/>
+    </element>
+  </define>
+  <define name="PDFFormSubtype">
+    <element name="pdfFormSubtype">
+      <choice>
+        <ref name="PDFInlineForm"/>
+        <ref name="PDFXobjForm"/>
+      </choice>
+    </element>
+  </define>
+  <define name="PDFInlineForm">
+    <element name="pdfInlineForm">
+      <optional>
+        <attribute name="formData">
+          <data type="string"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="imageParameters">
+          <data type="string"/>
+        </attribute>
+      </optional>
+    </element>
+  </define>
+  <define name="PDFXobjForm">
+    <element name="pdfXobjForm">
+      <attribute name="xrefId">
+        <ref name="PDFXrefId"/>
+      </attribute>
+      <attribute name="doArgs">
+        <data type="string"/>
+      </attribute>
+    </element>
+  </define>
+  <define name="PDFMatrix">
+    <element name="pdfMatrix">
+      <attribute name="a">
+        <data type="float"/>
+      </attribute>
+      <attribute name="b">
+        <data type="float"/>
+      </attribute>
+      <attribute name="c">
+        <data type="float"/>
+      </attribute>
+      <attribute name="d">
+        <data type="float"/>
+      </attribute>
+      <attribute name="e">
+        <data type="float"/>
+      </attribute>
+      <attribute name="f">
+        <data type="float"/>
+      </attribute>
+    </element>
+  </define>
+  <!-- Decomposed transform parameters for a CTM -->
+  <define name="PDFAffineTransform">
+    <element name="pdfAffineTransform">
+      <attribute name="translation_x">
+        <data type="float"/>
+      </attribute>
+      <attribute name="translation_y">
+        <data type="float"/>
+      </attribute>
+      <attribute name="rotation">
+        <data type="float"/>
+      </attribute>
+      <attribute name="scale_x">
+        <data type="float"/>
+      </attribute>
+      <attribute name="scale_y">
+        <data type="float"/>
+      </attribute>
+      <attribute name="shear">
+        <data type="float"/>
+      </attribute>
     </element>
   </define>
 </grammar>

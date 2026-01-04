@@ -5,6 +5,7 @@ from typing import cast
 
 import numpy as np
 
+from babeldoc.format.pdf.babelpdf.utils import guarded_bbox
 from babeldoc.format.pdf.document_il.frontend.il_creater import ILCreater
 from babeldoc.pdfminer import settings
 from babeldoc.pdfminer.pdfcolor import PREDEFINED_COLORSPACE
@@ -166,31 +167,6 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
                     self.xobjmap[xobjid] = xobjstrm
         pass
 
-    def do_S(self) -> None:
-        # 重载过滤非公式线条
-        """Stroke path"""
-
-        def is_black(color: Color) -> bool:
-            if isinstance(color, tuple):
-                return sum(color) == 0
-            else:
-                return color == 0
-
-        if (
-            len(self.curpath) == 2
-            and self.curpath[0][0] == "m"
-            and self.curpath[1][0] == "l"
-            and apply_matrix_pt(self.ctm, self.curpath[0][-2:])[1]
-            == apply_matrix_pt(self.ctm, self.curpath[1][-2:])[1]
-            and is_black(self.graphicstate.scolor)
-        ):  # 独立直线，水平，黑色
-            # print(apply_matrix_pt(self.ctm,self.curpath[0][-2:]),apply_matrix_pt(self.ctm,self.curpath[1][-2:]),self.graphicstate.scolor)
-            self.device.paint_path(self.graphicstate, True, False, False, self.curpath)
-            self.curpath = []
-            return "n"
-        else:
-            self.curpath = []
-
     def do_CS(self, name: PDFStackT) -> None:
         """Set color space for stroking operations
 
@@ -213,31 +189,6 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
             if settings.STRICT:
                 raise PDFInterpreterError(f"Undefined ColorSpace: {name!r}") from None
         return
-
-    ############################################################
-    # 重载过滤非公式线条（F/B）
-    def do_f(self) -> None:
-        """Fill path using nonzero winding number rule"""
-        # self.device.paint_path(self.graphicstate, False, True, False, self.curpath)
-        self.curpath = []
-
-    def do_F(self) -> None:
-        """Fill path using nonzero winding number rule (obsolete)"""
-
-    def do_f_a(self) -> None:
-        """Fill path using even-odd rule"""
-        # self.device.paint_path(self.graphicstate, False, True, True, self.curpath)
-        self.curpath = []
-
-    def do_B(self) -> None:
-        """Fill and stroke path using nonzero winding number rule"""
-        # self.device.paint_path(self.graphicstate, True, True, False, self.curpath)
-        self.curpath = []
-
-    def do_B_a(self) -> None:
-        """Fill and stroke path using even-odd rule"""
-        # self.device.paint_path(self.graphicstate, True, True, True, self.curpath)
-        self.curpath = []
 
     ############################################################
     # 重载返回调用参数（SCN）
@@ -283,6 +234,8 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
         self.il_creater.on_passthrough_per_char("sc", args)
         return args
 
+    # Ensure bbox has four numbers, otherwise determine it as an illegal image
+    # For example, some Form's bbox is '[ null -.00487 1.00412 .99393 ]'
     def do_Do(self, xobjid_arg: PDFStackT) -> None:
         # 重载设置 xobj 的 obj_patch
         """Invoke named XObject"""
@@ -303,6 +256,8 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
             bbox = list(
                 filter(lambda x: x is not None, cast(Rect, list_value(xobj["BBox"])))
             )
+            if len(bbox) < 4:
+                return
 
             matrix = cast(Matrix, list_value(xobj.get("Matrix", MATRIX_IDENTITY)))
             # According to PDF reference 1.7 section 4.9.1, XObjects in
@@ -313,9 +268,20 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
                 resources = dict_value(xobjres)
             else:
                 resources = self.resources.copy()
+
+            self.il_creater.on_xobj_form(
+                self.ctm,
+                self.il_creater.xobj_id,
+                xobj.objid,
+                "form",
+                xobjid,
+                bbox,
+                matrix,
+            )
+
             self.device.begin_figure(xobjid, bbox, matrix)
             ctm = mult_matrix(matrix, self.ctm)
-            (x, y, x2, y2) = bbox
+            (x, y, x2, y2) = guarded_bbox(bbox)
             (x, y) = apply_matrix_pt(ctm, (x, y))
             (x2, y2) = apply_matrix_pt(ctm, (x2, y2))
             x_id = self.il_creater.on_xobj_begin((x, y, x2, y2), xobj.objid)
@@ -340,7 +306,8 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
             self.scs = interpreter.scs
             self.il_creater.on_xobj_end(
                 x_id,
-                f"q {ops_base} Q {a} {b} {c} {d} {e} {f} cm ",
+                # f"q {ops_base} Q {a} {b} {c} {d} {e} {f} cm ",
+                f"{a:.6f} {b:.6f} {c:.6f} {d:.6f} {e:.6f} {f:.6f} cm ",
             )
             try:  # 有的时候 form 字体加不上这里会烂掉
                 self.device.fontid = interpreter.fontid
@@ -355,17 +322,38 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
                 a, b, c, d = ctm_inv.reshape(4).tolist()
                 e, f = pos_inv.tolist()[0]
                 self.obj_patch[self.xobjmap[xobjid].objid] = (
-                    f"q {ops_base}Q {a} {b} {c} {d} {e} {f} cm {ops_new}"
+                    f"q {ops_base}Q {a:.6f} {b:.6f} {c:.6f} {d:.6f} {e:.6f} {f:.6f} cm {ops_new}"
                 )
             except Exception:
                 pass
         elif subtype is LITERAL_IMAGE and "Width" in xobj and "Height" in xobj:
+            self.il_creater.on_xobj_form(
+                self.ctm,
+                self.il_creater.xobj_id,
+                xobj.objid,
+                "image",
+                xobjid,
+                (0, 0, 1, 1),
+                MATRIX_IDENTITY,
+            )
             self.device.begin_figure(xobjid, (0, 0, 1, 1), MATRIX_IDENTITY)
             self.device.render_image(xobjid, xobj)
             self.device.end_figure(xobjid)
         else:
             # unsupported xobject type.
             pass
+
+    def do_W(self) -> None:
+        """Set clipping path using nonzero winding number rule"""
+        self.handle_w(False)
+
+    def do_W_a(self) -> None:
+        """Set clipping path using even-odd rule"""
+        self.handle_w(True)
+
+    def handle_w(self, evenodd: bool):
+        path = self.curpath
+        self.il_creater.on_pdf_clip_path(path, evenodd, self.ctm)
 
     def process_page(self, page: PDFPage) -> None:
         # 重载设置 page 的 obj_patch
@@ -455,6 +443,24 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
         self.device.render_string(self.textstate, cast(PDFTextSeq, seq), self.ncs, gs)
         return
 
+    def do_d(self, dash: PDFStackT, phase: PDFStackT) -> None:
+        """Set line dash pattern"""
+        self.graphicstate.dash = (dash, phase)
+        self.il_creater.on_line_dash(dash, phase)
+
+    def do_BI(self) -> None:
+        """Begin inline image object"""
+        self.il_creater.on_inline_image_begin()
+
+    def do_ID(self) -> None:
+        """Begin inline image data"""
+        pass  # Handled by PDFContentParserEx
+
+    def do_EI(self, obj: PDFStackT) -> None:
+        """End inline image object"""
+        if isinstance(obj, PDFStream):
+            self.il_creater.on_inline_image_end(obj, self.ctm)
+
     # Run PostScript commands
     # The Do_xxx method is the method for executing corresponding postscript instructions
     def execute(self, streams: Sequence[object]) -> None:
@@ -490,7 +496,9 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
                                     name,
                                 ):
                                     self.il_creater.on_passthrough_per_char(name, args)
-                                if name == "d":
+                                if self.il_creater.is_graphic_operation(name):
+                                    continue
+                                elif name == "d":
                                     arg0 = f"[{' '.join(f'{arg}' for arg in args[0])}]"
                                     arg1 = args[1]
                                     ops += f"{arg0} {arg1} {name} "
@@ -515,7 +523,9 @@ class PDFPageInterpreterEx(PDFPageInterpreter):
                             targs = func()
                             if targs is None:
                                 targs = []
-                            if not (name[0] == "T" or name in ["BI", "ID", "EMC"]):
+                            if self.il_creater.is_graphic_operation(name):
+                                continue
+                            elif not (name[0] == "T" or name in ["BI", "ID", "EMC"]):
                                 p = " ".join(
                                     [
                                         (

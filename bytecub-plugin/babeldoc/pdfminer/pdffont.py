@@ -47,6 +47,7 @@ from babeldoc.pdfminer.utils import apply_matrix_norm
 from babeldoc.pdfminer.utils import choplist
 from babeldoc.pdfminer.utils import nunpack
 from babeldoc.pdfminer import settings
+from babeldoc.format.pdf.babelpdf.cmap import CharacterMap
 
 if TYPE_CHECKING:
     from babeldoc.pdfminer.pdfinterp import PDFResourceManager
@@ -949,7 +950,11 @@ class PDFType1Font(PDFSimpleFont):
             self.fontfile = stream_value(descriptor.get("FontFile"))
             length1 = int_value(self.fontfile["Length1"])
             data = self.fontfile.get_data()[:length1]
-            parser = Type1FontHeaderParser(BytesIO(data))
+            # awcm: quickfix for type 1 font which contains bad string literals
+            offset = 0
+            if enc_offset := data.index(b"/Encoding"):
+                offset = enc_offset
+            parser = Type1FontHeaderParser(BytesIO(data[offset:]))
             self.cid2unicode = parser.get_encoding()
 
     def __repr__(self) -> str:
@@ -1014,6 +1019,20 @@ class PDFCIDFont(PDFFont):
                 raise PDFFontError("FontDescriptor is missing")
             descriptor = {}
         ttf = None
+        self.has_encoding = False
+        self.cid_encoding = None
+        try:
+            if "Encoding" in spec:
+                encoding_part = resolve1(spec["Encoding"])
+                if isinstance(encoding_part, PDFStream):
+                    self.has_encoding = True
+                    self.cid_encoding = CharacterMap(
+                        encoding_part.get_data().decode("U8")
+                    )
+        except Exception as e:
+            log.error(f"Error get cid_encoding from spec: {e}")
+            self.has_encoding = False
+            self.cid_encoding = None
         if "FontFile2" in descriptor:
             self.fontfile = stream_value(descriptor.get("FontFile2"))
             ttf = TrueTypeFont(self.basefont, BytesIO(self.fontfile.get_data()))
@@ -1118,6 +1137,14 @@ class PDFCIDFont(PDFFont):
         return True
 
     def decode(self, bytes: bytes) -> Iterable[int]:
+        try:
+            if self.has_encoding:
+                res = self.cid_encoding.decode(bytes)
+
+                if res is not None and all(x > 0 for x in res):
+                    return res
+        except Exception as e:
+            log.error(f"Error use cid_encoding to decode bytes: {e}")
         return self.cmap.decode(bytes)
 
     def char_disp(self, cid: int) -> float | tuple[float | None, float]:

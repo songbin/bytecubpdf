@@ -25,10 +25,19 @@ from babeldoc.format.pdf.document_il.utils.layout_helper import RIGHT_BRACKET
 from babeldoc.format.pdf.document_il.utils.layout_helper import build_layout_index
 from babeldoc.format.pdf.document_il.utils.layout_helper import calculate_iou_for_boxes
 from babeldoc.format.pdf.document_il.utils.layout_helper import (
-    calculate_y_iou_for_boxes,
+    calculate_y_true_iou_for_boxes,
 )
 from babeldoc.format.pdf.document_il.utils.layout_helper import is_bullet_point
+from babeldoc.format.pdf.document_il.utils.layout_helper import (
+    is_curve_in_figure_table_layout,
+)
+from babeldoc.format.pdf.document_il.utils.layout_helper import (
+    is_curve_overlapping_with_paragraphs,
+)
 from babeldoc.format.pdf.document_il.utils.layout_helper import is_same_style
+from babeldoc.format.pdf.document_il.utils.spatial_analyzer import (
+    is_element_contained_in_formula,
+)
 from babeldoc.format.pdf.translation_config import TranslationConfig
 
 
@@ -58,23 +67,319 @@ class StylesAndFormulas:
                 if comp.pdf_formula:
                     self.update_formula_data(comp.pdf_formula)
 
+    def _calculate_element_formula_iou(
+        self, element_box: Box, formula_box: Box, tolerance: float = 2.0
+    ) -> float:
+        """Calculate precise IoU between an element and a formula with tolerance.
+
+        Args:
+            element_box: Bounding box of the element (curve/form)
+            formula_box: Bounding box of the formula
+            tolerance: Tolerance to expand formula box for containment check
+
+        Returns:
+            IoU value between element and expanded formula box
+        """
+        if element_box is None or formula_box is None:
+            return 0.0
+
+        # Expand formula box by tolerance for more lenient containment check
+        expanded_formula_box = Box(
+            x=formula_box.x - tolerance,
+            y=formula_box.y - tolerance,
+            x2=formula_box.x2 + tolerance,
+            y2=formula_box.y2 + tolerance,
+        )
+
+        return calculate_iou_for_boxes(element_box, expanded_formula_box)
+
+    def _is_element_contained_exact(
+        self,
+        element_box: Box,
+        formula_box: Box,
+        containment_threshold: float = 0.95,
+    ) -> bool:
+        """Check if an element is contained within a formula with zero tolerance.
+
+        Args:
+            element_box: Bounding box of the element (curve/form)
+            formula_box: Bounding box of the formula
+            containment_threshold: Minimum IoU ratio to consider as contained
+
+        Returns:
+            True if the element is contained within the formula (exact match)
+        """
+        if element_box is None or formula_box is None:
+            return False
+
+        # Use formula box without any tolerance expansion
+        iou = calculate_iou_for_boxes(element_box, formula_box)
+        return iou >= containment_threshold
+
+    def _calculate_element_formula_distance(
+        self, element_box: Box, formula_box: Box
+    ) -> float:
+        """Calculate the shortest distance between an element and a formula.
+
+        Args:
+            element_box: Bounding box of the element (curve/form)
+            formula_box: Bounding box of the formula
+
+        Returns:
+            Shortest distance between the element and formula boxes
+        """
+        if element_box is None or formula_box is None:
+            return float("inf")
+
+        # Calculate horizontal distance
+        if element_box.x2 < formula_box.x:
+            # Element is to the left of formula
+            dx = formula_box.x - element_box.x2
+        elif element_box.x > formula_box.x2:
+            # Element is to the right of formula
+            dx = element_box.x - formula_box.x2
+        else:
+            # Horizontal overlap
+            dx = 0.0
+
+        # Calculate vertical distance
+        if element_box.y2 < formula_box.y:
+            # Element is above formula
+            dy = formula_box.y - element_box.y2
+        elif element_box.y > formula_box.y2:
+            # Element is below formula
+            dy = element_box.y - formula_box.y2
+        else:
+            # Vertical overlap
+            dy = 0.0
+
+        # Return Euclidean distance
+        return (dx * dx + dy * dy) ** 0.5
+
+    def _collect_element_formula_candidates(
+        self, page: Page
+    ) -> tuple[list, dict, dict]:
+        """Collect all potential assignments of elements to formulas.
+
+        Uses two-level IoU matching strategy:
+        1. Exact IoU matching (zero tolerance) - highest priority
+        2. Tolerant IoU matching (2.0 tolerance, distance-sorted) - second priority
+
+        Returns:
+            Tuple of (all_formulas, curve_candidates, form_candidates) where:
+            - all_formulas: list of (formula, paragraph_xobj_id) tuples
+            - curve_candidates: dict mapping curve index to (curve, candidates) tuples
+            - form_candidates: dict mapping form index to (form, candidates) tuples
+            where candidates is a list of (formula_index, score, match_type) tuples
+        """
+        curve_candidates = {}
+        form_candidates = {}
+
+        # Configuration parameters
+        max_tolerant_distance = 100.0  # Maximum distance for tolerant matching scoring
+
+        if not page.pdf_paragraph:
+            return [], curve_candidates, form_candidates
+
+        # Collect all formulas from all paragraphs with their index
+        all_formulas = []
+        for paragraph in page.pdf_paragraph:
+            for composition in paragraph.pdf_paragraph_composition:
+                if composition.pdf_formula:
+                    all_formulas.append((composition.pdf_formula, paragraph.xobj_id))
+
+        # Check each curve against all formulas
+        for curve_idx, curve in enumerate(page.pdf_curve):
+            if not curve.box:
+                continue
+
+            candidates = []
+            for formula_idx, (formula, paragraph_xobj_id) in enumerate(all_formulas):
+                if not formula.box:
+                    continue
+
+                # Check xobj_id compatibility
+                if paragraph_xobj_id is not None and curve.xobj_id != paragraph_xobj_id:
+                    continue
+
+                # Level 1: Exact IoU matching (zero tolerance) - highest priority
+                if self._is_element_contained_exact(curve.box, formula.box):
+                    iou = calculate_iou_for_boxes(curve.box, formula.box)
+                    candidates.append((formula_idx, iou, "iou_exact"))
+                # Level 2: Tolerant IoU matching (with tolerance) - distance sorted
+                elif is_element_contained_in_formula(curve.box, formula.box):
+                    distance = self._calculate_element_formula_distance(
+                        curve.box, formula.box
+                    )
+                    # Convert distance to score (closer = higher score)
+                    # Score range: 0.5-0.9 to ensure lower than exact IoU
+                    distance_factor = max(0.0, 1.0 - distance / max_tolerant_distance)
+                    score = 0.5 + 0.4 * distance_factor
+                    candidates.append((formula_idx, score, "iou_tolerant"))
+
+            if candidates:
+                curve_candidates[curve_idx] = (curve, candidates)
+
+        # Check each form against all formulas
+        for form_idx, form in enumerate(page.pdf_form):
+            if not form.box:
+                continue
+
+            candidates = []
+            for formula_idx, (formula, paragraph_xobj_id) in enumerate(all_formulas):
+                if not formula.box:
+                    continue
+
+                # Check xobj_id compatibility
+                if paragraph_xobj_id is not None and form.xobj_id != paragraph_xobj_id:
+                    continue
+
+                # Level 1: Exact IoU matching (zero tolerance) - highest priority
+                if self._is_element_contained_exact(form.box, formula.box):
+                    iou = calculate_iou_for_boxes(form.box, formula.box)
+                    candidates.append((formula_idx, iou, "iou_exact"))
+                # Level 2: Tolerant IoU matching (with tolerance) - distance sorted
+                elif is_element_contained_in_formula(form.box, formula.box):
+                    distance = self._calculate_element_formula_distance(
+                        form.box, formula.box
+                    )
+                    # Convert distance to score (closer = higher score)
+                    # Score range: 0.5-0.9 to ensure lower than exact IoU
+                    distance_factor = max(0.0, 1.0 - distance / max_tolerant_distance)
+                    score = 0.5 + 0.4 * distance_factor
+                    candidates.append((formula_idx, score, "iou_tolerant"))
+
+            if candidates:
+                form_candidates[form_idx] = (form, candidates)
+
+        return all_formulas, curve_candidates, form_candidates
+
+    def _resolve_assignment_conflicts(
+        self, curve_candidates: dict, form_candidates: dict
+    ) -> tuple[dict, list, list]:
+        """Resolve assignment conflicts using prioritized matching strategy.
+
+        Args:
+            curve_candidates: dict mapping curve index to (curve, candidates) tuples
+            form_candidates: dict mapping form index to (form, candidates) tuples
+            where candidates is a list of (formula_index, score, match_type) tuples
+
+        Returns:
+            Tuple of (formula_assignments, curves_to_remove, forms_to_remove) where:
+            - formula_assignments: dict mapping formula_index to (curves, forms) tuples
+            - curves_to_remove: list of curves to remove from page level
+            - forms_to_remove: list of forms to remove from page level
+        """
+        formula_assignments = {}
+        curves_to_remove = []
+        forms_to_remove = []
+
+        def _get_best_candidate(candidates):
+            """Get the best candidate using priority: Exact IoU > Tolerant IoU, then by score."""
+            if not candidates:
+                return None
+
+            # Sort by match_type priority and then by score (descending)
+            def sort_key(candidate):
+                formula_idx, score, match_type = candidate
+                # Exact IoU matches get priority 1, tolerant IoU matches get priority 2
+                priority = 1 if match_type == "iou_exact" else 2
+                # Return tuple for sorting: (priority, -score) for descending score within priority
+                return (priority, -score)
+
+            sorted_candidates = sorted(candidates, key=sort_key)
+            return sorted_candidates[0]
+
+        # Resolve curve assignments
+        for _curve_idx, (curve, candidates) in curve_candidates.items():
+            if not candidates:
+                continue
+
+            best_candidate = _get_best_candidate(candidates)
+            if best_candidate:
+                best_formula_idx, best_score, match_type = best_candidate
+
+                # Add to assignments
+                if best_formula_idx not in formula_assignments:
+                    formula_assignments[best_formula_idx] = ([], [])
+                formula_assignments[best_formula_idx][0].append(curve)
+                curves_to_remove.append(curve)
+
+        # Resolve form assignments
+        for _form_idx, (form, candidates) in form_candidates.items():
+            if not candidates:
+                continue
+
+            best_candidate = _get_best_candidate(candidates)
+            if best_candidate:
+                best_formula_idx, best_score, match_type = best_candidate
+
+                # Add to assignments
+                if best_formula_idx not in formula_assignments:
+                    formula_assignments[best_formula_idx] = ([], [])
+                formula_assignments[best_formula_idx][1].append(form)
+                forms_to_remove.append(form)
+
+        return formula_assignments, curves_to_remove, forms_to_remove
+
+    def collect_contained_elements(self, page: Page):
+        """Collect curves and forms that are contained within formulas.
+
+        Uses two-phase assignment strategy to ensure each element is assigned
+        to only one formula based on highest IoU value.
+        """
+        if not page.pdf_paragraph:
+            return
+
+        # Phase 1: Collect all potential element-formula assignments
+        all_formulas, curve_candidates, form_candidates = (
+            self._collect_element_formula_candidates(page)
+        )
+
+        # Phase 2: Resolve conflicts using IoU maximization
+        formula_assignments, curves_to_remove, forms_to_remove = (
+            self._resolve_assignment_conflicts(curve_candidates, form_candidates)
+        )
+
+        # Apply the resolved assignments using formula indices
+        for formula_idx, (
+            assigned_curves,
+            assigned_forms,
+        ) in formula_assignments.items():
+            formula = all_formulas[formula_idx][0]  # Extract formula from tuple
+            formula.pdf_curve.extend(assigned_curves)
+            formula.pdf_form.extend(assigned_forms)
+
+        # Remove assigned elements from page level
+        for curve in curves_to_remove:
+            if curve in page.pdf_curve:
+                page.pdf_curve.remove(curve)
+
+        for form in forms_to_remove:
+            if form in page.pdf_form:
+                page.pdf_form.remove(form)
+
     def process_page(self, page: Page):
         """处理页面，包括公式识别和偏移量计算"""
-        build_layout_index(page)
         self.process_page_formulas(page)
         # self.process_page_offsets(page)
         self.process_comma_formulas(page)
         self.merge_overlapping_formulas(page)
-        # self.process_page_offsets(page)
+        if not self.translation_config.skip_formula_offset_calculation:
+            self.process_page_offsets(page)
         self.process_translatable_formulas(page)
         self.update_all_formula_data(page)
-        self.process_page_offsets(page)
+        if not self.translation_config.ocr_workaround:
+            self.collect_contained_elements(page)
+
+        # Process remaining non-formula lines after formula assignment is complete
+        if self.translation_config.remove_non_formula_lines:
+            self.remove_non_formula_lines_from_paragraphs(page)
+
+        if not self.translation_config.skip_formula_offset_calculation:
+            self.process_page_offsets(page)
         self.update_all_formula_data(page)
         self.process_page_styles(page)
-
-        # clean up to save memory
-        del page.layout_index
-        del page.layout_map
 
     def update_line_data(self, line: PdfLine):
         min_x = min(char.visual_bbox.box.x for char in line.pdf_character)
@@ -88,6 +393,7 @@ class StylesAndFormulas:
         composition: PdfParagraphComposition,
         formula_font_ids: set[int],
         first_is_bullet_so_far: bool,
+        line_index: int,
     ) -> tuple[list[tuple[PdfCharacter, bool]], bool]:
         """
         Phase 1: Classify every character in a composition as either formula or text.
@@ -103,6 +409,7 @@ class StylesAndFormulas:
         first_is_bullet = first_is_bullet_so_far
         in_formula_state = False
         in_corner_mark_state = False
+        corner_mark_info = []
 
         # Determine the `is_formula` tag for each character
         for i, char in enumerate(line.pdf_character):
@@ -151,22 +458,48 @@ class StylesAndFormulas:
             )
 
             previous_char = line.pdf_character[i - 1] if i > 0 else None
+            next_char = (
+                line.pdf_character[i + 1] if i < len(line.pdf_character) - 1 else None
+            )
             isspace = char.char_unicode.isspace() if char.char_unicode else False
+            prev_is_space = (
+                previous_char.char_unicode.isspace()
+                if previous_char and previous_char.char_unicode
+                else False
+            )
 
             is_corner_mark = (
-                previous_char is not None
-                and not isspace
-                and not first_is_bullet
-                # 角标字体，有 0.76 的角标和 0.799 的大写，这里用 0.79 取中，同时考虑首字母放大的情况
-                and char.pdf_style.font_size < previous_char.pdf_style.font_size * 0.79
-                and not in_corner_mark_state
-            ) or (
-                previous_char is not None
-                and not isspace
-                and not first_is_bullet
-                # 角标字体，有 0.76 的角标和 0.799 的大写，这里用 0.79 取中，同时考虑首字母放大的情况
-                and char.pdf_style.font_size < previous_char.pdf_style.font_size * 1.1
-                and in_corner_mark_state
+                (
+                    previous_char is not None
+                    and not isspace
+                    and not prev_is_space
+                    and not first_is_bullet
+                    # 角标字体，有 0.76 的角标和 0.799 的大写，这里用 0.79 取中，同时考虑首字母放大的情况
+                    and char.pdf_style.font_size
+                    < previous_char.pdf_style.font_size * 0.79
+                    and not in_corner_mark_state
+                )
+                or (
+                    previous_char is not None
+                    and not isspace
+                    and not prev_is_space
+                    and not first_is_bullet
+                    # 角标字体，有 0.76 的角标和 0.799 的大写，这里用 0.79 取中，同时考虑首字母放大的情况
+                    and char.pdf_style.font_size
+                    < previous_char.pdf_style.font_size * 1.1
+                    and in_corner_mark_state
+                )
+                or (
+                    # 检查段落开始的角标：当没有前一个字符时，通过下一个字符判断
+                    previous_char is None
+                    and next_char is not None
+                    and not isspace
+                    and not prev_is_space
+                    and not first_is_bullet
+                    # 当前字符字体大小明显小于下一个字符，判定为角标
+                    and char.pdf_style.font_size < next_char.pdf_style.font_size * 0.79
+                    and not in_corner_mark_state
+                )
             )
 
             is_formula = is_formula or is_corner_mark
@@ -180,16 +513,19 @@ class StylesAndFormulas:
 
             in_corner_mark_state = is_corner_mark
             is_formula_tags.append(is_formula)
+            corner_mark_info.append(is_corner_mark)
 
-        # Pair characters with their tags
-        for char, is_formula in zip(line.pdf_character, is_formula_tags, strict=False):
-            tagged_chars.append((char, is_formula))
+        for char, is_formula, is_corner_mark in zip(
+            line.pdf_character, is_formula_tags, corner_mark_info, strict=False
+        ):
+            tagged_chars.append((char, is_formula, is_corner_mark))
 
         return tagged_chars, first_is_bullet
 
     def _group_classified_characters(
         self,
-        tagged_chars: list[tuple[PdfCharacter, bool]],
+        tagged_chars: list[tuple[PdfCharacter, bool, bool]],
+        line_index: int,
     ) -> list[PdfParagraphComposition]:
         """
         Phase 2: Group consecutive characters with the same tag into new compositions.
@@ -200,20 +536,31 @@ class StylesAndFormulas:
         new_compositions = []
         current_chars = []
         current_tag = tagged_chars[0][1]
+        current_corner_mark_flags = []
 
-        for char, is_formula_tag in tagged_chars:
+        for char, is_formula_tag, is_corner_mark in tagged_chars:
             if is_formula_tag == current_tag:
                 current_chars.append(char)
+                current_corner_mark_flags.append(is_corner_mark)
             else:
+                # Check if any character in current group is a corner mark
+                has_corner_mark = any(current_corner_mark_flags)
                 new_compositions.append(
-                    self.create_composition(current_chars, current_tag),
+                    self.create_composition(
+                        current_chars, current_tag, line_index, has_corner_mark
+                    ),
                 )
                 current_chars = [char]
                 current_tag = is_formula_tag
+                current_corner_mark_flags = [is_corner_mark]
 
         if current_chars:
+            # Check if any character in final group is a corner mark
+            has_corner_mark = any(current_corner_mark_flags)
             new_compositions.append(
-                self.create_composition(current_chars, current_tag),
+                self.create_composition(
+                    current_chars, current_tag, line_index, has_corner_mark
+                ),
             )
 
         return new_compositions
@@ -247,7 +594,9 @@ class StylesAndFormulas:
             # This flag is carried through all compositions in a paragraph, as in the original implementation.
             first_is_bullet = False
 
-            for composition in paragraph.pdf_paragraph_composition:
+            for line_index, composition in enumerate(
+                paragraph.pdf_paragraph_composition
+            ):
                 (
                     tagged_chars,
                     first_is_bullet,
@@ -255,13 +604,16 @@ class StylesAndFormulas:
                     composition,
                     current_formula_font_ids,
                     first_is_bullet,
+                    line_index,
                 )
 
                 if not tagged_chars:
                     new_paragraph_compositions.append(composition)
                     continue
 
-                grouped_compositions = self._group_classified_characters(tagged_chars)
+                grouped_compositions = self._group_classified_characters(
+                    tagged_chars, line_index
+                )
                 new_paragraph_compositions.extend(grouped_compositions)
 
             paragraph.pdf_paragraph_composition = new_paragraph_compositions
@@ -277,8 +629,12 @@ class StylesAndFormulas:
 
             new_compositions = []
             for composition in paragraph.pdf_paragraph_composition:
-                if composition.pdf_formula is not None and self.is_translatable_formula(
-                    composition.pdf_formula,
+                if (
+                    composition.pdf_formula is not None
+                    and not composition.pdf_formula.is_corner_mark
+                    and self.is_translatable_formula(
+                        composition.pdf_formula,
+                    )
                 ):
                     # 将可翻译公式转换为普通文本行
                     new_line = PdfLine(
@@ -416,30 +772,6 @@ class StylesAndFormulas:
             return state1
 
         return GraphicState(
-            linewidth=(
-                state1.linewidth if state1.linewidth == state2.linewidth else None
-            ),
-            dash=state1.dash if state1.dash == state2.dash else None,
-            flatness=state1.flatness if state1.flatness == state2.flatness else None,
-            intent=state1.intent if state1.intent == state2.intent else None,
-            linecap=state1.linecap if state1.linecap == state2.linecap else None,
-            linejoin=state1.linejoin if state1.linejoin == state2.linejoin else None,
-            miterlimit=(
-                state1.miterlimit if state1.miterlimit == state2.miterlimit else None
-            ),
-            ncolor=state1.ncolor if state1.ncolor == state2.ncolor else None,
-            scolor=state1.scolor if state1.scolor == state2.scolor else None,
-            stroking_color_space_name=(
-                state1.stroking_color_space_name
-                if state1.stroking_color_space_name == state2.stroking_color_space_name
-                else None
-            ),
-            non_stroking_color_space_name=(
-                state1.non_stroking_color_space_name
-                if state1.non_stroking_color_space_name
-                == state2.non_stroking_color_space_name
-                else None
-            ),
             passthrough_per_char_instruction=(
                 state1.passthrough_per_char_instruction
                 if state1.passthrough_per_char_instruction
@@ -506,7 +838,9 @@ class StylesAndFormulas:
                             if not char.pdf_character_id:
                                 continue
                             # 检查 y 坐标是否接近，判断是否在同一行
-                            left_iou = calculate_y_iou_for_boxes(char.box, formula.box)
+                            left_iou = calculate_y_true_iou_for_boxes(
+                                formula.box, char.box
+                            )
                             if left_iou > 0.6:
                                 left_char = char
                                 break
@@ -520,7 +854,9 @@ class StylesAndFormulas:
                             if not char.pdf_character_id:
                                 continue
                             # 检查 y 坐标是否接近，判断是否在同一行
-                            right_iou = calculate_y_iou_for_boxes(char.box, formula.box)
+                            right_iou = calculate_y_true_iou_for_boxes(
+                                formula.box, char.box
+                            )
                             if right_iou > 0.6:
                                 right_char = char
                                 break
@@ -598,9 +934,12 @@ class StylesAndFormulas:
         self,
         chars: list[PdfCharacter],
         is_formula: bool,
+        line_index: int,
+        is_corner_mark: bool = False,
     ) -> PdfParagraphComposition:
         if is_formula:
-            formula = PdfFormula(pdf_character=chars)
+            formula = PdfFormula(pdf_character=chars, line_id=line_index)
+            formula.is_corner_mark = is_corner_mark
             self.update_formula_data(formula)
             return PdfParagraphComposition(pdf_formula=formula)
         else:
@@ -676,7 +1015,8 @@ class StylesAndFormulas:
         # sorted_chars = sorted(
         #     all_chars, key=lambda c: (c.visual_bbox.box.y, c.visual_bbox.box.x))
 
-        merged_formula = PdfFormula(pdf_character=all_chars)
+        # 继承第一个公式的行 ID
+        merged_formula = PdfFormula(pdf_character=all_chars, line_id=formula1.line_id)
         self.update_formula_data(merged_formula)
         return merged_formula
 
@@ -757,11 +1097,16 @@ class StylesAndFormulas:
                         formula2 = comp2.pdf_formula
 
                         # 检查合并条件：
+                        # 0. 必须在同一行（line_id 相同），以及
                         # 1. x 轴重叠且 y 轴有交集，或者
                         # 2. x 轴相邻且 y 轴 IOU > 0.5，或者
                         # 3. 所有字符的 layout id 都相同，或者
                         # 4. 任意两个公式的 IOU > 0.8
-                        should_merge = (
+
+                        # 检查是否在同一行
+                        same_line = formula1.line_id == formula2.line_id
+
+                        should_merge = same_line and (
                             (
                                 j == i + 1
                                 and (
@@ -815,15 +1160,19 @@ class StylesAndFormulas:
         # 获取 formula1 中所有字符的 layout id
         formula1_layout_ids = set()
         for char in formula1.pdf_character:
+            if char.char_unicode == " ":
+                continue
             layout = char.formula_layout_id
-            if layout is not None:
+            if layout:
                 formula1_layout_ids.add(layout)
 
         # 获取 formula2 中所有字符的 layout id
         formula2_layout_ids = set()
         for char in formula2.pdf_character:
+            if char.char_unicode == " ":
+                continue
             layout = char.formula_layout_id
-            if layout is not None:
+            if layout:
                 formula2_layout_ids.add(layout)
 
         # 如果任一公式没有有效的 layout id，则不合并
@@ -851,7 +1200,11 @@ class StylesAndFormulas:
                     char_groups = self.split_formula_by_comma(composition.pdf_formula)
                     for chars, comma in char_groups:
                         if chars:  # 忽略空组（连续的逗号）
-                            formula = PdfFormula(pdf_character=chars)
+                            # 继承原公式的行 ID
+                            formula = PdfFormula(
+                                pdf_character=chars,
+                                line_id=composition.pdf_formula.line_id,
+                            )
                             self.update_formula_data(formula)
                             new_compositions.append(
                                 PdfParagraphComposition(pdf_formula=formula),
@@ -868,3 +1221,56 @@ class StylesAndFormulas:
                     new_compositions.append(composition)
 
             paragraph.pdf_paragraph_composition = new_compositions
+
+    def remove_non_formula_lines_from_paragraphs(self, page: Page):
+        """Remove non-formula lines from paragraphs.
+
+        This method processes curves that remain in page.pdf_curve after
+        collect_contained_elements() has assigned formula-related curves to formulas.
+        All remaining curves are non-formula lines, but we need to be careful
+        not to remove lines from figure/table areas.
+
+        Args:
+            page: The page to process
+        """
+        if not page.pdf_curve:
+            return
+
+        # Build layout index for efficient spatial queries
+        layout_index, layout_map = build_layout_index(page)
+
+        curves_to_remove = []
+
+        # Get configuration thresholds
+        protection_threshold = getattr(
+            self.translation_config, "figure_table_protection_threshold", 0.9
+        )
+        overlap_threshold = getattr(
+            self.translation_config, "non_formula_line_iou_threshold", 0.9
+        )
+
+        for curve in page.pdf_curve:
+            # Skip if curve is in figure/table layout areas
+            if is_curve_in_figure_table_layout(
+                curve, layout_index, layout_map, protection_threshold
+            ):
+                continue
+
+            # Only remove if curve overlaps with text paragraph areas
+            if is_curve_overlapping_with_paragraphs(
+                curve, page.pdf_paragraph, overlap_threshold
+            ):
+                curves_to_remove.append(curve)
+
+        # Remove identified curves
+        removed_count = 0
+        for curve in curves_to_remove:
+            if curve in page.pdf_curve:
+                page.pdf_curve.remove(curve)
+                removed_count += 1
+
+        if removed_count > 0:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Removed {removed_count} non-formula lines from paragraphs")

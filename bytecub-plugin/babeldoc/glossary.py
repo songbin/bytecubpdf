@@ -5,6 +5,7 @@ import logging
 import re
 import time
 from pathlib import Path
+
 import chardet
 import hyperscan
 import regex
@@ -134,7 +135,7 @@ class Glossary:
         normalized_target_lang_out = target_lang_out.lower().replace("-", "_")
 
         try:
-             with file_path.open("rb") as f:
+            with file_path.open("rb") as f:
                 content = f.read()
                 encoding = chardet.detect(content)["encoding"]
                 buffer = io.StringIO(content.decode(encoding))

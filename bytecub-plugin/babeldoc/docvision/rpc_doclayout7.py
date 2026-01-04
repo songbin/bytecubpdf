@@ -1,3 +1,5 @@
+import base64
+import json
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -5,7 +7,6 @@ from pathlib import Path
 
 import cv2
 import httpx
-import msgpack
 import numpy as np
 import pymupdf
 from tenacity import retry
@@ -17,6 +18,13 @@ import babeldoc
 from babeldoc.docvision.base_doclayout import DocLayoutModel
 from babeldoc.docvision.base_doclayout import YoloBox
 from babeldoc.docvision.base_doclayout import YoloResult
+from babeldoc.format.pdf.document_il import il_version_1
+from babeldoc.format.pdf.document_il.utils.extract_char import (
+    convert_page_to_char_boxes,
+)
+from babeldoc.format.pdf.document_il.utils.extract_char import (
+    process_page_chars_to_lines,
+)
 from babeldoc.format.pdf.document_il.utils.mupdf_helper import get_no_rotation_img
 
 logger = logging.getLogger(__name__)
@@ -33,6 +41,7 @@ def encode_image(image) -> bytes:
         if not Path(image).exists():
             raise FileNotFoundError(f"Image file not found: {image}")
         img = cv2.imread(image)
+
         if img is None:
             raise ValueError(f"Failed to read image: {image}")
     else:
@@ -41,7 +50,6 @@ def encode_image(image) -> bytes:
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     # logger.debug(f"Image shape: {img.shape}")
     encoded = cv2.imencode(".jpg", img)[1].tobytes()
-    # logger.debug(f"Encoded image size: {len(encoded)} bytes")
     return encoded
 
 
@@ -60,6 +68,7 @@ def predict_layout(
     image,
     host: str = "http://localhost:8000",
     _imgsz: int = 1024,
+    lines: list[babeldoc.format.pdf.document_il.utils.extract_char.Line] | None = None,
 ):
     """
     Predict document layout using the MOSEC service
@@ -74,28 +83,48 @@ def predict_layout(
     """
     # Prepare request data
 
-    if not isinstance(image, list):
-        image = [image]
-    image_data = [encode_image(image) for image in image]
-    data = {
-        "image": image_data,
+    image_data = encode_image(image)
+
+    def convert_line(line: babeldoc.format.pdf.document_il.utils.extract_char.Line):
+        """Extract bounding box from a line object."""
+        boxes = [c[0] for c in line.chars]
+        min_x = min([b.x for b in boxes])
+        max_x = max([b.x2 for b in boxes])
+        min_y = min([b.y for b in boxes])
+        max_y = max([b.y2 for b in boxes])
+        # min_y, max_y = max_y, min_y
+
+        min_x = min_x / 72 * DPI
+        max_x = max_x / 72 * DPI
+        min_y = min_y / 72 * DPI
+        max_y = max_y / 72 * DPI
+
+        image_height = image.shape[0]
+        min_y, max_y = image_height - max_y, image_height - min_y
+
+        return {"box": [min_x, min_y, max_x, max_y], "text": line.text}
+
+    formatted_results = [convert_line(l) for l in lines]
+
+    image_b64 = base64.b64encode(image_data).decode("utf-8")
+
+    request_data = {
+        "image": image_b64,
+        "ocr_results": formatted_results,
+        "image_size": list(image.shape[:2])[::-1],  # (height, width)
     }
 
     # Pack data using msgpack
-    packed_data = msgpack.packb(data, use_bin_type=True)
+    # packed_data = msgpack.packb(data, use_bin_type=True)
     # logger.debug(f"Packed data size: {len(packed_data)} bytes")
 
     # Send request
     # logger.debug(f"Sending request to {host}/inference")
     response = httpx.post(
-        # f"{host}/analyze?min_sim=0.7&early_stop=0.99&timeout=480",
         f"{host}/inference",
-        data=packed_data,
-        headers={
-            "Content-Type": "application/msgpack",
-            "Accept": "application/msgpack",
-        },
-        timeout=480,
+        json=request_data,
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+        timeout=1800,
         follow_redirects=True,
     )
 
@@ -105,16 +134,14 @@ def predict_layout(
     id_lookup = {}
     if response.status_code == 200:
         try:
-            result = msgpack.unpackb(response.content, raw=False)
+            result = json.loads(response.text)
             useful_result = []
             if isinstance(result, dict):
                 names = {}
-                for box in result["boxes"]:
-                    if box["score"] < 0.7:
-                        continue
-
-                    box["xyxy"] = box["coordinate"]
-                    box["conf"] = box["score"]
+                clusters = result["clusters"]
+                for box in clusters:
+                    box["xyxy"] = box["box"]
+                    box["conf"] = 1
                     if box["label"] not in names:
                         idx += 1
                         names[idx] = box["label"]
@@ -135,7 +162,7 @@ def predict_layout(
             raise
     else:
         logger.error(f"Request failed with status {response.status_code}")
-        logger.error(f"Response content: {response.content}")
+        logger.error(f"Response content: {response.text}")
         raise Exception(
             f"Request failed with status {response.status_code}: {response.text}",
         )
@@ -234,7 +261,8 @@ class RpcDocLayoutModel(DocLayoutModel):
         host: str | None = None,
         result_container: ResultContainer | None = None,
         imgsz: int = 1024,
-    ) -> ResultContainer:
+        page: il_version_1.Page | None = None,
+    ) -> YoloResult:
         """Predict the layout of document pages using RPC service."""
         if result_container is None:
             result_container = ResultContainer()
@@ -243,7 +271,11 @@ class RpcDocLayoutModel(DocLayoutModel):
         target_imgsz = (orig_h, orig_w)
         if image.shape[0] != target_imgsz[0] or image.shape[1] != target_imgsz[1]:
             image = self.resize_and_pad_image(image, new_shape=target_imgsz)
-        preds = predict_layout(image, host=self.host)
+
+        char_boxes = convert_page_to_char_boxes(page)
+        lines = process_page_chars_to_lines(char_boxes)
+
+        preds = predict_layout(image, host=self.host, lines=lines)
         orig_h, orig_w = orig_h / DPI * 72, orig_w / DPI * 72
         if len(preds) > 0:
             for pred in preds:
@@ -264,22 +296,6 @@ class RpcDocLayoutModel(DocLayoutModel):
                 )
         return result_container.result
 
-    def predict(self, image, imgsz=1024, **kwargs) -> list[YoloResult]:
-        """Predict the layout of document pages using RPC service."""
-        # Handle single image input
-        if isinstance(image, np.ndarray) and len(image.shape) == 3:
-            image = [image]
-
-        result_containers = [ResultContainer() for _ in image]
-        predict_thread = ThreadPoolExecutor(max_workers=len(image))
-        for img, result_container in zip(image, result_containers, strict=True):
-            predict_thread.submit(
-                self.predict_image, img, self.host, result_container, 800
-            )
-        predict_thread.shutdown(wait=True)
-        result = [result_container.result for result_container in result_containers]
-        return result
-
     def predict_page(
         self, page, mupdf_doc: pymupdf.Document, translate_config, save_debug_image
     ):
@@ -292,18 +308,18 @@ class RpcDocLayoutModel(DocLayoutModel):
             pix.width,
             3,
         )[:, :, ::-1]
-        predict_result = self.predict_image(image, self.host, None, 800)
+        predict_result = self.predict_image(image, self.host, None, 800, page)
         save_debug_image(image, predict_result, page.page_number + 1)
         return page, predict_result
 
     def handle_document(
         self,
-        pages: list[babeldoc.format.pdf.document_il.il_version_1.Page],
+        pages: list[il_version_1.Page],
         mupdf_doc: pymupdf.Document,
         translate_config,
         save_debug_image,
     ):
-        with ThreadPoolExecutor(max_workers=16) as executor:
+        with ThreadPoolExecutor(max_workers=1) as executor:
             yield from executor.map(
                 self.predict_page,
                 pages,

@@ -33,15 +33,17 @@ def get_font_metadata(font_path) -> PdfFont:
     translation_config = babeldoc.format.pdf.translation_config.TranslationConfig(
         *[None for _ in range(4)], doc_layout_model=1
     )
-    translation_config.progress_monitor = babeldoc.high_level.ProgressMonitor(
-        babeldoc.high_level.get_translation_stage(translation_config)
+    translation_config.progress_monitor = (
+        babeldoc.format.pdf.high_level.ProgressMonitor(
+            babeldoc.format.pdf.high_level.get_translation_stage(translation_config)
+        )
     )
     translation_config.font = font_path
-    il_creater = babeldoc.high_level.ILCreater(translation_config)
+    il_creater = babeldoc.format.pdf.high_level.ILCreater(translation_config)
     il_creater.mupdf = doc
     buffer = io.BytesIO()
     doc.save(buffer)
-    babeldoc.high_level.start_parse_il(
+    babeldoc.format.pdf.high_level.start_parse_il(
         buffer,
         doc_zh=doc,
         resfont="test_font",

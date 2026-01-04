@@ -111,6 +111,7 @@ def collect_page_formula_font_ids(
 def is_formulas_font(font_name: str, formular_font_pattern: str | None) -> bool:
     pattern_text = (
         r"^("
+        r"|BLKFort.*"
         r"|Cambria.*"
         r"|EUAlbertina.*"
         r"|NimbusRomNo9L.*"

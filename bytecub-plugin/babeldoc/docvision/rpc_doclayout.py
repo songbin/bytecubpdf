@@ -38,6 +38,8 @@ def encode_image(image) -> bytes:
         img = image
 
     # logger.debug(f"Image shape: {img.shape}")
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
     encoded = cv2.imencode(".jpg", img)[1].tobytes()
     # logger.debug(f"Encoded image size: {len(encoded)} bytes")
     return encoded

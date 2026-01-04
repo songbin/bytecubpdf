@@ -48,7 +48,9 @@ class OnnxModel(DocLayoutModel):
 
         available_providers = onnxruntime.get_available_providers()
         for provider in available_providers:
-            if re.match(r"dml|cuda|cpu", provider, re.IGNORECASE):
+            # disable dml|cuda|
+            # directml/cuda may encounter problems under special circumstances
+            if re.match(r"cpu", provider, re.IGNORECASE):
                 logger.info(f"Available Provider: {provider}")
                 providers.append(provider)
         self.model = onnxruntime.InferenceSession(

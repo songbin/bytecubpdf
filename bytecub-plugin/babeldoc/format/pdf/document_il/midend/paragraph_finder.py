@@ -20,6 +20,7 @@ from babeldoc.format.pdf.document_il.utils.formular_helper import (
 from babeldoc.format.pdf.document_il.utils.layout_helper import (
     HEIGHT_NOT_USFUL_CHAR_IN_CHAR,
 )
+from babeldoc.format.pdf.document_il.utils.layout_helper import SPACE_REGEX
 from babeldoc.format.pdf.document_il.utils.layout_helper import Layout
 from babeldoc.format.pdf.document_il.utils.layout_helper import add_space_dummy_chars
 from babeldoc.format.pdf.document_il.utils.layout_helper import build_layout_index
@@ -232,15 +233,15 @@ class ParagraphFinder:
         )
 
     def process_page(self, page: Page):
-        # build layout index for fast query
-        build_layout_index(page)
-
+        layout_index, layout_map = build_layout_index(page)
         # 预处理公式布局的标签
         self._preprocess_formula_layouts(page)
 
         # 第一步：根据 layout 创建 paragraphs
         # 在这一步中，page.pdf_character 中的字符会被移除
-        paragraphs = self._group_characters_into_paragraphs(page)
+        paragraphs = self._group_characters_into_paragraphs(
+            page, layout_index, layout_map
+        )
         page.pdf_paragraph = paragraphs
 
         page_level_formula_font_ids, xobj_specific_formula_font_ids = (
@@ -285,6 +286,10 @@ class ParagraphFinder:
         # 第五步：处理独立段落
         self.process_independent_paragraphs(paragraphs, median_width)
 
+        # 新增后处理：合并带行号交替的正文段落（a 正文、b 行号、c 正文 -> 合并 a 与 c，保留 b）
+        if getattr(self.translation_config, "merge_alternating_line_numbers", True):
+            self.merge_alternating_line_number_paragraphs(paragraphs)
+
         for paragraph in paragraphs:
             self.update_paragraph_data(paragraph, update_unicode=True)
 
@@ -300,9 +305,46 @@ class ParagraphFinder:
         # self._sort_characters_in_lines(page)
 
         self.add_debug_info(page)
-        # clean up to save memory
-        del page.layout_index
-        del page.layout_map
+
+        # 新阶段：设置段落的 renderorder 为所有组成部分中 renderorder 最小的
+        self._set_paragraph_render_order(page)
+
+    def _set_paragraph_render_order(self, page: Page):
+        """
+        设置段落的 renderorder 为段落所有组成部分中 renderorder 最小的值
+        """
+        for paragraph in page.pdf_paragraph:
+            min_render_order = 9999999999999999
+
+            # 遍历段落的所有组成部分
+            for composition in paragraph.pdf_paragraph_composition:
+                # 检查 PdfLine 中的字符
+                if composition.pdf_line:
+                    for char in composition.pdf_line.pdf_character:
+                        if (
+                            hasattr(char, "render_order")
+                            and char.render_order is not None
+                        ):
+                            min_render_order = min(min_render_order, char.render_order)
+
+                # 检查单个字符
+                elif composition.pdf_character:
+                    char = composition.pdf_character
+                    if hasattr(char, "render_order") and char.render_order is not None:
+                        min_render_order = min(min_render_order, char.render_order)
+
+                # 检查公式中的字符
+                elif composition.pdf_formula:
+                    for char in composition.pdf_formula.pdf_character:
+                        if (
+                            hasattr(char, "render_order")
+                            and char.render_order is not None
+                        ):
+                            min_render_order = min(min_render_order, char.render_order)
+
+            # 如果找到了有效的 renderorder，设置段落的 renderorder
+            if min_render_order != 9999999999999999:
+                paragraph.render_order = min_render_order
 
     def is_isolated_formula(self, char: PdfCharacter):
         return char.char_unicode in (
@@ -312,7 +354,72 @@ class ParagraphFinder:
             "(cid:125)",
         )
 
-    def _group_characters_into_paragraphs(self, page: Page) -> list[PdfParagraph]:
+    def _paragraph_text_ascii(self, p: PdfParagraph) -> str:
+        parts: list[str] = []
+        for comp in p.pdf_paragraph_composition or []:
+            if comp.pdf_line:
+                for ch in comp.pdf_line.pdf_character or []:
+                    if ch.char_unicode is not None:
+                        parts.append(ch.char_unicode)
+            elif comp.pdf_character and comp.pdf_character.char_unicode is not None:
+                parts.append(comp.pdf_character.char_unicode)
+        return "".join(parts)
+
+    def _is_ascii_digit_or_space_paragraph(self, p: PdfParagraph) -> bool:
+        text = self._paragraph_text_ascii(p)
+        if not text:
+            return True
+        has_digit = False
+        for c in text:
+            if c.isdigit() and ord(c) < 128:
+                has_digit = True
+                continue
+            if c.isspace():
+                continue
+            return False
+        return True if has_digit or text.strip() == "" else False
+
+    @staticmethod
+    def _same_layout_and_xobj(a: PdfParagraph, c: PdfParagraph) -> bool:
+        return (
+            a.layout_id is not None
+            and c.layout_id is not None
+            and a.layout_id == c.layout_id
+            and a.xobj_id is not None
+            and c.xobj_id is not None
+            and a.xobj_id == c.xobj_id
+        )
+
+    def merge_alternating_line_number_paragraphs(self, paragraphs: list[PdfParagraph]):
+        # a 代表正文
+        # l 代表行号
+        if not paragraphs or len(paragraphs) < 3:
+            return
+        i = 0
+        while i < len(paragraphs) - 2:
+            a = paragraphs[i]
+            # 吞掉一个或多个连续的行号段 l
+            j = i + 1
+            saw_l = False
+            while j < len(paragraphs) and self._is_ascii_digit_or_space_paragraph(
+                paragraphs[j]
+            ):
+                saw_l = True
+                j += 1
+            # 现在 j 指向候选的 c
+            if saw_l and j < len(paragraphs):
+                c = paragraphs[j]
+                if self._same_layout_and_xobj(a, c):
+                    a.pdf_paragraph_composition.extend(c.pdf_paragraph_composition)
+                    self.update_paragraph_data(a)
+                    del paragraphs[j]
+                    # 不移动 i，继续尝试把更多正文接到 a，实现 a l+ a l+ a ... 链式合并
+                    continue
+            i += 1
+
+    def _group_characters_into_paragraphs(
+        self, page: Page, layout_index, layout_map
+    ) -> list[PdfParagraph]:
         paragraphs: list[PdfParagraph] = []
         if page.pdf_paragraph:
             paragraphs.extend(page.pdf_paragraph)
@@ -338,9 +445,11 @@ class ParagraphFinder:
         skip_chars = []
 
         for char in page.pdf_character:
-            char_layout = get_character_layout(char, page)
+            char_layout = get_character_layout(char, layout_index, layout_map)
             # Check if character is in any formula layout and set formula_layout_id
-            char.formula_layout_id = is_character_in_formula_layout(char, page)
+            char.formula_layout_id = is_character_in_formula_layout(
+                char, page, layout_index, layout_map
+            )
 
             if not is_text_layout(char_layout) or self.is_isolated_formula(char):
                 skip_chars.append(char)
@@ -365,7 +474,10 @@ class ParagraphFinder:
                 and char.char_unicode not in HEIGHT_NOT_USFUL_CHAR_IN_CHAR
             ):
                 if (
-                    char_layout.id != current_layout.id
+                    (
+                        char_layout.id != current_layout.id
+                        and not SPACE_REGEX.match(char.char_unicode)
+                    )
                     or (  # not same xobject
                         current_paragraph.pdf_paragraph_composition
                         and current_paragraph.pdf_paragraph_composition[
@@ -500,6 +612,43 @@ class ParagraphFinder:
             return visual_box.y, visual_box.y2
         return pdf_box.y, pdf_box.y2
 
+    @staticmethod
+    def _compute_collision_counts_histogram(
+        y1_arr: np.ndarray,
+        y2_arr: np.ndarray,
+        para_y_min: float,
+        para_y_max: float,
+        step: float,
+    ) -> np.ndarray:
+        """Compute overlap counts at each scan line using a difference-array histogram.
+
+        Args:
+            y1_arr: 1-D array with lower y bounds of characters (inclusive).
+            y2_arr: 1-D array with upper y bounds of characters (exclusive).
+            para_y_min: Minimum y of the paragraph.
+            para_y_max: Maximum y of the paragraph.
+            step: Scan step size.
+
+        Returns:
+            1-D NumPy int32 array where index i corresponds to y = para_y_max - i × step.
+        """
+        # Number of scan positions
+        m = int(np.ceil((para_y_max - para_y_min) / step))
+        if m <= 0:
+            return np.array([], dtype=np.int32)
+
+        # Map character bounds to discrete indices (top inclusive, bottom exclusive)
+        starts = np.floor((para_y_max - y2_arr) / step).astype(np.int32)
+        ends = np.floor((para_y_max - y1_arr) / step).astype(np.int32) + 1
+        # Clip ends to the valid range [0, m]
+        np.clip(ends, 0, m, out=ends)
+
+        hist = np.zeros(m + 1, dtype=np.int32)
+        np.add.at(hist, starts, 1)
+        np.add.at(hist, ends, -1)
+
+        return np.cumsum(hist[:-1])
+
     def _split_paragraph_into_lines(
         self, paragraph: PdfParagraph, formula_font_ids: set[str]
     ):
@@ -560,10 +709,16 @@ class ParagraphFinder:
 
         y_coordinates = np.arange(scan_y_max, scan_y_min, -step)
 
-        collision_counts = []
-        for y in y_coordinates:
-            count = sum(1 for b in char_y_bounds if b["y1"] <= y < b["y2"])
-            collision_counts.append(count)
+        # Compute collision counts using NumPy histogram (O(m + n))
+        y1_arr = np.array([b["y1"] for b in char_y_bounds], dtype=np.float32)
+        y2_arr = np.array([b["y2"] for b in char_y_bounds], dtype=np.float32)
+        collision_counts = self._compute_collision_counts_histogram(
+            y1_arr,
+            y2_arr,
+            scan_y_min,
+            scan_y_max,
+            step,
+        )
 
         # 4. Find gaps (regions with low collision count) from the histogram.
         gaps = []

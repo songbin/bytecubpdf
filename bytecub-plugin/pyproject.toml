@@ -14,7 +14,7 @@ authors = [
 ]
 readme = "readme.md"
 license = {text = "MIT"}
-requires-python = ">=3.12"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "argostranslate",
     "azure-ai-translation-text==1.0.1",
@@ -77,6 +77,12 @@ dependencies = [
     "uharfbuzz>=0.50.2",
     "py-spy>=0.4.0",
     "pip>=25.3",
+    # BabelDOC核心依赖
+    "charset-normalizer >= 2.0.0",
+    "cryptography >= 36.0.0",
+    "psutil>=7.0.0",
+    "scikit-learn>=1.7.1",
+    "hyperscan>=0.7.13",
 ]
 
 [project.optional-dependencies]
@@ -87,6 +93,11 @@ dev = [
     "ruff",
     "mypy",
 ]
+# GPU支持选项
+directml = ["onnxruntime-directml>=1.16.1"]
+cuda = ["onnxruntime-gpu>=1.16.1"]
+# 内存分析工具
+memray = ["memray>=1.17.1"]
 
 [project.scripts]
 bytecub-plugin = "main:main"

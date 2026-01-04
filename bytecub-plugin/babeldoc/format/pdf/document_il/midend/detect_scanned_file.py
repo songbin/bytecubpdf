@@ -8,8 +8,9 @@ from skimage.metrics import structural_similarity
 
 from babeldoc.babeldoc_exception.BabelDOCException import ScannedPDFError
 from babeldoc.format.pdf.document_il import il_version_1
+from babeldoc.format.pdf.document_il.backend.pdf_creater import PDFCreater
+from babeldoc.format.pdf.document_il.utils.style_helper import BLACK
 from babeldoc.format.pdf.document_il.utils.style_helper import GREEN
-from babeldoc.format.pdf.document_il.utils.zstd_helper import zstd_decompress
 from babeldoc.format.pdf.translation_config import TranslationConfig
 
 logger = logging.getLogger(__name__)
@@ -80,9 +81,16 @@ class DetectScannedFile:
             return bool(sum(hit_list) > len(doc) * 0.8)
         return False
 
-    def process(self, docs: il_version_1.Document):
+    def process(
+        self, docs: il_version_1.Document, original_pdf_path, mediabox_data: dict
+    ):
         """Generate layouts for all pages that need to be translated."""
         # Get pages that need to be translated
+
+        pdf_creater = PDFCreater(
+            original_pdf_path, docs, self.translation_config, mediabox_data
+        )
+
         pages_to_translate = [
             page
             for page in docs.page
@@ -104,7 +112,7 @@ class DetectScannedFile:
             for page in pages_to_translate:
                 if scanned < threshold and non_scanned < non_scanned_threshold:
                     # Only continue detection if both counts are below thresholds
-                    is_scanned = self.detect_page_is_scanned(page, mupdf)
+                    is_scanned = self.detect_page_is_scanned(page, mupdf, pdf_creater)
                     if is_scanned:
                         scanned += 1
                     else:
@@ -123,6 +131,9 @@ class DetectScannedFile:
                 self.translation_config.shared_context_cross_split_part.auto_enabled_ocr_workaround = True
                 self.translation_config.ocr_workaround = True
                 self.translation_config.skip_scanned_detection = True
+                self.translation_config.disable_rich_text_translate = True
+                self.clean_render_order_for_chars(docs)
+                self.translation_config.remove_non_formula_lines = False
             else:
                 logger.warning(
                     f"Detected {scanned} scanned pages, which is more than 80% of the total pages. "
@@ -130,25 +141,26 @@ class DetectScannedFile:
                 )
                 # raise ScannedPDFError("Scanned PDF detected.")
 
-    @staticmethod
-    def detect_page_is_scanned(page: il_version_1.Page, pdf: pymupdf.Document) -> bool:
+    def clean_render_order_for_chars(self, docs: il_version_1.Document):
+        for page in docs.page:
+            for char in page.pdf_character:
+                char.render_order = None
+                if not char.debug_info:
+                    char.pdf_style.graphic_state = BLACK
+
+    def detect_page_is_scanned(
+        self, page: il_version_1.Page, pdf: pymupdf.Document, pdf_creater: PDFCreater
+    ) -> bool:
         before_page_image = pdf[page.page_number].get_pixmap()
         before_page_image = np.frombuffer(before_page_image.samples, np.uint8).reshape(
             before_page_image.height,
             before_page_image.width,
             3,
         )[:, :, ::-1]
-        new_xref = pdf.get_new_xref()
-        pdf.update_object(new_xref, "<<>>")
-        baseop = page.base_operations.value
-        baseop = zstd_decompress(baseop)
-        pdf.update_stream(new_xref, baseop.encode("utf-8"))
-        pdf[page.page_number].set_contents(new_xref)
 
-        for xobj in page.pdf_xobject:
-            base_op = xobj.base_operations.value
-            base_op = zstd_decompress(base_op)
-            pdf.update_stream(xobj.xref_id, base_op.encode("utf-8"))
+        pdf_creater.update_page_content_stream(
+            False, page, pdf, self.translation_config, True
+        )
 
         after_page_image = pdf[page.page_number].get_pixmap()
         after_page_image = np.frombuffer(after_page_image.samples, np.uint8).reshape(

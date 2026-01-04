@@ -14,6 +14,7 @@ from tenacity import retry_if_exception_type
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
+from babeldoc.babeldoc_exception.BabelDOCException import ContentFilterError
 from babeldoc.translator.cache import TranslationCache
 from babeldoc.utils.atomic_integer import AtomicInteger
 
@@ -155,7 +156,12 @@ class BaseTranslator(ABC):
         _translate_rate_limiter.wait()
         translation = self.do_llm_translate(text, rate_limit_params)
         if not (self.ignore_cache or ignore_cache):
-            self.cache.set(text, translation)
+            try:
+                self.cache.set(text, translation)
+            except Exception as e:
+                logger.debug(
+                    f"try set cache failed, ignore it: {e}, text: {text}, translation: {translation}"
+                )
         return translation
 
     @abstractmethod
@@ -184,13 +190,13 @@ class BaseTranslator(ABC):
     def __str__(self):
         return f"{self.name} {self.lang_in} {self.lang_out} {self.model}"
 
-    def get_rich_text_left_placeholder(self, placeholder_id: int):
+    def get_rich_text_left_placeholder(self, placeholder_id: int | str):
         return f"<b{placeholder_id}>"
 
-    def get_rich_text_right_placeholder(self, placeholder_id: int):
+    def get_rich_text_right_placeholder(self, placeholder_id: int | str):
         return f"</b{placeholder_id}>"
 
-    def get_formular_placeholder(self, placeholder_id: int):
+    def get_formular_placeholder(self, placeholder_id: int | str):
         return self.get_rich_text_left_placeholder(placeholder_id)
 
 
@@ -206,9 +212,20 @@ class OpenAITranslator(BaseTranslator):
         base_url=None,
         api_key=None,
         ignore_cache=False,
+        enable_json_mode_if_requested=False,
+        send_dashscope_header=False,
+        send_temperature=True,
+        reasoning=None,
     ):
         super().__init__(lang_in, lang_out, ignore_cache)
         self.options = {"temperature": 0}  # 随机采样可能会打断公式标记
+        self.extra_body = {}
+        # if 'gpt-5' in model and 'gpt-5-chat' not in model:
+        #     self.extra_body['reasoning'] = {
+        #         "effort": "minimal"
+        #     }
+        #     self.add_cache_impact_parameters("reasoning-effort", 'minimal')
+        self.reasoning = reasoning
         self.client = openai.OpenAI(
             base_url=base_url,
             api_key=api_key,
@@ -219,13 +236,25 @@ class OpenAITranslator(BaseTranslator):
                 timeout=60,  # Set a reasonable timeout
             ),
         )
-        self.add_cache_impact_parameters("temperature", self.options["temperature"])
+        if send_temperature:
+            self.add_cache_impact_parameters("temperature", self.options["temperature"])
         self.model = model
+        self.enable_json_mode_if_requested = enable_json_mode_if_requested
+        self.send_dashscope_header = send_dashscope_header
+        self.send_temperature = send_temperature
         self.add_cache_impact_parameters("model", self.model)
         self.add_cache_impact_parameters("prompt", self.prompt(""))
+        if self.reasoning:
+            self.extra_body["reasoning"] = {"effort": self.reasoning}
+            self.add_cache_impact_parameters("reasoning", self.reasoning)
+        if self.enable_json_mode_if_requested:
+            self.add_cache_impact_parameters(
+                "enable_json_mode_if_requested", self.enable_json_mode_if_requested
+            )
         self.token_count = AtomicInteger()
         self.prompt_token_count = AtomicInteger()
         self.completion_token_count = AtomicInteger()
+        self.cache_hit_prompt_token_count = AtomicInteger()
 
     @retry(
         retry=retry_if_exception_type(openai.RateLimitError),
@@ -234,10 +263,15 @@ class OpenAITranslator(BaseTranslator):
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     def do_translate(self, text, rate_limit_params: dict = None) -> str:
+        options = {}
+        if self.send_temperature:
+            options.update(self.options)
+
         response = self.client.chat.completions.create(
             model=self.model,
-            **self.options,
+            **options,
             messages=self.prompt(text),
+            extra_body=self.extra_body,
         )
         self.update_token_count(response)
         return response.choices[0].message.content.strip()
@@ -264,19 +298,43 @@ class OpenAITranslator(BaseTranslator):
         if text is None:
             return None
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            **self.options,
-            max_tokens=2048,
-            messages=[
-                {
-                    "role": "user",
-                    "content": text,
-                },
-            ],
-        )
-        self.update_token_count(response)
-        return response.choices[0].message.content.strip()
+        options = {}
+        if self.send_temperature:
+            options.update(self.options)
+        if self.enable_json_mode_if_requested and rate_limit_params.get(
+            "request_json_mode", False
+        ):
+            options["response_format"] = {"type": "json_object"}
+
+        extra_headers = {}
+        if self.send_dashscope_header:
+            extra_headers["X-DashScope-DataInspection"] = (
+                '{"input": "disable", "output": "disable"}'
+            )
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                **options,
+                max_tokens=2048,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": text,
+                    },
+                ],
+                extra_headers=extra_headers,
+                extra_body=self.extra_body,
+            )
+            self.update_token_count(response)
+            return response.choices[0].message.content.strip()
+        except openai.BadRequestError as e:
+            if (
+                "系统检测到输入或生成内容可能包含不安全或敏感内容，请您避免输入易产生敏感内容的提示语，感谢您的配合。"
+                in e.message
+            ):
+                raise ContentFilterError(e.message) from e
+            else:
+                raise
 
     def update_token_count(self, response):
         try:
@@ -286,18 +344,22 @@ class OpenAITranslator(BaseTranslator):
                 self.prompt_token_count.inc(response.usage.prompt_tokens)
             if response.usage and response.usage.completion_tokens:
                 self.completion_token_count.inc(response.usage.completion_tokens)
+            if response.usage and (
+                hit_count := getattr(response.usage, "prompt_cache_hit_tokens", 0)
+            ):
+                self.cache_hit_prompt_token_count.inc(hit_count)
         except Exception as e:
             logger.exception("Error updating token count")
 
-    def get_formular_placeholder(self, placeholder_id: int):
+    def get_formular_placeholder(self, placeholder_id: int | str):
         return "{v" + str(placeholder_id) + "}", f"{{\\s*v\\s*{placeholder_id}\\s*}}"
         return "{{" + str(placeholder_id) + "}}"
 
-    def get_rich_text_left_placeholder(self, placeholder_id: int):
+    def get_rich_text_left_placeholder(self, placeholder_id: int | str):
         return (
             f"<style id='{placeholder_id}'>",
             f"<\\s*style\\s*id\\s*=\\s*'\\s*{placeholder_id}\\s*'\\s*>",
         )
 
-    def get_rich_text_right_placeholder(self, placeholder_id: int):
+    def get_rich_text_right_placeholder(self, placeholder_id: int | str):
         return "</style>", r"<\s*\/\s*style\s*>"

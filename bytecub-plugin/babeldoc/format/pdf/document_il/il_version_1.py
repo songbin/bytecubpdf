@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from dataclasses import field
 
 
-@dataclass
+@dataclass(slots=True)
 class BaseOperations:
     class Meta:
         name = "baseOperations"
@@ -15,7 +15,7 @@ class BaseOperations:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class Box:
     class Meta:
         name = "box"
@@ -50,85 +50,11 @@ class Box:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class GraphicState:
     class Meta:
         name = "graphicState"
 
-    linewidth: float | None = field(
-        default=None,
-        metadata={
-            "type": "Attribute",
-        },
-    )
-    dash: list[float] = field(
-        default_factory=list,
-        metadata={
-            "type": "Attribute",
-            "min_length": 1,
-            "tokens": True,
-        },
-    )
-    flatness: float | None = field(
-        default=None,
-        metadata={
-            "type": "Attribute",
-        },
-    )
-    intent: str | None = field(
-        default=None,
-        metadata={
-            "type": "Attribute",
-        },
-    )
-    linecap: int | None = field(
-        default=None,
-        metadata={
-            "type": "Attribute",
-        },
-    )
-    linejoin: int | None = field(
-        default=None,
-        metadata={
-            "type": "Attribute",
-        },
-    )
-    miterlimit: float | None = field(
-        default=None,
-        metadata={
-            "type": "Attribute",
-        },
-    )
-    ncolor: list[float] = field(
-        default_factory=list,
-        metadata={
-            "type": "Attribute",
-            "min_length": 1,
-            "tokens": True,
-        },
-    )
-    scolor: list[float] = field(
-        default_factory=list,
-        metadata={
-            "type": "Attribute",
-            "min_length": 1,
-            "tokens": True,
-        },
-    )
-    stroking_color_space_name: str | None = field(
-        default=None,
-        metadata={
-            "name": "strokingColorSpaceName",
-            "type": "Attribute",
-        },
-    )
-    non_stroking_color_space_name: str | None = field(
-        default=None,
-        metadata={
-            "name": "nonStrokingColorSpaceName",
-            "type": "Attribute",
-        },
-    )
     passthrough_per_char_instruction: str | None = field(
         default=None,
         metadata={
@@ -138,7 +64,56 @@ class GraphicState:
     )
 
 
-@dataclass
+@dataclass(slots=True)
+class PdfAffineTransform:
+    class Meta:
+        name = "pdfAffineTransform"
+
+    translation_x: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    translation_y: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    rotation: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    scale_x: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    scale_y: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    shear: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+
+
+@dataclass(slots=True)
 class PdfFontCharBoundingBox:
     class Meta:
         name = "pdfFontCharBoundingBox"
@@ -180,7 +155,134 @@ class PdfFontCharBoundingBox:
     )
 
 
-@dataclass
+@dataclass(slots=True)
+class PdfInlineForm:
+    class Meta:
+        name = "pdfInlineForm"
+
+    form_data: str | None = field(
+        default=None,
+        metadata={
+            "name": "formData",
+            "type": "Attribute",
+        },
+    )
+    image_parameters: str | None = field(
+        default=None,
+        metadata={
+            "name": "imageParameters",
+            "type": "Attribute",
+        },
+    )
+
+
+@dataclass(slots=True)
+class PdfMatrix:
+    class Meta:
+        name = "pdfMatrix"
+
+    a: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    b: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    c: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    d: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    e: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    f: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+
+
+@dataclass(slots=True)
+class PdfPath:
+    class Meta:
+        name = "pdfPath"
+
+    x: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    y: float | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    op: str | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    has_xy: bool | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
+
+
+@dataclass(slots=True)
+class PdfXobjForm:
+    class Meta:
+        name = "pdfXobjForm"
+
+    xref_id: int | None = field(
+        default=None,
+        metadata={
+            "name": "xrefId",
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    do_args: str | None = field(
+        default=None,
+        metadata={
+            "name": "doArgs",
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+
+
+@dataclass(slots=True)
 class Cropbox:
     class Meta:
         name = "cropbox"
@@ -194,7 +296,7 @@ class Cropbox:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class Mediabox:
     class Meta:
         name = "mediabox"
@@ -208,7 +310,7 @@ class Mediabox:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class PageLayout:
     class Meta:
         name = "pageLayout"
@@ -243,7 +345,7 @@ class PageLayout:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfFigure:
     class Meta:
         name = "pdfFigure"
@@ -257,7 +359,7 @@ class PdfFigure:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfFont:
     class Meta:
         name = "pdfFont"
@@ -338,7 +440,43 @@ class PdfFont:
     )
 
 
-@dataclass
+@dataclass(slots=True)
+class PdfFormSubtype:
+    class Meta:
+        name = "pdfFormSubtype"
+
+    pdf_inline_form: PdfInlineForm | None = field(
+        default=None,
+        metadata={
+            "name": "pdfInlineForm",
+            "type": "Element",
+        },
+    )
+    pdf_xobj_form: PdfXobjForm | None = field(
+        default=None,
+        metadata={
+            "name": "pdfXobjForm",
+            "type": "Element",
+        },
+    )
+
+
+@dataclass(slots=True)
+class PdfOriginalPath:
+    class Meta:
+        name = "pdfOriginalPath"
+
+    pdf_path: PdfPath | None = field(
+        default=None,
+        metadata={
+            "name": "pdfPath",
+            "type": "Element",
+            "required": True,
+        },
+    )
+
+
+@dataclass(slots=True)
 class PdfRectangle:
     class Meta:
         name = "pdfRectangle"
@@ -384,9 +522,16 @@ class PdfRectangle:
             "type": "Attribute",
         },
     )
+    render_order: int | None = field(
+        default=None,
+        metadata={
+            "name": "renderOrder",
+            "type": "Attribute",
+        },
+    )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfStyle:
     class Meta:
         name = "pdfStyle"
@@ -415,7 +560,7 @@ class PdfStyle:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class VisualBbox:
     class Meta:
         name = "visual_bbox"
@@ -429,7 +574,7 @@ class VisualBbox:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfCharacter:
     class Meta:
         name = "pdfCharacter"
@@ -506,9 +651,199 @@ class PdfCharacter:
             "type": "Attribute",
         },
     )
+    render_order: int | None = field(
+        default=None,
+        metadata={
+            "name": "renderOrder",
+            "type": "Attribute",
+        },
+    )
+    sub_render_order: int | None = field(
+        default=None,
+        metadata={
+            "name": "subRenderOrder",
+            "type": "Attribute",
+        },
+    )
 
 
-@dataclass
+@dataclass(slots=True)
+class PdfCurve:
+    class Meta:
+        name = "pdfCurve"
+
+    box: Box | None = field(
+        default=None,
+        metadata={
+            "type": "Element",
+            "required": True,
+        },
+    )
+    graphic_state: GraphicState | None = field(
+        default=None,
+        metadata={
+            "name": "graphicState",
+            "type": "Element",
+            "required": True,
+        },
+    )
+    pdf_path: list[PdfPath] = field(
+        default_factory=list,
+        metadata={
+            "name": "pdfPath",
+            "type": "Element",
+        },
+    )
+    pdf_original_path: list[PdfOriginalPath] = field(
+        default_factory=list,
+        metadata={
+            "name": "pdfOriginalPath",
+            "type": "Element",
+        },
+    )
+    debug_info: bool | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
+    fill_background: bool | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
+    stroke_path: bool | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
+    evenodd: bool | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
+    xobj_id: int | None = field(
+        default=None,
+        metadata={
+            "name": "xobjId",
+            "type": "Attribute",
+        },
+    )
+    render_order: int | None = field(
+        default=None,
+        metadata={
+            "name": "renderOrder",
+            "type": "Attribute",
+        },
+    )
+    ctm: list[object] = field(
+        default_factory=list,
+        metadata={
+            "type": "Attribute",
+            "length": 6,
+            "tokens": True,
+        },
+    )
+    relocation_transform: list[object] = field(
+        default_factory=list,
+        metadata={
+            "type": "Attribute",
+            "length": 6,
+            "tokens": True,
+        },
+    )
+
+
+@dataclass(slots=True)
+class PdfForm:
+    class Meta:
+        name = "pdfForm"
+
+    box: Box | None = field(
+        default=None,
+        metadata={
+            "type": "Element",
+            "required": True,
+        },
+    )
+    graphic_state: GraphicState | None = field(
+        default=None,
+        metadata={
+            "name": "graphicState",
+            "type": "Element",
+            "required": True,
+        },
+    )
+    pdf_matrix: PdfMatrix | None = field(
+        default=None,
+        metadata={
+            "name": "pdfMatrix",
+            "type": "Element",
+            "required": True,
+        },
+    )
+    pdf_affine_transform: PdfAffineTransform | None = field(
+        default=None,
+        metadata={
+            "name": "pdfAffineTransform",
+            "type": "Element",
+            "required": True,
+        },
+    )
+    pdf_form_subtype: PdfFormSubtype | None = field(
+        default=None,
+        metadata={
+            "name": "pdfFormSubtype",
+            "type": "Element",
+            "required": True,
+        },
+    )
+    xobj_id: int | None = field(
+        default=None,
+        metadata={
+            "name": "xobjId",
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    ctm: list[object] = field(
+        default_factory=list,
+        metadata={
+            "type": "Attribute",
+            "length": 6,
+            "tokens": True,
+        },
+    )
+    relocation_transform: list[object] = field(
+        default_factory=list,
+        metadata={
+            "type": "Attribute",
+            "length": 6,
+            "tokens": True,
+        },
+    )
+    render_order: int | None = field(
+        default=None,
+        metadata={
+            "name": "renderOrder",
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+    form_type: str | None = field(
+        default=None,
+        metadata={
+            "name": "formType",
+            "type": "Attribute",
+            "required": True,
+        },
+    )
+
+
+@dataclass(slots=True)
 class PdfSameStyleUnicodeCharacters:
     class Meta:
         name = "pdfSameStyleUnicodeCharacters"
@@ -535,7 +870,7 @@ class PdfSameStyleUnicodeCharacters:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfXobject:
     class Meta:
         name = "pdfXobject"
@@ -580,7 +915,7 @@ class PdfXobject:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfFormula:
     class Meta:
         name = "pdfFormula"
@@ -598,6 +933,20 @@ class PdfFormula:
             "name": "pdfCharacter",
             "type": "Element",
             "min_occurs": 1,
+        },
+    )
+    pdf_curve: list[PdfCurve] = field(
+        default_factory=list,
+        metadata={
+            "name": "pdfCurve",
+            "type": "Element",
+        },
+    )
+    pdf_form: list[PdfForm] = field(
+        default_factory=list,
+        metadata={
+            "name": "pdfForm",
+            "type": "Element",
         },
     )
     x_offset: float | None = field(
@@ -620,9 +969,22 @@ class PdfFormula:
             "type": "Attribute",
         },
     )
+    line_id: int | None = field(
+        default=None,
+        metadata={
+            "name": "lineId",
+            "type": "Attribute",
+        },
+    )
+    is_corner_mark: bool | None = field(
+        default=None,
+        metadata={
+            "type": "Attribute",
+        },
+    )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfLine:
     class Meta:
         name = "pdfLine"
@@ -642,9 +1004,16 @@ class PdfLine:
             "min_occurs": 1,
         },
     )
+    render_order: int | None = field(
+        default=None,
+        metadata={
+            "name": "renderOrder",
+            "type": "Attribute",
+        },
+    )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfSameStyleCharacters:
     class Meta:
         name = "pdfSameStyleCharacters"
@@ -674,7 +1043,7 @@ class PdfSameStyleCharacters:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfParagraphComposition:
     class Meta:
         name = "pdfParagraphComposition"
@@ -716,7 +1085,7 @@ class PdfParagraphComposition:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class PdfParagraph:
     class Meta:
         name = "pdfParagraph"
@@ -800,9 +1169,16 @@ class PdfParagraph:
             "type": "Attribute",
         },
     )
+    render_order: int | None = field(
+        default=None,
+        metadata={
+            "name": "renderOrder",
+            "type": "Attribute",
+        },
+    )
 
 
-@dataclass
+@dataclass(slots=True)
 class Page:
     class Meta:
         name = "page"
@@ -870,6 +1246,20 @@ class Page:
             "type": "Element",
         },
     )
+    pdf_curve: list[PdfCurve] = field(
+        default_factory=list,
+        metadata={
+            "name": "pdfCurve",
+            "type": "Element",
+        },
+    )
+    pdf_form: list[PdfForm] = field(
+        default_factory=list,
+        metadata={
+            "name": "pdfForm",
+            "type": "Element",
+        },
+    )
     base_operations: BaseOperations | None = field(
         default=None,
         metadata={
@@ -896,7 +1286,7 @@ class Page:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class Document:
     class Meta:
         name = "document"

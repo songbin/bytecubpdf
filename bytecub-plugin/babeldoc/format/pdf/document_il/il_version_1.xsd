@@ -20,6 +20,8 @@
         <xs:element minOccurs="0" maxOccurs="unbounded" ref="pdfParagraph"/>
         <xs:element minOccurs="0" maxOccurs="unbounded" ref="pdfFigure"/>
         <xs:element minOccurs="0" maxOccurs="unbounded" ref="pdfCharacter"/>
+        <xs:element minOccurs="0" maxOccurs="unbounded" ref="pdfCurve"/>
+        <xs:element minOccurs="0" maxOccurs="unbounded" ref="pdfForm"/>
         <xs:element ref="baseOperations"/>
       </xs:sequence>
       <xs:attribute name="pageNumber" use="required" type="xs:int"/>
@@ -104,6 +106,8 @@
       <xs:attribute name="xobjId" type="xs:int"/>
       <xs:attribute name="debug_info" type="xs:boolean"/>
       <xs:attribute name="formula_layout_id" type="xs:int"/>
+      <xs:attribute name="renderOrder" type="xs:int"/>
+      <xs:attribute name="subRenderOrder" type="xs:int"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="visual_bbox">
@@ -125,44 +129,6 @@
   </xs:element>
   <xs:element name="graphicState">
     <xs:complexType>
-      <xs:attribute name="linewidth" type="xs:float"/>
-      <xs:attribute name="dash">
-        <xs:simpleType>
-          <xs:restriction>
-            <xs:simpleType>
-              <xs:list itemType="xs:float"/>
-            </xs:simpleType>
-            <xs:minLength value="1"/>
-          </xs:restriction>
-        </xs:simpleType>
-      </xs:attribute>
-      <xs:attribute name="flatness" type="xs:float"/>
-      <xs:attribute name="intent" type="xs:string"/>
-      <xs:attribute name="linecap" type="xs:int"/>
-      <xs:attribute name="linejoin" type="xs:int"/>
-      <xs:attribute name="miterlimit" type="xs:float"/>
-      <xs:attribute name="ncolor">
-        <xs:simpleType>
-          <xs:restriction>
-            <xs:simpleType>
-              <xs:list itemType="xs:float"/>
-            </xs:simpleType>
-            <xs:minLength value="1"/>
-          </xs:restriction>
-        </xs:simpleType>
-      </xs:attribute>
-      <xs:attribute name="scolor">
-        <xs:simpleType>
-          <xs:restriction>
-            <xs:simpleType>
-              <xs:list itemType="xs:float"/>
-            </xs:simpleType>
-            <xs:minLength value="1"/>
-          </xs:restriction>
-        </xs:simpleType>
-      </xs:attribute>
-      <xs:attribute name="strokingColorSpaceName" type="xs:string"/>
-      <xs:attribute name="nonStrokingColorSpaceName" type="xs:string"/>
       <xs:attribute name="passthroughPerCharInstruction" type="xs:string"/>
     </xs:complexType>
   </xs:element>
@@ -191,6 +157,7 @@
       <xs:attribute name="debug_id" type="xs:string"/>
       <xs:attribute name="layout_label" type="xs:string"/>
       <xs:attribute name="layout_id" type="xs:int"/>
+      <xs:attribute name="renderOrder" type="xs:int"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="pdfParagraphComposition">
@@ -210,6 +177,7 @@
         <xs:element ref="box"/>
         <xs:element maxOccurs="unbounded" ref="pdfCharacter"/>
       </xs:sequence>
+      <xs:attribute name="renderOrder" type="xs:int"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="pdfSameStyleCharacters">
@@ -235,10 +203,14 @@
       <xs:sequence>
         <xs:element ref="box"/>
         <xs:element maxOccurs="unbounded" ref="pdfCharacter"/>
+        <xs:element minOccurs="0" maxOccurs="unbounded" ref="pdfCurve"/>
+        <xs:element minOccurs="0" maxOccurs="unbounded" ref="pdfForm"/>
       </xs:sequence>
       <xs:attribute name="x_offset" use="required" type="xs:float"/>
       <xs:attribute name="y_offset" use="required" type="xs:float"/>
       <xs:attribute name="x_advance" type="xs:float"/>
+      <xs:attribute name="lineId" type="xs:int"/>
+      <xs:attribute name="is_corner_mark" type="xs:boolean"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="pdfFigure">
@@ -258,6 +230,149 @@
       <xs:attribute name="fill_background" type="xs:boolean"/>
       <xs:attribute name="xobjId" type="xs:int"/>
       <xs:attribute name="lineWidth" type="xs:float"/>
+      <xs:attribute name="renderOrder" type="xs:int"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="pdfCurve">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="box"/>
+        <xs:element ref="graphicState"/>
+        <xs:element minOccurs="0" maxOccurs="unbounded" ref="pdfPath"/>
+        <xs:element minOccurs="0" maxOccurs="unbounded" ref="pdfOriginalPath"/>
+      </xs:sequence>
+      <xs:attribute name="debug_info" type="xs:boolean"/>
+      <xs:attribute name="fill_background" type="xs:boolean"/>
+      <xs:attribute name="stroke_path" type="xs:boolean"/>
+      <xs:attribute name="evenodd" type="xs:boolean"/>
+      <xs:attribute name="xobjId" type="xs:int"/>
+      <xs:attribute name="renderOrder" type="xs:int"/>
+      <xs:attribute name="ctm">
+        <xs:simpleType>
+          <xs:restriction>
+            <xs:simpleType>
+              <xs:list>
+                <xs:simpleType>
+                  <xs:union memberTypes="xs:float xs:float xs:float xs:float xs:float xs:float"/>
+                </xs:simpleType>
+              </xs:list>
+            </xs:simpleType>
+            <xs:length value="6"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="relocation_transform">
+        <xs:simpleType>
+          <xs:restriction>
+            <xs:simpleType>
+              <xs:list>
+                <xs:simpleType>
+                  <xs:union memberTypes="xs:float xs:float xs:float xs:float xs:float xs:float"/>
+                </xs:simpleType>
+              </xs:list>
+            </xs:simpleType>
+            <xs:length value="6"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="pdfOriginalPath">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="pdfPath"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="pdfPath">
+    <xs:complexType>
+      <xs:attribute name="x" use="required" type="xs:float"/>
+      <xs:attribute name="y" use="required" type="xs:float"/>
+      <xs:attribute name="op" use="required" type="xs:string"/>
+      <xs:attribute name="has_xy" type="xs:boolean"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="pdfForm">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="box"/>
+        <xs:element ref="graphicState"/>
+        <xs:element ref="pdfMatrix"/>
+        <xs:element ref="pdfAffineTransform"/>
+        <xs:element ref="pdfFormSubtype"/>
+      </xs:sequence>
+      <xs:attribute name="xobjId" use="required" type="xs:int"/>
+      <xs:attribute name="ctm">
+        <xs:simpleType>
+          <xs:restriction>
+            <xs:simpleType>
+              <xs:list>
+                <xs:simpleType>
+                  <xs:union memberTypes="xs:float xs:float xs:float xs:float xs:float xs:float"/>
+                </xs:simpleType>
+              </xs:list>
+            </xs:simpleType>
+            <xs:length value="6"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="relocation_transform">
+        <xs:simpleType>
+          <xs:restriction>
+            <xs:simpleType>
+              <xs:list>
+                <xs:simpleType>
+                  <xs:union memberTypes="xs:float xs:float xs:float xs:float xs:float xs:float"/>
+                </xs:simpleType>
+              </xs:list>
+            </xs:simpleType>
+            <xs:length value="6"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="renderOrder" use="required" type="xs:int"/>
+      <xs:attribute name="formType" use="required" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="pdfFormSubtype">
+    <xs:complexType>
+      <xs:choice>
+        <xs:element ref="pdfInlineForm"/>
+        <xs:element ref="pdfXobjForm"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="pdfInlineForm">
+    <xs:complexType>
+      <xs:attribute name="formData" type="xs:string"/>
+      <xs:attribute name="imageParameters" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="pdfXobjForm">
+    <xs:complexType>
+      <xs:attribute name="xrefId" use="required" type="PDFXrefId"/>
+      <xs:attribute name="doArgs" use="required" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="pdfMatrix">
+    <xs:complexType>
+      <xs:attribute name="a" use="required" type="xs:float"/>
+      <xs:attribute name="b" use="required" type="xs:float"/>
+      <xs:attribute name="c" use="required" type="xs:float"/>
+      <xs:attribute name="d" use="required" type="xs:float"/>
+      <xs:attribute name="e" use="required" type="xs:float"/>
+      <xs:attribute name="f" use="required" type="xs:float"/>
+    </xs:complexType>
+  </xs:element>
+  <!-- Decomposed transform parameters for a CTM -->
+  <xs:element name="pdfAffineTransform">
+    <xs:complexType>
+      <xs:attribute name="translation_x" use="required" type="xs:float"/>
+      <xs:attribute name="translation_y" use="required" type="xs:float"/>
+      <xs:attribute name="rotation" use="required" type="xs:float"/>
+      <xs:attribute name="scale_x" use="required" type="xs:float"/>
+      <xs:attribute name="scale_y" use="required" type="xs:float"/>
+      <xs:attribute name="shear" use="required" type="xs:float"/>
     </xs:complexType>
   </xs:element>
 </xs:schema>

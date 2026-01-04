@@ -107,6 +107,7 @@ class PDFTextDevice(PDFDevice):
         assert self.ctm is not None
         matrix = utils.mult_matrix(textstate.matrix, self.ctm)
         font = textstate.font
+        font.font_id_temp = getattr(textstate, "font_id", None)
         fontsize = textstate.fontsize
         scaling = textstate.scaling * 0.01
         charspace = textstate.charspace * scaling

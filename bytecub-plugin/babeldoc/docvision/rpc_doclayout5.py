@@ -1,3 +1,4 @@
+import json
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -5,7 +6,6 @@ from pathlib import Path
 
 import cv2
 import httpx
-import msgpack
 import numpy as np
 import pymupdf
 from tenacity import retry
@@ -74,28 +74,21 @@ def predict_layout(
     """
     # Prepare request data
 
-    if not isinstance(image, list):
-        image = [image]
-    image_data = [encode_image(image) for image in image]
-    data = {
-        "image": image_data,
-    }
+    image_data = encode_image(image)
 
     # Pack data using msgpack
-    packed_data = msgpack.packb(data, use_bin_type=True)
+    # packed_data = msgpack.packb(data, use_bin_type=True)
     # logger.debug(f"Packed data size: {len(packed_data)} bytes")
 
     # Send request
     # logger.debug(f"Sending request to {host}/inference")
     response = httpx.post(
-        # f"{host}/analyze?min_sim=0.7&early_stop=0.99&timeout=480",
-        f"{host}/inference",
-        data=packed_data,
+        f"{host}/analyze_hybrid?min_sim=0.7&early_stop=0.99&timeout=1800",
+        files={"file": ("image.jpg", image_data, "image/jpeg")},
         headers={
-            "Content-Type": "application/msgpack",
-            "Accept": "application/msgpack",
+            "Accept": "application/json",
         },
-        timeout=480,
+        timeout=1800,
         follow_redirects=True,
     )
 
@@ -105,16 +98,14 @@ def predict_layout(
     id_lookup = {}
     if response.status_code == 200:
         try:
-            result = msgpack.unpackb(response.content, raw=False)
+            result = json.loads(response.text)
             useful_result = []
             if isinstance(result, dict):
                 names = {}
-                for box in result["boxes"]:
-                    if box["score"] < 0.7:
-                        continue
-
-                    box["xyxy"] = box["coordinate"]
-                    box["conf"] = box["score"]
+                clusters = result["clusters"]
+                for box in clusters:
+                    box["xyxy"] = box["box"]
+                    box["conf"] = 1
                     if box["label"] not in names:
                         idx += 1
                         names[idx] = box["label"]
@@ -135,7 +126,7 @@ def predict_layout(
             raise
     else:
         logger.error(f"Request failed with status {response.status_code}")
-        logger.error(f"Response content: {response.content}")
+        logger.error(f"Response content: {response.text}")
         raise Exception(
             f"Request failed with status {response.status_code}: {response.text}",
         )
@@ -303,7 +294,7 @@ class RpcDocLayoutModel(DocLayoutModel):
         translate_config,
         save_debug_image,
     ):
-        with ThreadPoolExecutor(max_workers=16) as executor:
+        with ThreadPoolExecutor(max_workers=1) as executor:
             yield from executor.map(
                 self.predict_page,
                 pages,

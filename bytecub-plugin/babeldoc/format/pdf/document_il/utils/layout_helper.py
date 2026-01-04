@@ -15,37 +15,40 @@ from babeldoc.format.pdf.document_il.il_version_1 import PdfParagraph
 from babeldoc.format.pdf.document_il.il_version_1 import PdfParagraphComposition
 
 logger = logging.getLogger(__name__)
-HEIGHT_NOT_USFUL_CHAR_IN_CHAR = (
-    "∑︁",
-    # 暂时假设 cid:17 和 cid 16 是特殊情况
-    # 来源于 arXiv:2310.18608v2 第九页公式大括号
-    "(cid:17)",
-    "(cid:16)",
-    # arXiv:2411.19509v2 第四页 []
-    "(cid:104)",
-    "(cid:105)",
-    # arXiv:2411.19509v2 第四页 公式的 | 竖线
-    "(cid:13)",
-    "∑︁",
-    # arXiv:2412.05265 27 页 累加号
-    "(cid:88)",
-    # arXiv:2412.05265 16 页 累乘号
-    "(cid:89)",
-    # arXiv:2412.05265 27 页 积分
-    "(cid:90)",
-    # arXiv:2412.05265 32 页 公式左右的中括号
-    "(cid:2)",
-    "(cid:3)",
-    "·",
-    "√",
-)
+# HEIGHT_NOT_USFUL_CHAR_IN_CHAR = (
+#     "∑︁",
+#     # 暂时假设 cid:17 和 cid 16 是特殊情况
+#     # 来源于 arXiv:2310.18608v2 第九页公式大括号
+#     "(cid:17)",
+#     "(cid:16)",
+#     # arXiv:2411.19509v2 第四页 []
+#     "(cid:104)",
+#     "(cid:105)",
+#     # arXiv:2411.19509v2 第四页 公式的 | 竖线
+#     "(cid:13)",
+#     "∑︁",
+#     # arXiv:2412.05265 27 页 累加号
+#     "(cid:88)",
+#     # arXiv:2412.05265 16 页 累乘号
+#     "(cid:89)",
+#     # arXiv:2412.05265 27 页 积分
+#     "(cid:90)",
+#     # arXiv:2412.05265 32 页 公式左右的中括号
+#     "(cid:2)",
+#     "(cid:3)",
+#     "·",
+#     "√",
+# )
+
+# 由于我们有一套 bbox 解析机制了，所以现在不需要这个东西了。
+HEIGHT_NOT_USFUL_CHAR_IN_CHAR = (None,)
 
 
 LEFT_BRACKET = ("(cid:8)", "(", "(cid:16)", "{", "[", "(cid:104)", "(cid:2)")
 RIGHT_BRACKET = ("(cid:9)", ")", "(cid:17)", "}", "]", "(cid:105)", "(cid:3)")
 
 BULLET_POINT_PATTERN = re.compile(
-    r"[■•⚫⬤◆◇○●◦‣⁃▪▫∗†‡¹²³⁴⁵⁶⁷⁸⁹⁰₁₂₃₄₅₆₇₈₉₀ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖᵍʳˢᵗᵘᵛʷˣʸᶻ†‡§¶※⁑⁂⁕⁎⁜⁑❧☙⁋‖‽·]"
+    r"[■•⚫⬤◆◇○●◦‣⁃▪▫∗†‡¹²³⁴⁵⁶⁷⁸⁹⁰₁₂₃₄₅₆₇₈₉₀ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ¶※⁑⁂⁕⁎⁜❧☙⁋‖‽·]"
 )
 
 
@@ -378,18 +381,7 @@ def is_same_graphic_state(state1: GraphicState, state2: GraphicState) -> bool:
         return state1 is state2
 
     return (
-        state1.linewidth == state2.linewidth
-        and state1.dash == state2.dash
-        and state1.flatness == state2.flatness
-        and state1.intent == state2.intent
-        and state1.linecap == state2.linecap
-        and state1.linejoin == state2.linejoin
-        and state1.miterlimit == state2.miterlimit
-        and state1.ncolor == state2.ncolor
-        and state1.scolor == state2.scolor
-        and state1.stroking_color_space_name == state2.stroking_color_space_name
-        and state1.non_stroking_color_space_name == state2.non_stroking_color_space_name
-        and state1.passthrough_per_char_instruction
+        state1.passthrough_per_char_instruction
         == state2.passthrough_per_char_instruction
     )
 
@@ -568,8 +560,7 @@ def build_layout_index(page):
         layout_map[i] = layout
         if layout.box:
             layout_index.insert(i, box_to_tuple(layout.box))
-    page.layout_index = layout_index
-    page.layout_map = layout_map
+    return layout_index, layout_map
 
 
 def calculate_iou_for_boxes(box1: Box, box2: Box) -> float:
@@ -624,52 +615,117 @@ def calculate_y_iou_for_boxes(box1: Box, box2: Box) -> float:
     return intersection_height / first_box_height
 
 
+def calculate_y_true_iou_for_boxes(box1: Box, box2: Box) -> float:
+    """Calculate the intersection ratio in y-axis direction divided by the first box height.
+
+    Args:
+        box1: First box
+        box2: Second box
+
+    Returns:
+        float: Intersection ratio in y-axis direction between 0 and 1
+    """
+    y_bottom = max(box1.y, box2.y)
+    y_top = min(box1.y2, box2.y2)
+
+    if y_top <= y_bottom:
+        return 0.0
+
+    # Calculate intersection height
+    intersection_height = y_top - y_bottom
+
+    # Calculate height of first box
+    first_box_height = box1.y2 - box1.y
+    second_box_height = box2.y2 - box2.y
+
+    min_height = min(first_box_height, second_box_height)
+
+    # Return intersection divided by first box height, handle division by zero
+    if first_box_height <= 0:
+        return 0.0
+
+    return intersection_height / min_height
+
+
 def get_character_layout(
     char,
-    page,
+    layout_index,
+    layout_map,
     layout_priority=None,
     _bbox_mode: Literal["auto", "visual", "box"] = "auto",
 ):
     """Get the layout for a character based on priority and IoU."""
     if layout_priority is None:
         layout_priority = [
-            "image",
             "number",
             "reference",
+            "reference_content",
             "algorithm",
             "formula_caption",
             "isolate_formula",
             "table_footnote",
             "table_caption",
             "figure_caption",
-            "table_text",
-            "table",
-            "figure",
-            "abandon",
-            "title",
-            "paragraph_title",
-            "abstract",
-            "content",
             "figure_title",
             "chart_title",
             "table_title",
+            "table_cell_hybrid",
+            "table_text",
+            "wireless_table_cell",
+            "wired_table_cell",
+            "abandon",
+            "title",
+            "abstract",
+            "paragraph_title",
+            "content",
             "doc_title",
             "footnote",
             "header",
             "footer",
-            "sealplain text",
+            "seal",
+            "plain text",
             "tiny text",
+            "author_info_hybrid",
+            "list_item_hybrid",
             "text",
+            "paragraph_hybrid",
             "paragraph",
             "table_cell",
             "figure_text",
             "list_item",
             "title",
             "caption",
+            "footnote_hybrid",
             "footnote",
             "formula",
+            "formula_hybrid",
             "page_header",
             "page_footer",
+            # --- hybrid labels ---
+            "reference_hybrid",
+            "document_hybrid",
+            "academic_paper_hybrid",
+            "form_or_table_hybrid",
+            "presentation_slide_hybrid",
+            "webpage_screenshot_hybrid",
+            "manga_or_comic_hybrid",
+            "advertisement_hybrid",
+            "magazine_or_newspaper_hybrid",
+            "other_hybrid",
+            "table_cell_hybrid",
+            "figure_text_hybrid",
+            "title_hybrid",
+            "caption_hybrid",
+            "code_algo_hybrid",
+            "line_number_hybrid",
+            "page_header_hybrid",
+            "page_footer_hybrid",
+            "page_number_hybrid",
+            "unknown_hybrid",
+            "fallback_line",
+            "table",
+            "figure",
+            "image",
         ]
 
     char_box = char.visual_bbox.box
@@ -688,14 +744,10 @@ def get_character_layout(
     # elif bbox_mode == "box":
     #     char_box = char_box2
 
-    # Check if page has layout_index and layout_map
-    if not hasattr(page, "layout_index") or not hasattr(page, "layout_map"):
-        return None
-
     # Collect all intersecting layouts and their IoU values
     matching_layouts = []
-    candidate_ids = list(page.layout_index.intersection(box_to_tuple(char_box)))
-    candidate_layouts = [page.layout_map[i] for i in candidate_ids]
+    candidate_ids = list(layout_index.intersection(box_to_tuple(char_box)))
+    candidate_layouts = [layout_map[i] for i in candidate_ids]
 
     for layout in candidate_layouts:
         # Calculate IoU
@@ -710,9 +762,11 @@ def get_character_layout(
                 matching_layouts.append(
                     {
                         "layout": Layout(layout.id, layout.class_name),
-                        "priority": layout_priority.index(layout.class_name)
-                        if layout.class_name in layout_priority
-                        else len(layout_priority),
+                        "priority": (
+                            layout_priority.index(layout.class_name)
+                            if layout.class_name in layout_priority
+                            else len(layout_priority)
+                        ),
                         "iou": iou,
                     }
                 )
@@ -722,6 +776,24 @@ def get_character_layout(
 
     # Sort by priority (ascending) and IoU value (descending)
     matching_layouts.sort(key=lambda x: (x["priority"], -x["iou"]))
+
+    # non_hybrid_table_label = None
+    # for layout in matching_layouts:
+    #     layout = layout["layout"]
+    #     label = layout.name
+    #     if is_text_layout(layout) and label not in (
+    #         "table_cell_hybrid",
+    #         "table_text",
+    #         "wireless_table_cell",
+    #         "wired_table_cell",
+    #         "fallback_line",
+    #         "unknown_hybrid",
+    #     ):
+    #         non_hybrid_table_label = layout
+    #         break
+    #
+    # if non_hybrid_table_label:
+    #     return non_hybrid_table_label
 
     return matching_layouts[0]["layout"]
 
@@ -736,6 +808,7 @@ def is_text_layout(layout: Layout):
         "figure_caption",
         "table_caption",
         "table_text",
+        "table_footnote",
         # "reference",
         "title",
         "paragraph_title",
@@ -759,11 +832,28 @@ def is_text_layout(layout: Layout):
         "footnote",
         "page_header",
         "page_footer",
+        "wired_table_cell",
+        "wireless_table_cell",
+        "paragraph_hybrid",
+        "table_cell_hybrid",
+        "caption_hybrid",
+        "unknown_hybrid",
+        "figure_text_hybrid",
+        "list_item_hybrid",
+        "title_hybrid",
+        "fallback_line",
+        "author_info_hybrid",
+        "page_header_hybrid",
+        "page_footer_hybrid",
+        "footnote_hybrid",
     ]
 
 
 def is_character_in_formula_layout(
-    char: il_version_1.PdfCharacter, page: il_version_1.Page
+    char: il_version_1.PdfCharacter,
+    _page: il_version_1.Page,
+    layout_index,
+    layout_map,
 ) -> int | None:
     """Check if character is contained within any formula-related layout."""
     formula_layout_types = {"formula"}
@@ -774,14 +864,10 @@ def is_character_in_formula_layout(
     if calculate_iou_for_boxes(char_box, char_box2) < 0.2:
         char_box = char_box2
 
-    # Check if page has layout_index and layout_map
-    if not hasattr(page, "layout_index") or not hasattr(page, "layout_map"):
-        return False
-
     # Get all candidate layouts that intersect with the character
-    candidate_ids = list(page.layout_index.intersection(box_to_tuple(char_box)))
+    candidate_ids = list(layout_index.intersection(box_to_tuple(char_box)))
     candidate_layouts: list[il_version_1.PageLayout] = [
-        page.layout_map[i] for i in candidate_ids
+        layout_map[i] for i in candidate_ids
     ]
 
     # Check if any intersecting layout is a formula type
@@ -792,3 +878,136 @@ def is_character_in_formula_layout(
                 return layout.id
 
     return None
+
+
+def is_curve_in_figure_table_layout(
+    curve, layout_index, layout_map, protection_threshold: float = 0.3
+) -> bool:
+    """Check if curve is within figure/table layout areas.
+
+    Args:
+        curve: The curve object to check
+        layout_index: Spatial index for layouts
+        layout_map: Mapping from layout IDs to layout objects
+        protection_threshold: IoU threshold for figure/table protection
+
+    Returns:
+        True if curve is within figure/table layout areas
+    """
+    if not curve.box:
+        return False
+
+    # Figure/table related layout types
+    figure_table_layouts = {
+        "figure",
+        "table",
+        "figure_text",
+        "table_text",
+        "figure_caption",
+        "table_caption",
+        "figure_title",
+        "table_title",
+        "chart_title",
+        "table_cell",
+        "table_cell_hybrid",
+        "wired_table_cell",
+        "wireless_table_cell",
+        "table_footnote",
+    }
+
+    # Get candidate layouts that intersect with curve
+    candidate_ids = list(layout_index.intersection(box_to_tuple(curve.box)))
+    candidate_layouts = [layout_map[i] for i in candidate_ids]
+
+    for layout in candidate_layouts:
+        if layout.class_name in figure_table_layouts:
+            # Check if curve has significant overlap with figure/table layout
+            iou = calculate_iou_for_boxes(curve.box, layout.box)
+            if iou > protection_threshold:
+                return True
+
+    return False
+
+
+def is_curve_overlapping_with_paragraphs(
+    curve, paragraphs: list, overlap_threshold: float = 0.2
+) -> bool:
+    """Check if curve overlaps with text paragraph areas.
+
+    Args:
+        curve: The curve object to check
+        paragraphs: List of paragraph objects
+        overlap_threshold: IoU threshold for paragraph overlap detection
+
+    Returns:
+        True if curve overlaps with any paragraph area
+    """
+    if not curve.box:
+        return False
+
+    for paragraph in paragraphs:
+        para_box = get_paragraph_bounding_box(paragraph)
+        if para_box:
+            iou = calculate_iou_for_boxes(curve.box, para_box)
+            if iou > overlap_threshold:
+                return True
+
+    return False
+
+
+def get_paragraph_bounding_box(paragraph) -> Box | None:
+    """Calculate the bounding box of a paragraph from its compositions.
+
+    Args:
+        paragraph: The paragraph object
+
+    Returns:
+        Box object representing the paragraph bounds, or None if no valid bounds
+    """
+    if not paragraph.pdf_paragraph_composition:
+        return None
+
+    min_x = float("inf")
+    min_y = float("inf")
+    max_x = float("-inf")
+    max_y = float("-inf")
+
+    has_valid_box = False
+
+    for composition in paragraph.pdf_paragraph_composition:
+        comp_box = None
+
+        if composition.pdf_line and composition.pdf_line.box:
+            comp_box = composition.pdf_line.box
+        elif composition.pdf_formula and composition.pdf_formula.box:
+            comp_box = composition.pdf_formula.box
+        elif (
+            composition.pdf_same_style_characters
+            and composition.pdf_same_style_characters.box
+        ):
+            comp_box = composition.pdf_same_style_characters.box
+        elif composition.pdf_character and len(composition.pdf_character) > 0:
+            # Calculate box from character list
+            char_boxes = [
+                char.visual_bbox.box
+                for char in composition.pdf_character
+                if char.visual_bbox and char.visual_bbox.box
+            ]
+            if char_boxes:
+                comp_min_x = min(box.x for box in char_boxes)
+                comp_min_y = min(box.y for box in char_boxes)
+                comp_max_x = max(box.x2 for box in char_boxes)
+                comp_max_y = max(box.y2 for box in char_boxes)
+                comp_box = Box(comp_min_x, comp_min_y, comp_max_x, comp_max_y)
+
+        if comp_box:
+            min_x = min(min_x, comp_box.x)
+            min_y = min(min_y, comp_box.y)
+            max_x = max(max_x, comp_box.x2)
+            max_y = max(max_y, comp_box.y2)
+            has_valid_box = True
+
+    if not has_valid_box:
+        return None
+
+    return Box(min_x, min_y, max_x, max_y)

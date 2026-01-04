@@ -1,6 +1,9 @@
 import asyncio
 import logging
+import multiprocessing as mp
 import queue
+import random
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +18,7 @@ from rich.progress import TimeRemainingColumn
 
 import babeldoc.assets.assets
 import babeldoc.format.pdf.high_level
+from babeldoc.const import enable_process_pool
 from babeldoc.format.pdf.translation_config import TranslationConfig
 from babeldoc.format.pdf.translation_config import WatermarkOutputMode
 from babeldoc.glossary import Glossary
@@ -22,7 +26,7 @@ from babeldoc.translator.translator import OpenAITranslator
 from babeldoc.translator.translator import set_translate_rate_limiter
 
 logger = logging.getLogger(__name__)
-__version__ = "0.4.14"
+__version__ = "0.5.22"
 
 
 def create_parser():
@@ -68,6 +72,22 @@ def create_parser():
         help="RPC service host address for document layout analysis",
     )
     parser.add_argument(
+        "--rpc-doclayout4",
+        help="RPC service host address for document layout analysis",
+    )
+    parser.add_argument(
+        "--rpc-doclayout5",
+        help="RPC service host address for document layout analysis",
+    )
+    parser.add_argument(
+        "--rpc-doclayout6",
+        help="RPC service host address for document layout analysis",
+    )
+    parser.add_argument(
+        "--rpc-doclayout7",
+        help="RPC service host address for document layout analysis",
+    )
+    parser.add_argument(
         "--generate-offline-assets",
         default=None,
         help="Generate offline assets package in the specified directory",
@@ -81,6 +101,16 @@ def create_parser():
         "--working-dir",
         default=None,
         help="Working directory for translation. If not set, use temp directory.",
+    )
+    parser.add_argument(
+        "--metadata-extra-data",
+        default=None,
+        help="Extra data for metadata",
+    )
+    parser.add_argument(
+        "--enable-process-pool",
+        action="store_true",
+        help="DEBUG ONLY",
     )
     # translation option argument group
     translation_group = parser.add_argument_group(
@@ -251,6 +281,11 @@ def create_parser():
         help="Maximum number of worker threads for internal task processing pools. If not specified, defaults to QPS value. This parameter directly sets the worker count, replacing previous QPS-based dynamic calculations.",
     )
     translation_group.add_argument(
+        "--term-pool-max-workers",
+        type=int,
+        help="Maximum number of worker threads dedicated to automatic term extraction. If not specified, defaults to --pool-max-workers (or QPS value when unset).",
+    )
+    translation_group.add_argument(
         "--no-auto-extract-glossary",
         action="store_false",
         dest="auto_extract_glossary",
@@ -282,6 +317,67 @@ def create_parser():
         default=False,
         help="Save automatically extracted glossary terms to a CSV file in the output directory.",
     )
+    translation_group.add_argument(
+        "--disable-graphic-element-process",
+        action="store_true",
+        default=False,
+        help="Disable graphic element process. (default: False)",
+    )
+    translation_group.add_argument(
+        "--no-merge-alternating-line-numbers",
+        action="store_false",
+        dest="merge_alternating_line_numbers",
+        default=True,
+        help="Disable post-processing that merges alternating line-number layouts (by default this feature is enabled).",
+    )
+    translation_group.add_argument(
+        "--skip-translation",
+        action="store_true",
+        default=False,
+        help="Skip translation step. (default: False)",
+    )
+    translation_group.add_argument(
+        "--skip-form-render",
+        action="store_true",
+        default=False,
+        help="Skip form rendering. (default: False)",
+    )
+    translation_group.add_argument(
+        "--skip-curve-render",
+        action="store_true",
+        default=False,
+        help="Skip curve rendering. (default: False)",
+    )
+    translation_group.add_argument(
+        "--only-parse-generate-pdf",
+        action="store_true",
+        default=False,
+        help="Only parse PDF and generate output PDF without translation (default: False). This skips all translation-related processing including layout analysis, paragraph finding, style processing, and translation itself.",
+    )
+    translation_group.add_argument(
+        "--remove-non-formula-lines",
+        action="store_true",
+        default=False,
+        help="Remove non-formula lines from paragraph areas. This removes decorative lines that are not part of formulas, while protecting lines in figure/table areas. (default: False)",
+    )
+    translation_group.add_argument(
+        "--non-formula-line-iou-threshold",
+        type=float,
+        default=0.9,
+        help="IoU threshold for detecting paragraph overlap when removing non-formula lines. Higher values are more conservative. (default: 0.9)",
+    )
+    translation_group.add_argument(
+        "--figure-table-protection-threshold",
+        type=float,
+        default=0.9,
+        help="IoU threshold for protecting lines in figure/table areas when removing non-formula lines. Higher values provide more protection. (default: 0.9)",
+    )
+    translation_group.add_argument(
+        "--skip-formula-offset-calculation",
+        action="store_true",
+        default=False,
+        help="Skip formula offset calculation (default: False)",
+    )
     # service option argument group
     service_group = translation_group.add_mutually_exclusive_group()
     service_group.add_argument(
@@ -306,6 +402,51 @@ def create_parser():
         "--openai-api-key",
         "-k",
         help="The API key for the OpenAI API.",
+    )
+    service_group.add_argument(
+        "--openai-term-extraction-model",
+        default=None,
+        help="OpenAI model to use for automatic term extraction. Defaults to --openai-model when unset.",
+    )
+    service_group.add_argument(
+        "--openai-term-extraction-base-url",
+        default=None,
+        help="Base URL for the OpenAI API used during automatic term extraction. Falls back to --openai-base-url when unset.",
+    )
+    service_group.add_argument(
+        "--openai-term-extraction-api-key",
+        default=None,
+        help="API key for the OpenAI API used during automatic term extraction. Falls back to --openai-api-key when unset.",
+    )
+    service_group.add_argument(
+        "--enable-json-mode-if-requested",
+        action="store_true",
+        default=False,
+        help="Enable JSON mode for OpenAI requests.",
+    )
+    service_group.add_argument(
+        "--send-dashscope-header",
+        action="store_true",
+        default=False,
+        help="Send DashScope data inspection header to disable input/output inspection.",
+    )
+    service_group.add_argument(
+        "--no-send-temperature",
+        action="store_true",
+        default=False,
+        help="Do not send temperature parameter to OpenAI API (default: send temperature).",
+    )
+    service_group.add_argument(
+        "--openai-reasoning",
+        type=str,
+        default=None,
+        help="Reasoning string to send in the OpenAI request body 'reasoning' field. If not set, the field is not sent.",
+    )
+    service_group.add_argument(
+        "--openai-term-extraction-reasoning",
+        type=str,
+        default=None,
+        help="Reasoning string for the OpenAI term extraction translator. If not set, no reasoning field is sent for term extraction requests.",
     )
 
     return parser
@@ -345,8 +486,14 @@ async def main():
     if args.openai and not args.openai_api_key:
         parser.error("使用 OpenAI 服务时必须提供 API key")
 
+    if args.enable_process_pool:
+        enable_process_pool()
+
     # 实例化翻译器
     if args.openai:
+        translator_kwargs: dict[str, Any] = {}
+        if args.openai_reasoning is not None:
+            translator_kwargs["reasoning"] = args.openai_reasoning
         translator = OpenAITranslator(
             lang_in=args.lang_in,
             lang_out=args.lang_out,
@@ -354,7 +501,34 @@ async def main():
             base_url=args.openai_base_url,
             api_key=args.openai_api_key,
             ignore_cache=args.ignore_cache,
+            enable_json_mode_if_requested=args.enable_json_mode_if_requested,
+            send_dashscope_header=args.send_dashscope_header,
+            send_temperature=not args.no_send_temperature,
+            **translator_kwargs,
         )
+        term_extraction_translator = translator
+        if (
+            args.openai_term_extraction_model
+            or args.openai_term_extraction_base_url
+            or args.openai_term_extraction_api_key
+        ):
+            term_translator_kwargs: dict[str, Any] = {}
+            if args.openai_term_extraction_reasoning is not None:
+                term_translator_kwargs["reasoning"] = (
+                    args.openai_term_extraction_reasoning
+                )
+            term_extraction_translator = OpenAITranslator(
+                lang_in=args.lang_in,
+                lang_out=args.lang_out,
+                model=args.openai_term_extraction_model or args.openai_model,
+                base_url=(args.openai_term_extraction_base_url or args.openai_base_url),
+                api_key=args.openai_term_extraction_api_key or args.openai_api_key,
+                ignore_cache=args.ignore_cache,
+                enable_json_mode_if_requested=args.enable_json_mode_if_requested,
+                send_dashscope_header=args.send_dashscope_header,
+                send_temperature=not args.no_send_temperature,
+                **term_translator_kwargs,
+            )
     else:
         raise ValueError("Invalid translator type")
 
@@ -373,6 +547,22 @@ async def main():
         from babeldoc.docvision.rpc_doclayout3 import RpcDocLayoutModel
 
         doc_layout_model = RpcDocLayoutModel(host=args.rpc_doclayout3)
+    elif args.rpc_doclayout4:
+        from babeldoc.docvision.rpc_doclayout4 import RpcDocLayoutModel
+
+        doc_layout_model = RpcDocLayoutModel(host=args.rpc_doclayout4)
+    elif args.rpc_doclayout5:
+        from babeldoc.docvision.rpc_doclayout5 import RpcDocLayoutModel
+
+        doc_layout_model = RpcDocLayoutModel(host=args.rpc_doclayout5)
+    elif args.rpc_doclayout6:
+        from babeldoc.docvision.rpc_doclayout6 import RpcDocLayoutModel
+
+        doc_layout_model = RpcDocLayoutModel(host=args.rpc_doclayout6)
+    elif args.rpc_doclayout7:
+        from babeldoc.docvision.rpc_doclayout7 import RpcDocLayoutModel
+
+        doc_layout_model = RpcDocLayoutModel(host=args.rpc_doclayout7)
     else:
         from babeldoc.docvision.doclayout import DocLayoutModel
 
@@ -470,6 +660,11 @@ async def main():
             args.max_pages_per_part
         )
 
+    total_term_extraction_total_tokens = 0
+    total_term_extraction_prompt_tokens = 0
+    total_term_extraction_completion_tokens = 0
+    total_term_extraction_cache_hit_prompt_tokens = 0
+
     for file in pending_files:
         # 清理文件路径，去除两端的引号
         file = file.strip("\"'")
@@ -480,6 +675,7 @@ async def main():
             pages=args.pages,
             output_dir=args.output,
             translator=translator,
+            term_extraction_translator=term_extraction_translator,
             debug=args.debug,
             lang_in=args.lang_in,
             lang_out=args.lang_out,
@@ -514,10 +710,28 @@ async def main():
             primary_font_family=args.primary_font_family,
             only_include_translated_page=args.only_include_translated_page,
             save_auto_extracted_glossary=args.save_auto_extracted_glossary,
+            enable_graphic_element_process=not args.disable_graphic_element_process,
+            merge_alternating_line_numbers=args.merge_alternating_line_numbers,
+            skip_translation=args.skip_translation,
+            skip_form_render=args.skip_form_render,
+            skip_curve_render=args.skip_curve_render,
+            only_parse_generate_pdf=args.only_parse_generate_pdf,
+            remove_non_formula_lines=args.remove_non_formula_lines,
+            non_formula_line_iou_threshold=args.non_formula_line_iou_threshold,
+            figure_table_protection_threshold=args.figure_table_protection_threshold,
+            skip_formula_offset_calculation=args.skip_formula_offset_calculation,
+            metadata_extra_data=args.metadata_extra_data,
+            term_pool_max_workers=args.term_pool_max_workers,
         )
 
+        def nop(_x):
+            pass
+
+        getattr(doc_layout_model, "init_font_mapper", nop)(config)
         # Create progress handler
-        progress_context, progress_handler = create_progress_handler(config)
+        progress_context, progress_handler = create_progress_handler(
+            config, show_log=False
+        )
 
         # 开始翻译
         with progress_context:
@@ -532,12 +746,39 @@ async def main():
                     result = event["translate_result"]
                     logger.info(str(result))
                     break
+        usage = config.term_extraction_token_usage
+        total_term_extraction_total_tokens += usage["total_tokens"]
+        total_term_extraction_prompt_tokens += usage["prompt_tokens"]
+        total_term_extraction_completion_tokens += usage["completion_tokens"]
+        total_term_extraction_cache_hit_prompt_tokens += usage[
+            "cache_hit_prompt_tokens"
+        ]
     logger.info(f"Total tokens: {translator.token_count.value}")
     logger.info(f"Prompt tokens: {translator.prompt_token_count.value}")
     logger.info(f"Completion tokens: {translator.completion_token_count.value}")
+    logger.info(
+        f"Cache hit prompt tokens: {translator.cache_hit_prompt_token_count.value}"
+    )
+    logger.info(
+        "Term extraction tokens: total=%s prompt=%s completion=%s cache_hit_prompt=%s",
+        total_term_extraction_total_tokens,
+        total_term_extraction_prompt_tokens,
+        total_term_extraction_completion_tokens,
+        total_term_extraction_cache_hit_prompt_tokens,
+    )
+    if term_extraction_translator is not translator:
+        logger.info(
+            "Term extraction translator raw tokens: total=%s prompt=%s completion=%s cache_hit_prompt=%s",
+            term_extraction_translator.token_count.value,
+            term_extraction_translator.prompt_token_count.value,
+            term_extraction_translator.completion_token_count.value,
+            term_extraction_translator.cache_hit_prompt_token_count.value,
+        )
 
 
-def create_progress_handler(translation_config: TranslationConfig):
+def create_progress_handler(
+    translation_config: TranslationConfig, show_log: bool = False
+):
     """Create a progress handler function based on the configuration.
 
     Args:
@@ -560,6 +801,8 @@ def create_progress_handler(translation_config: TranslationConfig):
         stage_tasks = {}
 
         def progress_handler(event):
+            if show_log and random.random() <= 0.1:  # noqa: S311
+                logger.info(event)
             if event["type"] == "progress_start":
                 if event["stage"] not in stage_tasks:
                     stage_tasks[event["stage"]] = progress.add_task(
@@ -624,6 +867,7 @@ def create_cache_folder():
 def download_font_assets():
     return babeldoc.format.pdf.high_level.download_font_assets()
 
+
 class EvictQueue(queue.Queue):
     def __init__(self, maxsize):
         self.discarded = 0
@@ -652,6 +896,7 @@ def speed_up_logs():
     queue_listener.start()
     root_logger.handlers = [queue_handler]
 
+
 def cli():
     """Command line interface entry point."""
     from rich.logging import RichHandler
@@ -679,10 +924,15 @@ def cli():
         ):
             v.disabled = True
             v.propagate = False
+
     speed_up_logs()
     babeldoc.format.pdf.high_level.init()
     asyncio.run(main())
 
 
 if __name__ == "__main__":
+    if sys.platform == "darwin" or sys.platform == "win32":
+        mp.set_start_method("spawn")
+    else:
+        mp.set_start_method("forkserver")
     cli()

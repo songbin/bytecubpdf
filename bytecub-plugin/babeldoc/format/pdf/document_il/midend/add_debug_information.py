@@ -4,6 +4,7 @@ import babeldoc.format.pdf.document_il.il_version_1 as il_version_1
 from babeldoc.format.pdf.document_il import GraphicState
 from babeldoc.format.pdf.document_il.utils.style_helper import BLUE
 from babeldoc.format.pdf.document_il.utils.style_helper import ORANGE
+from babeldoc.format.pdf.document_il.utils.style_helper import PINK
 from babeldoc.format.pdf.document_il.utils.style_helper import TEAL
 from babeldoc.format.pdf.document_il.utils.style_helper import YELLOW
 from babeldoc.format.pdf.translation_config import TranslationConfig
@@ -39,10 +40,16 @@ class AddDebugInformation:
         )
         return rect
 
-    def _create_text(self, text: str, color: GraphicState, box: il_version_1.Box):
+    def _create_text(
+        self,
+        text: str,
+        color: GraphicState,
+        box: il_version_1.Box,
+        font_size: float = 4,
+    ):
         style = il_version_1.PdfStyle(
             font_id="base",
-            font_size=4,
+            font_size=font_size,
             graphic_state=color,
         )
         return il_version_1.PdfParagraph(
@@ -72,7 +79,7 @@ class AddDebugInformation:
         # Add page number text at top-left corner
         page_width = page.cropbox.box.x2 - page.cropbox.box.x
         page_height = page.cropbox.box.y2 - page.cropbox.box.y
-        page_number_text = f"pagenumber: {page.page_number}"
+        page_number_text = f"pagenumber: {page.page_number + 1}"
         page_number_box = il_version_1.Box(
             x=page.cropbox.box.x + page_width * 0.02,
             y=page.cropbox.box.y,
@@ -108,7 +115,9 @@ class AddDebugInformation:
 
             debug_text = "paragraph"
             if hasattr(paragraph, "debug_id") and paragraph.debug_id:
-                debug_text = f"paragraph[{paragraph.debug_id}]"
+                debug_text = (
+                    f"paragraph[{paragraph.debug_id}]-[{paragraph.layout_label}]"
+                )
             new_paragraphs.append(self._create_text(debug_text, BLUE, paragraph.box))
 
             for composition in paragraph.pdf_paragraph_composition:
@@ -137,17 +146,34 @@ class AddDebugInformation:
                         # )
 
             for xobj in page.pdf_xobject:
-                new_paragraphs.append(
-                    self._create_text(
-                        "xobj",
-                        YELLOW,
-                        xobj.box,
-                    ),
-                )
+                # new_paragraphs.append(
+                #     self._create_text(
+                #         "xobj",
+                #         YELLOW,
+                #         xobj.box,
+                #     ),
+                # )
                 page.pdf_rectangle.append(
                     self._create_rectangle(
                         xobj.box,
                         YELLOW,
+                    ),
+                )
+
+            for form in page.pdf_form:
+                debug_text = "Form"
+                if form.pdf_form_subtype.pdf_xobj_form:
+                    debug_text += f"[{form.pdf_form_subtype.pdf_xobj_form.do_args}]"
+                elif form.pdf_form_subtype.pdf_inline_form:
+                    debug_text += "[inline]"
+
+                new_paragraphs.append(
+                    self._create_text(debug_text, PINK, form.box, font_size=0.4),
+                )
+                page.pdf_rectangle.append(
+                    self._create_rectangle(
+                        form.box,
+                        PINK,
                     ),
                 )
 

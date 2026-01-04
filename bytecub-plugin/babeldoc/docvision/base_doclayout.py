@@ -56,17 +56,6 @@ class DocLayoutModel(abc.ABC):
         """Stride of the model input."""
 
     @abc.abstractmethod
-    def predict(self, image: bytes, imgsz: int = 1024, **kwargs) -> list[int]:
-        """
-        Predict the layout of a document page.
-
-        Args:
-            image: The image of the document page.
-            imgsz: Resize the image to this size. Must be a multiple of the stride.
-            **kwargs: Additional arguments.
-        """
-
-    @abc.abstractmethod
     def handle_document(
         self,
         pages: list[Page],

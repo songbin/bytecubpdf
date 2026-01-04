@@ -1,9 +1,12 @@
+import itertools
+import multiprocessing as mp
 import os
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 
-__version__ = "0.4.14"
+__version__ = "0.5.22"
 
 CACHE_FOLDER = Path.home() / ".cache" / "babeldoc"
 def set_cache_folder(path: str | Path):
@@ -41,3 +44,54 @@ except (OSError, FileNotFoundError, subprocess.CalledProcessError):
 TIKTOKEN_CACHE_FOLDER = CACHE_FOLDER / "tiktoken"
 TIKTOKEN_CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
 os.environ["TIKTOKEN_CACHE_DIR"] = str(TIKTOKEN_CACHE_FOLDER)
+
+
+_process_pool = None
+_process_pool_lock = threading.Lock()
+_ENABLE_PROCESS_POOL = False
+
+
+def enable_process_pool():
+    # Development and Testing ONLY API
+    global _ENABLE_PROCESS_POOL
+    _ENABLE_PROCESS_POOL = True
+
+
+# macos & windows use spawn mode
+# linux use forkserver mode
+
+
+def get_process_pool():
+    if not _ENABLE_PROCESS_POOL:
+        return None
+    global _process_pool
+    with _process_pool_lock:
+        if _process_pool is None:
+            # Create pool only in main process
+            if mp.current_process().name != "MainProcess":
+                return None
+
+            _process_pool = mp.Pool()
+        return _process_pool
+
+
+def close_process_pool():
+    if not _ENABLE_PROCESS_POOL:
+        return None
+    global _process_pool
+    with _process_pool_lock:
+        if _process_pool:
+            _process_pool.close()
+            _process_pool.join()
+            _process_pool = None
+
+
+def batched(iterable, n, *, strict=False):
+    # batched('ABCDEFG', 3) → ABC DEF G
+    if n < 1:
+        raise ValueError("n must be at least one")
+    iterator = iter(iterable)
+    while batch := tuple(itertools.islice(iterator, n)):
+        if strict and len(batch) != n:
+            raise ValueError("batched(): incomplete batch")
+        yield batch

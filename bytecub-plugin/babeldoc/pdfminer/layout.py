@@ -8,6 +8,7 @@ from typing import TypeVar
 from typing import Union
 from typing import cast
 
+from babeldoc.format.pdf.babelpdf.utils import guarded_bbox
 from babeldoc.pdfminer.pdfcolor import PDFColorSpace
 from babeldoc.pdfminer.pdfexceptions import PDFTypeError
 from babeldoc.pdfminer.pdfexceptions import PDFValueError
@@ -948,7 +949,7 @@ class LTFigure(LTLayoutContainer):
     def __init__(self, name: str, bbox: Rect, matrix: Matrix) -> None:
         self.name = name
         self.matrix = matrix
-        (x, y, w, h) = bbox
+        (x, y, w, h) = guarded_bbox(bbox)
         bounds = ((x, y), (x + w, y), (x, y + h), (x + w, y + h))
         bbox = get_bound(apply_matrix_pt(matrix, (p, q)) for (p, q) in bounds)
         LTLayoutContainer.__init__(self, bbox)

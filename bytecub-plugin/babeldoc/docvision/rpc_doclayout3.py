@@ -25,6 +25,7 @@ DPI = 150
 
 def encode_image(image) -> bytes:
     """Read and encode image to bytes
+
     Args:
         image: Can be either a file path (str) or numpy array
     """
@@ -37,6 +38,7 @@ def encode_image(image) -> bytes:
     else:
         img = image
 
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     # logger.debug(f"Image shape: {img.shape}")
     encoded = cv2.imencode(".jpg", img)[1].tobytes()
     # logger.debug(f"Encoded image size: {len(encoded)} bytes")
@@ -61,10 +63,12 @@ def predict_layout(
 ):
     """
     Predict document layout using the MOSEC service
+
     Args:
         image: Can be either a file path (str) or numpy array
         host: Service host URL
         imgsz: Image size for model input
+
     Returns:
         List of predictions containing bounding boxes and classes
     """
@@ -79,12 +83,12 @@ def predict_layout(
     # Send request
     # logger.debug(f"Sending request to {host}/inference")
     response = httpx.post(
-        f"{host}/analyze?min_sim=0.7&early_stop=0.99&timeout=240",
+        f"{host}/analyze?min_sim=0.7&early_stop=0.99&timeout=1800",
         files={"file": ("image.jpg", image_data, "image/jpeg")},
         headers={
             "Accept": "application/json",
         },
-        timeout=300,
+        timeout=1800,
         follow_redirects=True,
     )
 
@@ -154,10 +158,12 @@ class RpcDocLayoutModel(DocLayoutModel):
         """
         Resize and pad the image to the specified size,
         ensuring dimensions are multiples of stride.
+
         Parameters:
         - image: Input image
         - new_shape: Target size (integer or (height, width) tuple)
         - stride: Padding alignment stride, default 32
+
         Returns:
         - Processed image
         """
@@ -193,11 +199,13 @@ class RpcDocLayoutModel(DocLayoutModel):
         """
         Rescales bounding boxes (in the format of xyxy by default) from the shape of the image they were originally
         specified in (img1_shape) to the shape of a different image (img0_shape).
+
         Args:
             img1_shape (tuple): The shape of the image that the bounding boxes are for,
                 in the format of (height, width).
             boxes (torch.Tensor): the bounding boxes of the objects in the image, in the format of (x1, y1, x2, y2)
             img0_shape (tuple): the shape of the target image, in the format of (height, width).
+
         Returns:
             boxes (torch.Tensor): The scaled bounding boxes, in the format of (x1, y1, x2, y2)
         """
@@ -228,7 +236,7 @@ class RpcDocLayoutModel(DocLayoutModel):
         target_imgsz = (orig_h, orig_w)
         if image.shape[0] != target_imgsz[0] or image.shape[1] != target_imgsz[1]:
             image = self.resize_and_pad_image(image, new_shape=target_imgsz)
-        preds = predict_layout(image, host=self.host, imgsz=800)
+        preds = predict_layout(image, host=self.host)
         orig_h, orig_w = orig_h / DPI * 72, orig_w / DPI * 72
         if len(preds) > 0:
             for pred in preds:

@@ -44,7 +44,7 @@ from babeldoc.pdfminer.psparser import PSStackParser
 from babeldoc.pdfminer.psparser import PSStackType
 from babeldoc.pdfminer.psparser import keyword_name
 from babeldoc.pdfminer.psparser import literal_name
-from babeldoc.pdfminer.utils import MATRIX_IDENTITY
+from babeldoc.pdfminer.utils import MATRIX_IDENTITY, apply_matrix_pt
 from babeldoc.pdfminer.utils import Matrix
 from babeldoc.pdfminer.utils import PathSegment
 from babeldoc.pdfminer.utils import Point
@@ -119,6 +119,7 @@ class PDFTextState:
         obj.rise = self.rise
         obj.matrix = self.matrix
         obj.linematrix = self.linematrix
+        obj.font_id = getattr(self, "font_id", None)
         return obj
 
     def reset(self) -> None:
@@ -682,9 +683,11 @@ class PDFPageInterpreter:
 
     def do_W(self) -> None:
         """Set clipping path using nonzero winding number rule"""
+        pass
 
     def do_W_a(self) -> None:
         """Set clipping path using even-odd rule"""
+        pass
 
     def do_CS(self, name: PDFStackT) -> None:
         """Set color space for stroking operations
@@ -1005,6 +1008,7 @@ class PDFPageInterpreter:
         """
         try:
             self.textstate.font = self.fontmap[literal_name(fontid)]
+            self.textstate.font_id = literal_name(fontid)
         except KeyError:
             if settings.STRICT:
                 raise PDFInterpreterError("Undefined Font id: %r" % fontid)

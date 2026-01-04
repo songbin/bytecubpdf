@@ -14,6 +14,8 @@ from rtree import index
 from babeldoc.const import WATERMARK_VERSION
 from babeldoc.format.pdf.document_il import Box
 from babeldoc.format.pdf.document_il import PdfCharacter
+from babeldoc.format.pdf.document_il import PdfCurve
+from babeldoc.format.pdf.document_il import PdfForm
 from babeldoc.format.pdf.document_il import PdfFormula
 from babeldoc.format.pdf.document_il import PdfParagraphComposition
 from babeldoc.format.pdf.document_il import PdfStyle
@@ -408,15 +410,21 @@ class TypesettingUnit:
             "〚",  # 左单书名号
         ]
 
-    def passthrough(self) -> list[PdfCharacter]:
+    def passthrough(
+        self,
+    ) -> tuple[list[PdfCharacter], list[PdfCurve], list[PdfForm]]:
         if self.char:
-            return [self.char]
+            return [self.char], [], []
         elif self.formular:
-            return self.formular.pdf_character
+            return (
+                self.formular.pdf_character,
+                self.formular.pdf_curve,
+                self.formular.pdf_form,
+            )
         elif self.unicode:
             logger.error(f"Cannot passthrough unicode. TypesettingUnit: {self}. ")
             logger.error(f"Cannot passthrough unicode. TypesettingUnit: {self}. ")
-            return []
+            return [], [], []
 
     @property
     def can_passthrough(self):
@@ -479,7 +487,12 @@ class TypesettingUnit:
         box = self.box
         return box.y2 - box.y
 
-    def relocate(self, x: float, y: float, scale: float) -> TypesettingUnit:
+    def relocate(
+        self,
+        x: float,
+        y: float,
+        scale: float,
+    ) -> TypesettingUnit:
         """重定位并缩放排版单元
 
         Args:
@@ -546,8 +559,8 @@ class TypesettingUnit:
                     ),
                     visual_bbox=il_version_1.VisualBbox(
                         box=Box(
-                            x=x + visual_rel_x * scale,
-                            y=y + visual_rel_y * scale,
+                            x=x + (visual_rel_x + self.formular.x_offset) * scale,
+                            y=y + (visual_rel_y + self.formular.y_offset) * scale,
                             x2=x
                             + (
                                 visual_rel_x
@@ -594,7 +607,32 @@ class TypesettingUnit:
                 y_offset=self.formular.y_offset * scale,
                 x_advance=self.formular.x_advance * scale,
             )
+
+            # Handle contained curves
+            new_curves = []
+            for curve in self.formular.pdf_curve:
+                new_curve = self._transform_curve_for_relocation(
+                    curve,
+                    self.formular.box.x,
+                    self.formular.box.y,
+                    x,
+                    y,
+                    scale,
+                )
+                new_curves.append(new_curve)
+            new_formula.pdf_curve = new_curves
+
+            # Handle contained forms
+            new_forms = []
+            for form in self.formular.pdf_form:
+                new_form = self._transform_form_for_relocation(
+                    form, self.formular.box.x, self.formular.box.y, x, y, scale
+                )
+                new_forms.append(new_form)
+            new_formula.pdf_form = new_forms
+
             update_formula_data(new_formula)
+
             new_tu = TypesettingUnit(formular=new_formula)
             new_tu.try_resue_cache(self)
             return new_tu
@@ -616,7 +654,119 @@ class TypesettingUnit:
             new_unit.try_resue_cache(self)
             return new_unit
 
-    def render(self) -> list[PdfCharacter]:
+    def _transform_curve_for_relocation(
+        self,
+        curve,
+        original_formula_x: float,
+        original_formula_y: float,
+        new_x: float,
+        new_y: float,
+        scale: float,
+    ):
+        """Transform a curve for formula relocation."""
+        import copy
+
+        new_curve = copy.deepcopy(curve)
+
+        if new_curve.box:
+            # Calculate relative position to formula's original position (same as chars)
+            rel_x = new_curve.box.x - original_formula_x
+            rel_y = new_curve.box.y - original_formula_y
+
+            # Apply same transformation as characters
+            new_curve.box = Box(
+                x=new_x + (rel_x + self.formular.x_offset) * scale,
+                y=new_y + (rel_y + self.formular.y_offset) * scale,
+                x2=new_x
+                + (
+                    rel_x
+                    + (new_curve.box.x2 - new_curve.box.x)
+                    + self.formular.x_offset
+                )
+                * scale,
+                y2=new_y
+                + (
+                    rel_y
+                    + (new_curve.box.y2 - new_curve.box.y)
+                    + self.formular.y_offset
+                )
+                * scale,
+            )
+
+        # Set relocation transform instead of modifying original CTM
+        translation_x = (
+            new_x + self.formular.x_offset * scale - original_formula_x * scale
+        )
+        translation_y = (
+            new_y + self.formular.y_offset * scale - original_formula_y * scale
+        )
+
+        # Create relocation transformation matrix
+        from babeldoc.format.pdf.document_il.utils.matrix_helper import (
+            create_translation_and_scale_matrix,
+        )
+
+        relocation_matrix = create_translation_and_scale_matrix(
+            translation_x, translation_y, scale
+        )
+        new_curve.relocation_transform = list(relocation_matrix)
+
+        return new_curve
+
+    def _transform_form_for_relocation(
+        self,
+        form,
+        original_formula_x: float,
+        original_formula_y: float,
+        new_x: float,
+        new_y: float,
+        scale: float,
+    ):
+        """Transform a form for formula relocation."""
+        import copy
+
+        new_form = copy.deepcopy(form)
+
+        if new_form.box:
+            # Calculate relative position to formula's original position (same as chars)
+            rel_x = new_form.box.x - original_formula_x
+            rel_y = new_form.box.y - original_formula_y
+
+            # Apply same transformation as characters
+            new_form.box = Box(
+                x=new_x + (rel_x + self.formular.x_offset) * scale,
+                y=new_y + (rel_y + self.formular.y_offset) * scale,
+                x2=new_x
+                + (rel_x + (new_form.box.x2 - new_form.box.x) + self.formular.x_offset)
+                * scale,
+                y2=new_y
+                + (rel_y + (new_form.box.y2 - new_form.box.y) + self.formular.y_offset)
+                * scale,
+            )
+
+        # Set relocation transform instead of modifying original matrices
+        translation_x = (
+            new_x + self.formular.x_offset * scale - original_formula_x * scale
+        )
+        translation_y = (
+            new_y + self.formular.y_offset * scale - original_formula_y * scale
+        )
+
+        # Create relocation transformation matrix
+        from babeldoc.format.pdf.document_il.utils.matrix_helper import (
+            create_translation_and_scale_matrix,
+        )
+
+        relocation_matrix = create_translation_and_scale_matrix(
+            translation_x, translation_y, scale
+        )
+        new_form.relocation_transform = list(relocation_matrix)
+
+        return new_form
+
+    def render(
+        self,
+    ) -> tuple[list[PdfCharacter], list[PdfCurve], list[PdfForm]]:
         """渲染排版单元为 PdfCharacter 列表
 
         Returns:
@@ -664,11 +814,11 @@ class TypesettingUnit:
                 xobj_id=self.xobj_id,
                 debug_info=self.debug_info,
             )
-            return [new_char]
+            return [new_char], [], []
         else:
             logger.error(f"Unknown typesetting unit. TypesettingUnit: {self}. ")
             logger.error(f"Unknown typesetting unit. TypesettingUnit: {self}. ")
-            return []
+            return [], [], []
 
 
 class Typesetting:
@@ -719,8 +869,13 @@ class Typesetting:
             # 处理每个段落
             for paragraph in page.pdf_paragraph:
                 all_paragraphs.append(paragraph)
+                unit_count = 0
                 try:
                     typesetting_units = self.create_typesetting_units(paragraph, fonts)
+                    unit_count = len(typesetting_units)
+                    for unit in typesetting_units:
+                        if unit.formular:
+                            unit_count += len(unit.formular.pdf_character) - 1
 
                     # 如果所有单元都可以直接传递，则 scale = 1.0
                     if all(unit.can_passthrough for unit in typesetting_units):
@@ -737,7 +892,7 @@ class Typesetting:
                     paragraph.optimal_scale = 1.0
 
                 if paragraph.optimal_scale is not None:
-                    all_scales.append(paragraph.optimal_scale)
+                    all_scales.extend([paragraph.optimal_scale] * unit_count)
 
         # 获取缩放因子的众数
         if all_scales:
@@ -812,10 +967,15 @@ class Typesetting:
                         paragraph.scale = scale
                         paragraph.pdf_paragraph_composition = []
                         for unit in typeset_units:
-                            for char in unit.render():
+                            chars, curves, forms = unit.render()
+                            for char in chars:
                                 paragraph.pdf_paragraph_composition.append(
                                     PdfParagraphComposition(pdf_character=char),
                                 )
+                            for curve in curves:
+                                page.pdf_curve.append(curve)
+                            for form in forms:
+                                page.pdf_form.append(form)
                         final_typeset_units = typeset_units
                     return scale, final_typeset_units
             except Exception:
@@ -988,9 +1148,12 @@ class Typesetting:
                 para_index.insert(i, box_to_tuple(para.box))
 
             for i, p_upper in para_map.items():
-                required_gap = 6
                 if not (p_upper.box and p_upper.box.y is not None):
                     continue
+
+                # Calculate paragraph height and set required gap accordingly
+                para_height = p_upper.box.y2 - p_upper.box.y
+                required_gap = 0.5 if para_height < 36 else 3
 
                 check_area = il_version_1.Box(
                     x=p_upper.box.x,
@@ -1093,6 +1256,9 @@ class Typesetting:
             self.retypeset_with_precomputed_scale(
                 paragraph, page, typesetting_units, precomputed_scale
             )
+
+            # 重排版后，重新设置段落各字符的 render order
+            self._update_paragraph_render_order(paragraph)
 
     def _get_width_before_next_break_point(
         self, typesetting_units: list[TypesettingUnit], scale: float
@@ -1380,12 +1546,15 @@ class Typesetting:
         """
         composition = []
         for unit in typesetting_units:
-            composition.extend(
-                [
-                    PdfParagraphComposition(pdf_character=char)
-                    for char in unit.passthrough()
-                ],
-            )
+            if unit.formular:
+                # 对于公式单元，直接创建包含完整公式的组合
+                composition.append(PdfParagraphComposition(pdf_formula=unit.formular))
+            else:
+                # 对于字符单元，使用原有逻辑
+                chars, curves, forms = unit.passthrough()
+                composition.extend(
+                    [PdfParagraphComposition(pdf_character=char) for char in chars],
+                )
         return composition
 
     def get_max_right_space(self, current_box: Box, page) -> float:
@@ -1459,3 +1628,23 @@ class Typesetting:
                 min_y = max(min_y, figure.box.y2)
 
         return min_y
+
+    def _update_paragraph_render_order(self, paragraph: il_version_1.PdfParagraph):
+        """
+        重新设置段落各字符的 render order
+        主 render order 等于 paragraph 的 renderorder，sub render order 从 1 开始自增
+        """
+        if not hasattr(paragraph, "render_order") or paragraph.render_order is None:
+            return
+
+        main_render_order = paragraph.render_order
+        sub_render_order = 1
+
+        # 遍历段落的所有组成部分
+        for composition in paragraph.pdf_paragraph_composition:
+            # 检查单个字符
+            if composition.pdf_character:
+                char = composition.pdf_character
+                char.render_order = main_render_order
+                char.sub_render_order = sub_render_order
+                sub_render_order += 1

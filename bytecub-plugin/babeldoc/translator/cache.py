@@ -1,17 +1,31 @@
 import json
+import logging
+import random
+import threading
 from pathlib import Path
 
+import peewee
 from peewee import SQL
 from peewee import AutoField
 from peewee import CharField
 from peewee import Model
 from peewee import SqliteDatabase
 from peewee import TextField
+from peewee import fn  # For aggregation functions
 
 from babeldoc.const import CACHE_FOLDER
 
+logger = logging.getLogger(__name__)
+
 # we don't init the database here
 db = SqliteDatabase(None)
+
+# Cleanup configuration
+CLEAN_PROBABILITY = 0.001  # 0.1% chance to trigger cleanup
+MAX_CACHE_ROWS = 50_000  # Keep only the latest 50,000 rows
+
+# Thread-level mutex to ensure only one cleanup runs at a time within the process
+_cleanup_lock = threading.Lock()
 
 
 class _TranslationCache(Model):
@@ -77,26 +91,65 @@ class TranslationCache:
     # Since peewee and the underlying sqlite are thread-safe,
     # get and set operations don't need locks.
     def get(self, original_text: str) -> str | None:
-        result = _TranslationCache.get_or_none(
-            translate_engine=self.translate_engine,
-            translate_engine_params=self.translate_engine_params,
-            original_text=original_text,
-        )
-        return result.translation if result else None
+        try:
+            result = _TranslationCache.get_or_none(
+                translate_engine=self.translate_engine,
+                translate_engine_params=self.translate_engine_params,
+                original_text=original_text,
+            )
+            # Trigger cache cleanup with a small probability.
+            if result and random.random() < CLEAN_PROBABILITY:  # noqa: S311
+                self._cleanup()
+            return result.translation if result else None
+        except peewee.OperationalError as e:
+            if "database is locked" in str(e):
+                logger.debug("Cache is locked")
+                return None
+            else:
+                raise
 
     def set(self, original_text: str, translation: str):
-        _TranslationCache.create(
-            translate_engine=self.translate_engine,
-            translate_engine_params=self.translate_engine_params,
-            original_text=original_text,
-            translation=translation,
-        )
+        try:
+            _TranslationCache.create(
+                translate_engine=self.translate_engine,
+                translate_engine_params=self.translate_engine_params,
+                original_text=original_text,
+                translation=translation,
+            )
+            # Trigger cache cleanup with a small probability.
+            if random.random() < CLEAN_PROBABILITY:  # noqa: S311
+                self._cleanup()
+        except peewee.OperationalError as e:
+            if "database is locked" in str(e):
+                logger.debug("Cache is locked")
+            else:
+                raise
+
+    def _cleanup(self) -> None:
+        """Remove old cache entries, keeping only the latest MAX_CACHE_ROWS records."""
+        # Quick exit if another thread is already performing cleanup.
+        if not _cleanup_lock.acquire(blocking=False):
+            return
+        try:
+            logger.info("Cleaning up translation cache...")
+            max_id = _TranslationCache.select(fn.MAX(_TranslationCache.id)).scalar()
+            # Nothing to do if table is empty or below threshold
+            if not max_id or max_id <= MAX_CACHE_ROWS:
+                return
+            threshold = max_id - MAX_CACHE_ROWS
+            # Delete rows with id *less than or equal* to threshold so that at most MAX_CACHE_ROWS remain.
+            _TranslationCache.delete().where(
+                _TranslationCache.id <= threshold
+            ).execute()
+        finally:
+            _cleanup_lock.release()
 
 
 def init_db(remove_exists=False):
     CACHE_FOLDER.mkdir(parents=True, exist_ok=True)
     # The current version does not support database migration, so add the version number to the file name.
     cache_db_path = CACHE_FOLDER / "cache.v1.db"
+    logger.info(f"Initializing cache database at {cache_db_path}")
     if remove_exists and cache_db_path.exists():
         cache_db_path.unlink()
     db.init(
