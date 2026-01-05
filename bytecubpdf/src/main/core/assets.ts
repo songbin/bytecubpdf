@@ -501,7 +501,7 @@ export async function downloadTargetFile(target:FileDownloadItem,progressCallbac
     }else if(target.type === 'cmap'){
       return await getCMapFile(target.name, progressCallback);
     }else if(target.type === 'tiktoken'){
-      return await getTiktokenFile(target.name, progressCallback);
+       return await getTiktokenFile(target.name, progressCallback);
     }
 
   }catch (error) {
@@ -523,7 +523,7 @@ export async function verifyFileDownloads(): Promise<FileDownloadItem[]> {
     ...waitDownModelFileList,
     ...waitDownFontList,
     // ...waitDownCmapList, // CMap 文件暂时不下载
-    ...waitDownTiktokenList
+    //...waitDownTiktokenList
   ];
   const fileList: FileDownloadItem[] = waitDownFileList;
   // console.log('正在验证文件列表：', fileList.map(f => f.name));
