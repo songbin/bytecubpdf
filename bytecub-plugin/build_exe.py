@@ -98,7 +98,20 @@ def build_executable():
         'beautifulsoup4',
         'pylatexenc',
         'matplotlib',
-        'pillow'
+        'pillow',
+         # 新增依赖（从pyproject.toml同步）
+        'rtree',
+        'chardet',
+        'scipy',
+        'uharfbuzz',
+        'py_spy',
+        # 'pip',
+        'psutil',
+        'scikit_learn',
+        'hyperscan',
+        # BabelDOC核心依赖
+        'charset_normalizer',
+        'cryptography',
     ]
     
     # 添加所有必需的包作为hidden-imports
