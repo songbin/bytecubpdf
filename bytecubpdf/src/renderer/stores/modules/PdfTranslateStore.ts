@@ -15,7 +15,8 @@ export const usePdfTranslateStore = defineStore('pdfTranslate', {
     errorMessage: '' as string,
     abortController: null as AbortController | null,
     startTime: 0 as number,
-    startCheckTime: 0 as number
+    startCheckTime: 0 as number,
+    currentTaskId: '' as string  // 添加当前翻译任务的ID
   }),
   actions: {
     // 设置 statusClass
@@ -65,6 +66,10 @@ export const usePdfTranslateStore = defineStore('pdfTranslate', {
     // 设置 startCheckTime
     setStartCheckTime(value: number) {
       this.startCheckTime = value
+    },
+    // 设置 currentTaskId
+    setCurrentTaskId(value: string) {
+      this.currentTaskId = value
     },
     // 重置状态
     resetState() {

@@ -278,7 +278,8 @@ const {
   errorMessage,
   abortController,
   startTime,
-  startCheckTime
+  startCheckTime,
+  currentTaskId
 } = storeToRefs(store)
 
 // 平台和模型数据
@@ -701,6 +702,11 @@ const handleTranslate = async () => {
       },
       onmessage(event) {
         const data = JSON.parse(event.data);
+        // 处理任务启动事件,保存task_id
+        if (data.status === 'task_started') {
+          store.setCurrentTaskId(data.task_id);
+          return;
+        }
         if (data.status === 'processing') {
           const timeUsed = Math.floor((Date.now() - startTime.value) / 1000);
           const remainingTime = data.progress > 0 ? Math.floor((100 - data.progress) * timeUsed / data.progress) : 0;
@@ -774,16 +780,28 @@ const handleTranslate = async () => {
 }
 
 // 终止翻译任务
-const handleAbort = () => {
+const handleAbort = async () => {
   if (abortController.value) {
     console.log('终止翻译任务');
-    
+
+    // 1. 调用后端取消API
+    if (currentTaskId.value) {
+      try {
+        await axios.post('http://localhost:8089/pdf/cancel_translate', {
+          task_id: currentTaskId.value
+        });
+        console.log('已发送取消请求到后端, task_id:', currentTaskId.value);
+      } catch (error) {
+        console.error('调用取消API失败:', error);
+      }
+    }
+
+    // 2. 中断前端的SSE连接
     abortController.value.abort();
     store.setStatusMessage('⏹️ 翻译已手动终止');
-    //statusMessage.value = '⏹️ 翻译已手动终止';
     store.setStatusClass('error');
-    //statusClass.value = 'error';
     store.setAbortController(null);
+    store.setCurrentTaskId('');  // 清空task_id
   }
 };
 const handleTermsSwitchChange = async (value: boolean) => {

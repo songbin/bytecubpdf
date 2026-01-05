@@ -39,9 +39,15 @@ parse_babel_executor = ThreadPoolExecutor(max_workers=20)
 #创建一个摘要总结线程池
 summary_executor = ThreadPoolExecutor(max_workers=20)
 
+# 全局取消事件管理器,用于存储每个翻译任务的取消事件
+cancellation_events = {}
+
 
 class VerifyPdfMode(BaseModel):
     file_path: str
+
+class CancelTranslateMode(BaseModel):
+    task_id: str
 class TranslateRequestModel(BaseModel):
     file_path: str
     sourceLanguage: str
@@ -123,6 +129,15 @@ class PdfController:
             summary="校验pdf是不是扫描版",
             response_description="校验pdf是不是扫描版",
             operation_id="verifypdf"
+        )
+
+        self.router.add_api_route(
+            path="/pdf/cancel_translate",
+            endpoint=self.cancel_translate,
+            methods=["POST"],
+            summary="取消翻译任务",
+            response_description="取消翻译任务",
+            operation_id="cancel_translate"
         )
         
   
@@ -225,14 +240,35 @@ class PdfController:
             return DataResult.fail(msg=ErrorInfo.msg_verify_pdf, code=ErrorInfo.code_verify_pdf)
         else:
             return DataResult.ok()
+
+    def cancel_translate(self, request: CancelTranslateMode):
+        """取消翻译任务"""
+        task_id = request.task_id
+        logger.info(f"Received cancellation request for task: {task_id}")
+
+        if task_id in cancellation_events:
+            cancellation_events[task_id].set()
+            logger.info(f"Task {task_id} cancellation event set")
+            return DataResult.ok(msg="翻译任务已取消")
+        else:
+            logger.warning(f"Task {task_id} not found in cancellation events")
+            return DataResult.fail(msg="任务不存在或已完成", code=404)
          
     def translate_pdf(self, request: TranslateRequestModel):
         translate_engine:str = request.translate_engine
         ConfigDir.init(base_dir = request.cache_dir)
         logger.info(f"translate_request: {request.__repr__()}")
         def generate():
-            progress_queue = Queue()  
-            cancellation_event = asyncio.Event()  
+            # 为每个翻译任务生成唯一的task_id
+            import uuid
+            task_id = str(uuid.uuid4())
+            logger.info(f"Starting translation task: {task_id}")
+
+            progress_queue = Queue()
+            cancellation_event = asyncio.Event()
+
+            # 注册取消事件到全局管理器
+            cancellation_events[task_id] = cancellation_event  
 
             def on_page_callback(
                 current_page, 
@@ -357,6 +393,9 @@ class PdfController:
                     parse_executor.submit(run_translate)
 
             try:
+                # 首先发送task_id给前端
+                yield f'data: {json.dumps({"status": "task_started", "task_id": task_id}, ensure_ascii=False)}\n\n'
+
                 # 从队列读取数据并生成 SSE
                 while True:
                     data = progress_queue.get()
@@ -367,8 +406,12 @@ class PdfController:
                         break
                     yield f'data: {event_data}\n\n'
             finally:
-                # 当前端关闭连接时，触发 finally 块
-                logger.info("SSE connection closed by client")
+                # 清理任务
+                logger.info(f"Cleaning up translation task: {task_id}")
                 cancellation_event.set()  # 设置取消事件，终止翻译任务
+                # 从全局管理器中移除该任务
+                if task_id in cancellation_events:
+                    del cancellation_events[task_id]
+                logger.info(f"Translation task {task_id} cleaned up")
 
         return StreamingResponse(generate(), media_type='text/event-stream')
