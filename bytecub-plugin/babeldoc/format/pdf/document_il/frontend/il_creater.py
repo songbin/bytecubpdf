@@ -10,7 +10,7 @@ from typing import Literal
 
 import freetype
 import pymupdf
-import tiktoken
+# import tiktoken  # Disabled: tiktoken causes issues in packaged exe, using character count instead
 
 import babeldoc.pdfminer.pdfinterp
 from babeldoc.format.pdf.babelpdf.base14 import get_base14_bbox
@@ -363,7 +363,8 @@ class ILCreater:
         self.clip_paths_stack: list[list[tuple]] = []
         # For valid character collection
         self.font_mapper = FontMapper(translation_config)
-        self.tokenizer = tiktoken.encoding_for_model("gpt-4o")
+        # self.tokenizer = tiktoken.encoding_for_model("gpt-4o")  # Disabled: tiktoken causes issues in packaged exe
+        self.tokenizer = None
         self._page_valid_chars_buffer: list[str] | None = None
 
     def transform_clip_path(
@@ -587,10 +588,12 @@ class ILCreater:
             ):
                 page_text = "".join(self._page_valid_chars_buffer)
                 char_count = len(page_text)
+                # Use character count as approximation for token count (tiktoken disabled)
                 try:
-                    token_count = len(
-                        self.tokenizer.encode(page_text, disallowed_special=())
-                    )
+                    # token_count = len(
+                    #     self.tokenizer.encode(page_text, disallowed_special=())
+                    # )
+                    token_count = 0  # Disabled: tiktoken causes issues in packaged exe
                 except Exception as e:
                     logger.warning("Failed to compute token count for page: %s", e)
                     token_count = 0

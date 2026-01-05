@@ -503,9 +503,9 @@ async def download_all_cmaps_async(client: httpx.AsyncClient | None = None):
 
 async def async_warmup():
     logger.info("Downloading all assets...")
-    from tiktoken import encoding_for_model
-
-    _ = encoding_for_model("gpt-4o")
+    # Disabled: tiktoken causes issues in packaged exe
+    # from tiktoken import encoding_for_model
+    # _ = encoding_for_model("gpt-4o")
     async with httpx.AsyncClient() as client:
         onnx_task = asyncio.create_task(get_doclayout_onnx_model_path_async(client))
         onnx_task2 = asyncio.create_task(

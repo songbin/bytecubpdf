@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import tiktoken
+# import tiktoken  # Disabled: tiktoken causes issues in packaged exe, using character count instead
 from tqdm import tqdm
 
 from babeldoc.format.pdf.document_il import (
@@ -141,7 +141,8 @@ class AutomaticTermExtractor:
         self.translate_engine = translate_engine
         self.translation_config = translation_config
         self.shared_context = translation_config.shared_context_cross_split_part
-        self.tokenizer = tiktoken.encoding_for_model("gpt-4o")
+        # self.tokenizer = tiktoken.encoding_for_model("gpt-4o")  # Disabled: tiktoken causes issues in packaged exe
+        self.tokenizer = None
 
         # Check if the translate_engine has llm_translate capability
         if not hasattr(self.translate_engine, "llm_translate") or not callable(
@@ -152,8 +153,11 @@ class AutomaticTermExtractor:
             )
 
     def calc_token_count(self, text: str) -> int:
+        # Disabled: tiktoken causes issues in packaged exe
+        # Use character count as approximation (1 token ~ 4 characters for English text)
         try:
-            return len(self.tokenizer.encode(text, disallowed_special=()))
+            # return len(self.tokenizer.encode(text, disallowed_special=()))
+            return len(text) // 4  # Approximate token count from character count
         except Exception:
             return 0
 

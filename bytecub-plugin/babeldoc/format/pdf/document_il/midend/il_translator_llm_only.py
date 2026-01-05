@@ -6,7 +6,7 @@ from pathlib import Path
 from string import Template
 
 import Levenshtein
-import tiktoken
+# import tiktoken  # Disabled: tiktoken causes issues in packaged exe, using character count instead
 from tqdm import tqdm
 
 from babeldoc.format.pdf.document_il import Document
@@ -123,10 +123,12 @@ class ILTranslatorLLMOnly:
             translation_config.shared_context_cross_split_part
         )
 
-        if tokenizer is None:
-            self.tokenizer = tiktoken.encoding_for_model("gpt-4o")
-        else:
-            self.tokenizer = tokenizer
+        # Disabled: tiktoken causes issues in packaged exe
+        # if tokenizer is None:
+        #     self.tokenizer = tiktoken.encoding_for_model("gpt-4o")
+        # else:
+        #     self.tokenizer = tokenizer
+        self.tokenizer = None
 
         # Cache glossaries at initialization
         self._cached_glossaries = (
@@ -151,8 +153,11 @@ class ILTranslatorLLMOnly:
         self.total_count = 0
 
     def calc_token_count(self, text: str) -> int:
+        # Disabled: tiktoken causes issues in packaged exe
+        # Use character count as approximation (1 token ~ 4 characters for English text)
         try:
-            return len(self.tokenizer.encode(text, disallowed_special=()))
+            # return len(self.tokenizer.encode(text, disallowed_special=()))
+            return len(text) // 4  # Approximate token count from character count
         except Exception:
             return 0
 

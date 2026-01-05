@@ -89,3 +89,30 @@
     )
 ### 9.format/document_il/midend/detect_scanned_file.py
    Scanned PDF detected 把 # raise ScannedPDFError("Scanned PDF detected.")注释掉
+
+1. babeldoc/format/pdf/document_il/frontend/il_creater.py
+注释掉了 import tiktoken
+将 self.tokenizer = tiktoken.encoding_for_model("gpt-4o") 改为 self.tokenizer = None
+修改了 token 计算逻辑，直接返回 0（因为这里只用于统计）
+2. babeldoc/format/pdf/document_il/midend/il_translator.py
+注释掉了 import tiktoken
+将 tokenizer 初始化代码注释掉，设置为 self.tokenizer = None
+修改 calc_token_count 方法，使用 len(text) // 4 来近似计算 token 数（英文文本中约 4 个字符等于 1 个 token）
+3. babeldoc/format/pdf/document_il/midend/il_translator_llm_only.py
+注释掉了 import tiktoken
+将 tokenizer 初始化代码注释掉，设置为 self.tokenizer = None
+修改 calc_token_count 方法，使用字符数近似计算 token 数
+4. babeldoc/format/pdf/document_il/midend/automatic_term_extractor.py
+注释掉了 import tiktoken
+将 self.tokenizer = tiktoken.encoding_for_model("gpt-4o") 改为 self.tokenizer = None
+修改 calc_token_count 方法，使用字符数近似计算 token 数
+5. babeldoc/assets/assets.py
+注释掉了预热函数中的 tiktoken 初始化代码
+修改原理
+tiktoken 的作用：原本用于精确计算文本的 token 数量，主要用于统计和优先级计算
+替代方案：使用 len(text) // 4 来近似计算 token 数（这是一个经验公式，英文文本中平均 4 个字符约等于 1 个 token）
+影响评估：
+token 计数只用于统计日志和任务优先级排序
+不会影响翻译的核心功能
+使用近似值对系统运行影响很小
+这样修改后，你再次使用 build_exe.py 打包成 exe 文件，运行 babeldoc 翻译时就不会再出现 "Unknown encoding o200k_base" 的错误了。
