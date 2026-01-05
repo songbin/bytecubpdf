@@ -37,7 +37,7 @@ export const VERSION = {
 export type FileDownloadItem = {
     name: string;
     expectedSha: string;
-    type: 'font' | 'models';
+    type: 'font' | 'models' | 'cmap' | 'tiktoken';
   };
 //下载模型字体等资源文件的下载过程中返回的进度格式
 export type DownloadProgress = {
@@ -45,7 +45,7 @@ export type DownloadProgress = {
     speed: number; // 下载速度，单位：字节/秒
     eta: number; // 预计剩余时间，单位：秒
     name: string; // 下载的文件名称
-    type: 'font' |'models'; // 下载的文件类型
+    type: 'font' |'models' | 'cmap' | 'tiktoken'; // 下载的文件类型
     status: 'downloading' | 'completed' | 'failed'; // 下载状态
   };
 // export const APP_CONFIG = {

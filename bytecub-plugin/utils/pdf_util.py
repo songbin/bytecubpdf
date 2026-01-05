@@ -76,7 +76,7 @@ class PdfUtil:
             for i in range(min(pdf_document.page_count, 8)):
                 page = pdf_document[i]
                 text = page.get_text()
-                logger.info(f'verify pdf is scanned page {i} text: {text}')
+                # logger.info(f'verify pdf is scanned page {i} text: {text}')
                 cleaned_text = text.replace(" ", "").replace("\n", "")
                 if len(cleaned_text) < 200:
                     low_text_pages += 1

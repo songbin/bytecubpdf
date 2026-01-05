@@ -19,7 +19,11 @@ import {
   EMBEDDING_FONT_METADATA,
   TABLE_DETECTION_RAPIDOCR_CLS_MODEL_SHA3_256,
   TABLE_DETECTION_RAPIDOCR_REC_MODEL_SHA3_256,
-  getFontFamily
+  getFontFamily,
+  CMAP_METADATA,
+  CMAP_URL_BY_UPSTREAM,
+  TIKTOKEN_CACHES,
+  TIKTOKEN_URL_BY_UPSTREAM
 } from './embedding_assets_metadata';
 
 // 模型文件名常量
@@ -33,17 +37,25 @@ export const MODEL_NAMES = {
 const logger = console;
 
 // 获取缓存文件路径
-function getCacheFilePath(fileName: string, type: 'fonts' | 'models' | 'assets' | 'tiktoken') {
+function getCacheFilePath(fileName: string, type: 'fonts' | 'models' | 'assets' | 'tiktoken' | 'cmap') {
   let targetDir = '';
   if (type === 'fonts') {
     targetDir =  BuildPath.getFontDownDir()
   }else if (type === 'models') {
     targetDir = BuildPath.getModelDownDir()
+  }else if (type === 'cmap') {
+    // CMap 文件存储在 fonts 目录下的 cmap 子目录
+    const fontDir = BuildPath.getFontDownDir();
+    targetDir = path.join(fontDir, 'cmap');
+  }else if (type === 'tiktoken') {
+    // Tiktoken 缓存文件存储在 fonts 目录下的 tiktoken 子目录
+    const fontDir = BuildPath.getFontDownDir();
+    targetDir = path.join(fontDir, 'tiktoken');
   }else{
     console.error('无效的下载类型', type, 'fileName', fileName);
     throw new Error('无效的类型');
   }
-  
+
   mkdirSync(targetDir, { recursive: true });
   return path.join(targetDir, fileName);
 }
@@ -70,7 +82,7 @@ async function  downloadFile(
   filePath: string,
   sha3_256_str: string,
   name: string,
-  type: 'font' | 'models',
+  type: "models" | "tiktoken" | "cmap" | "font",
   progressCallback?: (p: DownloadProgress) => void
 ): Promise<void> {
   const response = await axios.get(url, {
@@ -304,6 +316,53 @@ async function getDoclayoutOnnxModelPath(progressCallback?: (p: DownloadProgress
   throw new AggregateError([lastError], '所有上游下载失败');
 }
 
+// 获取 CMap 文件
+async function getCMapFile(cmapFileName: string, progressCallback?: (p: DownloadProgress) => void): Promise<string> {
+  const cacheFilePath = getCacheFilePath(cmapFileName, 'cmap');
+
+  if (CMAP_METADATA[cmapFileName] &&
+      await verifyFile(cacheFilePath, CMAP_METADATA[cmapFileName].sha3_256)) {
+    return cacheFilePath;
+  }
+
+  logger.info(`下载 CMap 文件 ${cmapFileName} ...`);
+  const fastestUpstream = 'modelscope';
+  const url = CMAP_URL_BY_UPSTREAM[fastestUpstream](cmapFileName);
+  console.log('下载 CMap 文件地址是:', url);
+
+  await downloadFile(url, cacheFilePath, CMAP_METADATA[cmapFileName].sha3_256, cmapFileName, 'cmap', (progress: DownloadProgress) => {
+    if (progressCallback) {
+      progressCallback(progress);
+    }
+  });
+
+  return cacheFilePath;
+}
+
+// 获取 Tiktoken 缓存文件
+async function getTiktokenFile(tiktokenFileName: string, progressCallback?: (p: DownloadProgress) => void): Promise<string> {
+  const cacheFilePath = getCacheFilePath(tiktokenFileName, 'tiktoken');
+
+  if (TIKTOKEN_CACHES[tiktokenFileName] &&
+      await verifyFile(cacheFilePath, TIKTOKEN_CACHES[tiktokenFileName])) {
+    return cacheFilePath;
+  }
+
+  logger.info(`下载 Tiktoken 缓存文件 ${tiktokenFileName} ...`);
+  // Tiktoken 文件从 modelscope 下载
+  const fastestUpstream = 'modelscope';
+  const url = TIKTOKEN_URL_BY_UPSTREAM[fastestUpstream](tiktokenFileName);
+  console.log('下载 Tiktoken 文件地址是:', url);
+
+  await downloadFile(url, cacheFilePath, TIKTOKEN_CACHES[tiktokenFileName], tiktokenFileName, 'tiktoken', (progress: DownloadProgress) => {
+    if (progressCallback) {
+      progressCallback(progress);
+    }
+  });
+
+  return cacheFilePath;
+}
+
 // 获取字体和元数据
 async function getFontAndMetadata(fontFileName: string,progressCallback?: (p: DownloadProgress) => void): Promise<{ path: string; metadata: any }> {
   const cacheFilePath = getCacheFilePath(fontFileName, 'fonts');
@@ -384,7 +443,7 @@ export const waitDownFontList: FileDownloadItem[] = Object.keys(EMBEDDING_FONT_M
   };
 });
 export const waitDownModelFileList: FileDownloadItem[] = [
- 
+
   {
     name: 'ch_PP-OCRv4_det_infer.onnx',
     expectedSha: TABLE_DETECTION_RAPIDOCR_MODEL_SHA3_256,
@@ -406,6 +465,24 @@ export const waitDownModelFileList: FileDownloadItem[] = [
     type: 'models'
   }
 ];
+
+// CMap 文件下载列表
+export const waitDownCmapList: FileDownloadItem[] = Object.keys(CMAP_METADATA).map(cmapFileName => {
+  return {
+    name: cmapFileName,
+    expectedSha: CMAP_METADATA[cmapFileName].sha3_256,
+    type: 'cmap' as const
+  };
+});
+
+// Tiktoken 缓存文件下载列表
+export const waitDownTiktokenList: FileDownloadItem[] = Object.keys(TIKTOKEN_CACHES).map(tiktokenFileName => {
+  return {
+    name: tiktokenFileName,
+    expectedSha: TIKTOKEN_CACHES[tiktokenFileName],
+    type: 'tiktoken' as const
+  };
+});
 export async function downloadTargetFile(target:FileDownloadItem,progressCallback?: (progress: DownloadProgress) => void) {
   try {
     if(target.type === 'font'){
@@ -421,8 +498,12 @@ export async function downloadTargetFile(target:FileDownloadItem,progressCallbac
       }else if(target.name === 'doclayout_yolo_docstructbench_imgsz1024.onnx'){
         return await getDoclayoutOnnxModelPath(progressCallback);
       }
+    }else if(target.type === 'cmap'){
+      return await getCMapFile(target.name, progressCallback);
+    }else if(target.type === 'tiktoken'){
+      return await getTiktokenFile(target.name, progressCallback);
     }
-     
+
   }catch (error) {
     console.error('下载文件失败:', error);
     progressCallback?.({
@@ -438,17 +519,26 @@ export async function downloadTargetFile(target:FileDownloadItem,progressCallbac
 }
 //获取全量未下载的文件列表
 export async function verifyFileDownloads(): Promise<FileDownloadItem[]> {
-  const waitDownFileList = [...waitDownModelFileList, ...waitDownFontList ];
+  const waitDownFileList = [
+    ...waitDownModelFileList,
+    ...waitDownFontList,
+    // ...waitDownCmapList, // CMap 文件暂时不下载
+    ...waitDownTiktokenList
+  ];
   const fileList: FileDownloadItem[] = waitDownFileList;
   // console.log('正在验证文件列表：', fileList.map(f => f.name));
 
   const failedFiles = [];
-  
+
   for (const item of fileList) {
     try {
       let path = getCacheFilePath(item.name, 'models');
       if(item.type === 'font'){
         path = getCacheFilePath(item.name,'fonts');
+      }else if(item.type === 'cmap'){
+        path = getCacheFilePath(item.name,'cmap');
+      }else if(item.type === 'tiktoken'){
+        path = getCacheFilePath(item.name,'tiktoken');
       }
       const is_exist:boolean = await verifyFile(path, item.expectedSha);
       if (is_exist) {
@@ -506,6 +596,8 @@ export {
   getRapidOCRRecModelPath,
   getRapidOCRClsModelPath,
   getFontAndMetadata,
+  getCMapFile,
+  getTiktokenFile,
   warmup,
   downloadAllResources,
   getFontFamily
