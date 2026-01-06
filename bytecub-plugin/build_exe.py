@@ -43,7 +43,6 @@ def build_executable():
         'skimage.metrics',  # 显式添加metrics子模块
         'skimage.metrics._structural_similarity',
         'cryptography',
-        'argostranslate',
         'azure.ai.translation.text',
         'bitstring',
         'configargparse',

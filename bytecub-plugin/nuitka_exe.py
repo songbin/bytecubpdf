@@ -46,7 +46,6 @@ def build_executable():
     ]
 
     required_packages = [
-        'argostranslate',
         'azure.ai.translation.text',
         'bitstring',
         'configargparse',
