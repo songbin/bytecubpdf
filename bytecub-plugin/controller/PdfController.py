@@ -66,6 +66,7 @@ class TranslateRequestModel(BaseModel):
     disable_rich_text: Optional[bool] = False
     enable_table: Optional[bool] = False,
     enbale_dual: Optional[bool] = False,
+    enable_clean: Optional[bool] = False,
 
 class OcrRequestModel(BaseModel):
     file_path: str
@@ -363,6 +364,7 @@ class PdfController:
                         enable_table = request.enable_table,  # 新增表格翻译字段
                         no_dual = no_dual,
                         system_prompt = request.system_prompt,  # 新增系统提示字段
+                        enable_clean=request.enable_clean,  # 新增enable_clean字段
                     )
                     dual_file_name = dual_file_name if dual_file_name else ''
                     final_result = {

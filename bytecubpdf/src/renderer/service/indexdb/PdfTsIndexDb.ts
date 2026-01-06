@@ -15,6 +15,7 @@ export interface PdfTranslateConfig {
   enableTable: boolean,  // 新增表格翻译字段
   enableDual: boolean,  // 新增双栏翻译字段
   verifyScanned:boolean,
+  enableClean: boolean,  // 新增优化体积字段
 }
 
 export default class PdfTsIndexDb {

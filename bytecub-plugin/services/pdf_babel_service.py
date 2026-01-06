@@ -42,7 +42,9 @@ class PdfBabelSerive:
         enable_table: bool = False,  # 新增表格翻译字段
         no_dual: bool = True,  # 新增禁用双页翻译字段
         system_prompt: str = "",  # 新增系统提示字段
+        enable_clean: bool = False,  # 新增enable_clean字段
     ):
+        skip_clean = not enable_clean
         # 检查文件是否存在
         if not os.path.exists(file_path):
             raise ValueError(f"File not found: {file_path}")
@@ -89,7 +91,7 @@ class PdfBabelSerive:
                 disable_rich_text_translate = disable_rich_text,
                 ocr_workaround = enable_ocr,
                 table_model = table_model,
-                skip_clean = True,
+                skip_clean = skip_clean,
                 save_auto_extracted_glossary = False,
             )
             

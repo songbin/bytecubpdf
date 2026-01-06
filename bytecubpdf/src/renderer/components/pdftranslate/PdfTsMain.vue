@@ -129,7 +129,18 @@
               </n-tooltip>
               <n-switch v-model:value="formData.disableRichText" size="small" />
             </n-form-item>
-          
+            <n-form-item  v-if="formData.engine === 'babeldoc'" label="优化体积" :show-feedback="false" :style="{ marginBottom: 0 }">
+              <n-tooltip trigger="hover">
+                <template #trigger>
+                  <n-icon size="large">
+                    <HelpCircle />
+                  </n-icon>
+                </template>
+                开启后生成PDF文件体积较小，较低概率会出现字体问题
+              </n-tooltip>
+              <n-switch v-model:value="formData.enableClean" size="small" />
+            </n-form-item>
+
           </n-flex>
         </n-flex>
         <n-flex justify="end">
@@ -263,6 +274,7 @@ const formData = ref({
   enableTable: false,  // 新增表格翻译字段
   enableDual: true,  // 新增双语对照字段
   verifyScanned:true,//是否开启扫描版检测
+  enableClean: false,  // 新增skip_clean字段
 
 });
 const store = usePdfTranslateStore()
@@ -307,22 +319,23 @@ onMounted(async () => {
     await pdfTsIndexDb;
     const config = await pdfTsIndexDb.getConfig();
     if (config) {
-      formData.value = {
-        sourceLang: config.sourceLang || '',
-        targetLang: config.targetLang || '',
-        platformId: config.platformId || '',
-        assistantId: config.assistantId || '',
-        modelId: config.modelId || '',
-        engine: config.engine || '',
-        threadCount: config.threadCount || 4,
-        enableTerms: config.enableTerms || false,
-        maxPages: config.maxPages || 0, // 新增每页最大页数字段
-        enableOCR:  false,  // 新增OCR识别字段
-        disableRichText: config.disableRichText || false,  // 新增富文字段
-        enableTable: config.enableTable || false,  // 新增表格翻译字段
-        enableDual: config.enableDual || false,  // 新增双语对照字段
-        verifyScanned: config.verifyScanned || true,
-      };
+        formData.value = {
+          sourceLang: config.sourceLang || '',
+          targetLang: config.targetLang || '',
+          platformId: config.platformId || '',
+          assistantId: config.assistantId || '',
+          modelId: config.modelId || '',
+          engine: config.engine || '',
+          threadCount: config.threadCount || 4,
+          enableTerms: config.enableTerms || false,
+          maxPages: config.maxPages || 0, // 新增每页最大页数字段
+          enableOCR:  false,  // 新增OCR识别字段
+          disableRichText: config.disableRichText || false,  // 新增富文字段
+          enableTable: config.enableTable || false,  // 新增表格翻译字段
+          enableDual: config.enableDual || false,  // 新增双语对照字段
+          verifyScanned: config.verifyScanned || true,
+          enableClean: config.enableClean || false,  // 新增优化体积字段
+        };
       if (config.platformId) {
         await handlePlatformChange(config.platformId);
       }
@@ -384,6 +397,7 @@ watch(
       enableTable: newValue.enableTable, // 新增
       enableDual: newValue.enableDual, // 新增
       verifyScanned: newValue.verifyScanned, // 新增
+      enableClean: newValue.enableClean, // 新增
     });
   },
   { deep: true }
@@ -557,6 +571,7 @@ const formatRequestData = async () => {
     disable_rich_text: formData.value.disableRichText,  // 新增富文字段
     enable_table: formData.value.enableTable,  // 新增表格翻译字段
     enbale_dual: formData.value.enableDual,  // 新增双语对照字段
+    enable_clean: formData.value.enableClean,  // 新增优化体积字段
   };
 };
 // 在 handleTranslate 方法之前添加
