@@ -619,7 +619,6 @@ dependencies = [
     { name = "peewee" },
     { name = "pikepdf" },
     { name = "pillow" },
-    { name = "pip" },
     { name = "psutil" },
     { name = "py-spy" },
     { name = "pydantic" },
@@ -723,7 +722,6 @@ requires-dist = [
     { name = "peewee", specifier = ">=3.17.8" },
     { name = "pikepdf" },
     { name = "pillow", specifier = "==11.2.1" },
-    { name = "pip", specifier = ">=25.3" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "py-spy", specifier = ">=0.4.0" },
     { name = "pydantic", specifier = ">=2.10.6" },
@@ -3368,15 +3366,6 @@ wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/f6/20/5c0a0aa83b213b7a07ec01e71a3d6ea2cf4ad1d2c686cc0168173b6089e7/pillow-11.2.1-pp311-pypy311_pp73-manylinux_2_28_aarch64.whl", hash = "sha256:036e53f4170e270ddb8797d4c590e6dd14d28e15c7da375c18978045f7e6c37b" },
     { url = "https://mirrors.aliyun.com/pypi/packages/58/0e/2abab98a72202d91146abc839e10c14f7cf36166f12838ea0c4db3ca6ecb/pillow-11.2.1-pp311-pypy311_pp73-manylinux_2_28_x86_64.whl", hash = "sha256:14f73f7c291279bd65fda51ee87affd7c1e097709f7fdd0188957a16c264601f" },
     { url = "https://mirrors.aliyun.com/pypi/packages/21/2c/5e05f58658cf49b6667762cca03d6e7d85cededde2caf2ab37b81f80e574/pillow-11.2.1-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:208653868d5c9ecc2b327f9b9ef34e0e42a4cdd172c2988fd81d62d2bc9bc044" },
-]
-
-[[package]]
-name = "pip"
-version = "25.3"
-source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/fe/6e/74a3f0179a4a73a53d66ce57fdb4de0080a8baa1de0063de206d6167acc2/pip-25.3.tar.gz", hash = "sha256:8d0538dbbd7babbd207f261ed969c65de439f6bc9e5dbd3b3b9a77f25d95f343" }
-wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/44/3c/d717024885424591d5376220b5e836c2d5293ce2011523c9de23ff7bf068/pip-25.3-py3-none-any.whl", hash = "sha256:9655943313a94722b7774661c21049070f6bbb0a1516bf02f7c8d5d9201514cd" },
 ]
 
 [[package]]
