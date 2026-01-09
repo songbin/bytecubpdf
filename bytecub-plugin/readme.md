@@ -8,7 +8,7 @@
 
 ### 前置条件
 
-1. **Python 版本要求**: 本项目需要 **Python 3.12.x** 版本
+1. **Python 版本要求**: 本项目需要 **Python 3.11.x** 版本
 
 2. 安装 UV:
 
@@ -50,21 +50,21 @@
    cd bytecub-plugin
    ```
 
-2. 安装并配置 Python 3.12.x:
+2. 安装并配置 Python 3.11.x:
 
    ```bash
-   # 使用 UV 安装 Python 3.12.12
-   uv python install 3.12.12
+   # 使用 UV 安装 Python 3.11.9
+   uv python install 3.11.9
    
    # 验证 Python 版本
    uv run python --version
    ```
 
-3. 使用 UV 在 Python 3.12.x 环境中安装依赖:
+3. 使用 UV 在 Python 3.11.9 环境中安装依赖:
 
    ```bash
-   # 创建虚拟环境并安装依赖（自动使用 Python 3.12.x）
-   uv sync --python 3.12
+   # 创建虚拟环境并安装依赖（自动使用 Python 3.11.9）
+   uv sync --python 3.11.9
    ```
 
 4. 激活虚拟环境:
@@ -193,9 +193,9 @@ uv pip list --verbose
 ### Python 版本管理
 
 - 查看可用 Python 版本: `uv python list`
-- 安装特定 Python 版本: `uv python install 3.12.12`
+- 安装特定 Python 版本: `uv python install 3.11.9`
 - 查看当前 Python 版本: `uv run python --version`
-- 切换 Python 版本: `uv sync --python 3.12`
+- 切换 Python 版本: `uv sync --python 3.11.9`
 
 ## 完整安装与运行指南
 
@@ -209,9 +209,9 @@ powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 git clone <repository-url>
 cd bytecub-plugin
 
-# 3. 安装 Python 3.12.x 和所有依赖
-uv python install 3.12.12
-uv sync --python 3.12
+# 3. 安装 Python 3.11.x 和所有依赖
+uv python install 3.11.9
+uv sync --python 3.11.9
 
 # 4. 运行项目
 uv run python main.py
@@ -233,8 +233,8 @@ uv --version
 
 #### 2. Python 版本管理
 ```bash
-# 安装 Python 3.12.12
-uv python install 3.12.12
+# 安装 Python 3.11.9
+uv python install 3.11.9
 
 # 查看已安装的 Python 版本
 uv python list
@@ -249,10 +249,10 @@ uv run python --version
 cd bytecub-plugin
 
 # 安装所有依赖（包括开发依赖）
-uv sync --python 3.12
+uv sync --python 3.11.9
 
 # 或者只安装生产依赖
-uv sync --python 3.12 --no-dev
+uv sync --python 3.11.9 --no-dev
 
 # 安装额外的包
 uv add new_package_name
@@ -492,11 +492,11 @@ uv add --dev pyinstaller --index-url https://pypi.tuna.tsinghua.edu.cn/simple/
 ```bash
 # 完全重置环境
 rm -rf .venv uv.lock
-uv sync --python 3.12
+uv sync --python 3.11.9
 
 # 或者重新创建项目
 uv init bytecub-plugin-new
 cd bytecub-plugin-new
 # 复制 pyproject.toml 和源码
-uv sync --python 3.12
+uv sync --python 3.11.9
 ```

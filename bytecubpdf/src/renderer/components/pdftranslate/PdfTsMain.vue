@@ -136,7 +136,7 @@
                     <HelpCircle />
                   </n-icon>
                 </template>
-                开启后生成PDF文件体积较小，较低概率会出现字体问题
+                开启后生成PDF生成速度快，文件体积大幅缩小，较低概率会出现字体问题
               </n-tooltip>
               <n-switch v-model:value="formData.enableClean" size="small" />
             </n-form-item>

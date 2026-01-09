@@ -32,38 +32,32 @@ export async function initLlmModels(db: Database) {
     // 初始化模型数据 - 逐条检查并插入
     const models = [
         // 智谱AI模型
-        { id: 'GLM-4-Flash', platformId: 'zhipu', name: 'GLM-4-Flash', type: '["text"]', pricingType: 'free' },
+        { id: 'GLM-4-Flash', platformId: 'zhipu', name: 'GLM-4-Flash(免费)', type: '["text"]', pricingType: 'free' },
         { id: 'GLM-4-Plus', platformId: 'zhipu', name: 'GLM-4-Plus', type: '["text"]', pricingType: 'charge' },
-        { id: 'GLM-4V-Flash', platformId: 'zhipu', name: 'GLM-4V-Flash', type: '["vision"]', pricingType: 'free' },
+         { id: 'GLM-4.5-Flash', platformId: 'zhipu', name: 'GLM-4.5-Flash(免费)', type: '["text"]', pricingType: 'free' },
+        { id: 'GLM-4.6', platformId: 'zhipu', name: 'GLM-4.6', type: '["text"]', pricingType: 'charge' },
+        { id: 'GLM-4.6V-Flash', platformId: 'zhipu', name: 'GLM-4.6V-Flash(免费)', type: '["vision"]', pricingType: 'free' },
 
         // DeepSeek模型
         { id: 'deepseek-chat', platformId: 'deepseek', name: 'deepseek-chat', type: '["text"]', pricingType: 'charge' },
 
         // 硅基流动模型
-        { id: 'Qwen/QwQ-32B', platformId: 'silicon', name: 'QwQ-32B', type: '["text"]', pricingType: 'charge' },
-        { id: 'deepseek-ai/DeepSeek-V3', platformId: 'silicon', name: 'DeepSeek-V3', type: '["text"]', pricingType: 'charge' },
-        { id: 'deepseek-ai/DeepSeek-R1', platformId: 'silicon', name: 'DeepSeek-R1', type: '["text"]', pricingType: 'charge' },
-        { id: 'Pro/deepseek-ai/DeepSeek-V3', platformId: 'silicon', name: 'DeepSeek-V3(Pro)', type: '["text"]', pricingType: 'charge' },
-        { id: 'Pro/deepseek-ai/DeepSeek-R1', platformId: 'silicon', name: 'DeepSeek-R1(Pro)', type: '["text"]', pricingType: 'charge' },
-        { id: 'moonshotai/Kimi-K2-Instruct', platformId: 'silicon', name: 'moonshotai/Kimi-K2-Instruct', type: '["text"]', pricingType: 'charge' },
-        { id: 'Qwen/Qwen2.5-VL-72B-Instruct', platformId: 'silicon', name: 'Qwen/Qwen2.5-VL-72B-Instruct', type: '["vision"]', pricingType: 'charge' },
-
+        { id: 'deepseek-ai/DeepSeek-V3.2', platformId: 'silicon', name: 'DeepSeek-V3.2', type: '["text"]', pricingType: 'charge' },
+        { id: 'zai-org/GLM-4.6', platformId: 'silicon', name: 'GLM-4.6', type: '["text"]', pricingType: 'charge' },
+        { id: 'MiniMaxAI/MiniMax-M2', platformId: 'silicon', name: 'MiniMax-M2', type: '["text"]', pricingType: 'charge' },
+     
         // Ollama模型
         { id: 'qwen2.5:0.5b', platformId: 'ollama', name: 'qwen2.5:0.5b', type: '["text"]', pricingType: 'free' },
         { id: 'llama3-70b', platformId: 'ollama', name: 'Llama3-70B', type: '["text"]', pricingType: 'free' },
         { id: 'llama3-8b', platformId: 'ollama', name: 'Llama3-8B', type: '["text"]', pricingType: 'free' },
-        { id: 'ZimaBlueAI/Qwen2.5-VL-7B-Instruct', platformId: 'ollama', name: 'ZimaBlueAI/Qwen2.5-VL-7B-Instruct', type: '["vision"]', pricingType: 'free' },
-
+    
         // 阿里百炼云模型
-        { id: 'qwen3-32b', platformId: 'datascope', name: 'qwen3-32b', type: '["text"]', pricingType: 'charge' },
-        { id: 'qwen3-235b-a22b', platformId: 'datascope', name: 'qwen3-235b-a22b', type: '["text"]', pricingType: 'charge' },
-
-        { id: 'qwen/qwen3-235b-a22b-07-25:free', platformId: 'openrouter', name: 'qwen/qwen3-235b-a22b-07-25:free', type: '["text"]', pricingType: 'free' },
-        { id: 'moonshotai/kimi-k2:free', platformId: 'openrouter', name: 'moonshotai/kimi-k2:free', type: '["text"]', pricingType: 'free' },
-        { id: 'anthropic/claude-sonnet-4', platformId: 'openrouter', name: 'anthropic/claude-sonnet-4', type: '["text"]', pricingType: 'charge' },
+        { id: 'qwen3-max', platformId: 'datascope', name: 'qwen3-max', type: '["text"]', pricingType: 'charge' },
+        
+        // openrouter模型
+        { id: 'xiaomi/mimo-v2-flash:free', platformId: 'openrouter', name: 'xiaomi/mimo-v2-flash:free', type: '["text"]', pricingType: 'free' },
         { id: 'google/gemini-2.5-flash', platformId: 'openrouter', name: 'google/gemini-2.5-flash', type: '["text"]', pricingType: 'charge' },
-        { id: 'openai/gpt-4.1', platformId: 'openrouter', name: 'openai/gpt-4.1', type: '["text"]', pricingType: 'charge' },
-        { id: 'deepseek/deepseek-r1-0528', platformId: 'openrouter', name: 'deepseek/deepseek-r1-0528', type: '["text"]', pricingType: 'charge' },
+       
     ];
     try {
         await db.exec('BEGIN TRANSACTION');

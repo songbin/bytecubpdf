@@ -113,14 +113,14 @@ dev = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py312"
+target-version = "py311"
 
 [tool.black]
 line-length = 120
-target-version = ["py312"]
+target-version = ["py311"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
