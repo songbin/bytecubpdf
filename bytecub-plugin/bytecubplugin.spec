@@ -6,11 +6,11 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=['torchvision', 'pikepdf._cpphelpers', 'rapidocr_onnxruntime--exclude-module=PyQt5', 'scikit_image', 'skimage.metrics', 'skimage.metrics._structural_similarity', 'cryptography', 'azure.ai.translation.text', 'bitstring', 'configargparse', 'deepl', 'doclayout_yolo', 'flask', 'flask_cors', 'fonttools', 'freetype', 'gevent', 'gradio', 'gradio_pdf', 'huggingface_hub', 'httpx', 'modelscope', 'msgpack', 'numpy', 'ollama', 'onnx', 'onnxruntime', 'openai', 'opencv_python_headless', 'opencv_python', 'orjson', 'peewee', 'pikepdf', 'pymupdf', 'python_dotenv', 'python_levenshtein', 'pdfminer.six', 'pydantic', 'requests', 'rich', 'scikit_image', 'tenacity', 'tencentcloud_sdk_python', 'toml', 'torch', 'torchvision', 'tqdm', 'werkzeug', 'xsdata', 'xinference_client', 'rapidocr_onnxruntime', 'pyzstd', 'fastapi', 'uvicorn', 'sse-starlette', 'markdown', 'python-docx', 'beautifulsoup4', 'pylatexenc', 'matplotlib', 'pillow', 'rtree', 'chardet', 'scipy', 'uharfbuzz', 'py_spy', 'psutil', 'scikit_learn', 'hyperscan', 'charset_normalizer', 'cryptography'],
+    hiddenimports=['torchvision', 'pikepdf._cpphelpers', 'rapidocr_onnxruntime', 'scikit_image', 'skimage.metrics', 'skimage.metrics._structural_similarity', 'cryptography', 'azure.ai.translation.text', 'bitstring', 'configargparse', 'deepl', 'doclayout_yolo', 'flask', 'flask_cors', 'fonttools', 'freetype', 'gevent', 'gradio', 'gradio_pdf', 'huggingface_hub', 'httpx', 'modelscope', 'msgpack', 'numpy', 'ollama', 'onnx', 'onnxruntime', 'openai', 'opencv_python_headless', 'opencv_python', 'orjson', 'peewee', 'pikepdf', 'pymupdf', 'python_dotenv', 'python_levenshtein', 'pdfminer.six', 'pydantic', 'requests', 'rich', 'scikit_image', 'tenacity', 'tencentcloud_sdk_python', 'toml', 'torch', 'torchvision', 'tqdm', 'werkzeug', 'xsdata', 'xinference_client', 'rapidocr_onnxruntime', 'pyzstd', 'fastapi', 'uvicorn', 'sse-starlette', 'markdown', 'python-docx', 'beautifulsoup4', 'pylatexenc', 'matplotlib', 'pillow', 'rtree', 'chardet', 'scipy', 'uharfbuzz', 'py_spy', 'psutil', 'scikit_learn', 'hyperscan', 'charset_normalizer', 'cryptography'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['tkinter', 'PyQt5'],
     noarchive=False,
     optimize=0,
 )

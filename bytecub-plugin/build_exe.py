@@ -31,90 +31,34 @@ def build_executable():
         '--onefile',
         '--name=bytecubplugin',
         f'--distpath={output_dir}',
-        '--hidden-import=torchvision',
-        '--hidden-import=pikepdf._cpphelpers',
-        '--hidden-import=rapidocr_onnxruntime'
+        '--add-data=.env;.',  # 添加配置文件
         '--exclude-module=PyQt5',  # 排除可能引起冲突的模块
+        '--exclude-module=tkinter',  # 排除Tkinter避免Tcl/Tk打包问题
+        '--exclude-module=matplotlib',  # 排除matplotlib的GUI后端，使用Agg后端
+        '--exclude-module=IPython',
+        '--exclude-module=jupyter',
+        '--exclude-module=notebook',
     ]
     
-    # 从requirements.txt中提取所有必需的包
-    required_packages = [
-        'scikit_image',
-        'skimage.metrics',  # 显式添加metrics子模块
-        'skimage.metrics._structural_similarity',
-        'cryptography',
-        'azure.ai.translation.text',
-        'bitstring',
-        'configargparse',
-        'deepl',
-        'doclayout_yolo',
-        'flask',
-        'flask_cors',
-        'fonttools',
-        'freetype',
-        'gevent',
-        'gradio',
-        'gradio_pdf',
-        'huggingface_hub',
-        'httpx',
-        'modelscope',
-        'msgpack',
-        'numpy',
-        'ollama',
-        'onnx',
-        'onnxruntime',
-        'openai',
-        'opencv_python_headless',
-        'opencv_python',
-        'orjson',
-        'peewee',
-        'pikepdf',
-        'pymupdf',
-        'python_dotenv',
-        'python_levenshtein',
-        'pdfminer.six',
-        'pydantic',
-        'requests',
-        'rich',
-        'scikit_image',
-        'tenacity',
-        'tencentcloud_sdk_python',
-        # 'tiktoken',
-        'toml',
-        'torch',
+    # 必要的隐藏导入 - 仅添加PyInstaller无法自动检测的动态导入模块
+    hidden_imports = [
         'torchvision',
-        'tqdm',
-        'werkzeug',
-        'xsdata',
-        'xinference_client',
+        'pikepdf._cpphelpers',
         'rapidocr_onnxruntime',
+        'skimage.metrics._structural_similarity',
+        'azure.ai.translation.text',
+        'gradio_pdf',
+        'modelscope',
+        'huggingface_hub',
+        'xinference_client',
+        'xsdata',
         'pyzstd',
-        'fastapi',
-        'uvicorn',
-        'sse-starlette',
-        'markdown',
-        'python-docx',
-        'beautifulsoup4',
-        'pylatexenc',
-        'matplotlib',
-        'pillow',
-         # 新增依赖（从pyproject.toml同步）
-        'rtree',
-        'chardet',
-        'scipy',
-        'uharfbuzz',
-        'py_spy',
-        # 'pip',
-        'psutil',
-        'scikit_learn',
-        'hyperscan',
-        # BabelDOC核心依赖
+        'sse_starlette',
         'charset_normalizer',
-        'cryptography',
     ]
     
     # 添加所有必需的包作为hidden-imports
-    for pkg in required_packages:
+    for pkg in hidden_imports:
         options.append(f'--hidden-import={pkg}')
     
     # 执行打包

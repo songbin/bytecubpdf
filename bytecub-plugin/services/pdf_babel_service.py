@@ -1,4 +1,3 @@
-from tkinter import NO
 from babeldoc.format.pdf.translation_config import TranslationConfig as YadtConfig
 from babeldoc.format.pdf.high_level import async_translate as yadt_translate
 from babeldoc.format.pdf.high_level import init as yadt_init
