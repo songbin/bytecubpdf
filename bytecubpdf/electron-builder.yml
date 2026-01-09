@@ -56,8 +56,10 @@ win:
 nsis:
   allowToChangeInstallationDirectory: true  # 允许用户选择安装目录
   oneClick: false  # 禁用一键安装模式
+  perMachine: false  # 禁止为所有用户安装，仅允许为当前用户安装
   createDesktopShortcut: always  # 始终创建桌面快捷方式
   createStartMenuShortcut: true  # 创建开始菜单快捷方式
+  include: build/installerScript.nsh  # 自定义 NSIS 脚本
 mac:
   target: dmg
 linux:
