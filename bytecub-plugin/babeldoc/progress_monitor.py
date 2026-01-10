@@ -2,11 +2,21 @@ import asyncio
 import logging
 import threading
 import time
-from asyncio import CancelledError
 from collections.abc import Callable
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+class TranslationCancelledError(asyncio.CancelledError):
+    """Custom CancelledError that can carry a message about why translation was cancelled."""
+
+    def __init__(self, message: str = "Translation was cancelled"):
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return self.message
 
 
 class ProgressMonitor:
@@ -53,6 +63,7 @@ class ProgressMonitor:
         self.cancel_event = cancel_event
         self.loop = loop
         self.disable = False
+        self.cancel_message = None  # Store the error message when cancelling
         if finish_event and not loop:
             raise ValueError("finish_event requires a loop")
         if self.progress_change_callback:
@@ -144,7 +155,9 @@ class ProgressMonitor:
         if self.finish_event and self.loop:
             self.loop.call_soon_threadsafe(self.finish_event.set)
         if self.cancel_event and self.cancel_event.is_set():
-            self.finish_callback(type="error", error=CancelledError)
+            # Create a TranslationCancelledError instance with the stored message
+            error = TranslationCancelledError(self.cancel_message) if self.cancel_message else TranslationCancelledError()
+            self.finish_callback(type="error", error=error)
 
     def stage_done(self, stage):
         if self.disable or self.parent_monitor and self.parent_monitor.disable:
@@ -249,13 +262,22 @@ class ProgressMonitor:
 
     def raise_if_cancelled(self):
         if self.cancel_event and self.cancel_event.is_set():
-            raise asyncio.CancelledError
+            if self.cancel_message:
+                raise TranslationCancelledError(self.cancel_message)
+            else:
+                raise TranslationCancelledError()
 
-    def cancel(self):
+    def cancel(self, message: str | None = None):
+        """Cancel the translation, optionally with an error message.
+
+        Args:
+            message: Optional error message explaining why translation was cancelled
+        """
         if self.disable or self.parent_monitor and self.parent_monitor.disable:
             return
         if self.cancel_event:
-            logger.info("Translation canceled")
+            self.cancel_message = message
+            logger.info(f"Translation canceled: {message if message else 'No message'}")
             self.cancel_event.set()
 
 

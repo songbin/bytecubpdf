@@ -456,9 +456,14 @@ class TranslationConfig:
         if self.progress_monitor is not None:
             self.progress_monitor.raise_if_cancelled()
 
-    def cancel_translation(self):
+    def cancel_translation(self, message: str | None = None):
+        """Cancel the translation, optionally with an error message.
+
+        Args:
+            message: Optional error message explaining why translation was cancelled
+        """
         if self.progress_monitor is not None:
-            self.progress_monitor.cancel()
+            self.progress_monitor.cancel(message)
 
     def get_term_extraction_translator(self) -> BaseTranslator:
         """Return the translator to use for automatic term extraction."""

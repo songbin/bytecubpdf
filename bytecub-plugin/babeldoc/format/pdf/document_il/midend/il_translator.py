@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import openai
 import re
 import threading
 from pathlib import Path
@@ -1267,6 +1268,14 @@ class ILTranslator:
                 self.post_translate_paragraph(
                     paragraph, tracker, translate_input, translated_text
                 )
+            except openai.AuthenticationError as e:
+                logger.error(
+                    f"Authentication error translating paragraph. Paragraph: {paragraph.debug_id} ({paragraph.unicode}). Error: {e}. ",
+                )
+                # Cancel translation with error message
+                self.translation_config.cancel_translation(str(e))
+                # Raise to ensure error propagates
+                raise
             except ContentFilterError as e:
                 logger.warning(f"ContentFilterError: {e.message}")
                 self.add_content_filter_hint(page, paragraph)

@@ -841,7 +841,14 @@ class ILTranslatorLLMOnly:
                         )
                     else:
                         self.ok_count += 1
-
+        except openai.AuthenticationError as e:
+                logger.error(
+                    f"Authentication error translating paragraph. Error: {e}. ",
+                )
+                # Cancel translation with error message
+                self.translation_config.cancel_translation(str(e))
+                # Raise to ensure error propagates
+                raise
         except Exception as e:
             error_message = f"Error {e} during translation. try fallback"
             logger.warning(error_message)

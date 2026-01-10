@@ -416,6 +416,7 @@ async def async_translate(translation_config: TranslationConfig):
 
     finish_event = asyncio.Event()
     cancel_event = threading.Event()
+
     with ProgressMonitor(
         get_translation_stage(translation_config),
         progress_change_callback=callback.step_callback,
@@ -426,17 +427,34 @@ async def async_translate(translation_config: TranslationConfig):
         report_interval=translation_config.report_interval,
     ) as pm:
         future = loop.run_in_executor(None, do_translate, pm, translation_config)
+
         try:
             async for event in callback:
                 event = event.kwargs
                 yield event
                 if event["type"] == "error":
                     break
-        except CancelledError:
+        except CancelledError as e:
+            # Capture the error message from TranslationCancelledError
+            # Try multiple ways to extract the error message
+            error_msg = None
+            if hasattr(e, 'message') and e.message:
+                error_msg = e.message
+            elif hasattr(e, 'args') and e.args:
+                # Get the first argument which is usually the message
+                error_msg = str(e.args[0]) if e.args[0] else "Translation was cancelled"
+            else:
+                error_msg = str(e)
+
             cancel_event.set()
+            yield {
+                "type": "error",
+                "error": error_msg
+            }
         except KeyboardInterrupt:
             logger.info("Translation cancelled by user through keyboard interrupt")
             cancel_event.set()
+
     if cancel_event.is_set():
         future.cancel()
     logger.info("Waiting for translation to finish...")
