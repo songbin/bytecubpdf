@@ -339,8 +339,22 @@ class PdfController:
                     }
                     progress_queue.put({"status": "completed", "process": 100, "result": final_result, "msg": "翻译完成"})
                 except Exception as e:
-                    logger.error_ext(f"An error occurred: {e}")
-                    progress_queue.put({"status": "error", "message": str(e)})
+                    logger.error_ext(f"Translation error occurred: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    # 提取更有用的错误信息
+                    error_msg = str(e)
+                    # 如果错误信息包含特定的API错误,提供更友好的提示
+                    if "401" in error_msg or "身份验证失败" in error_msg or "authentication" in error_msg.lower():
+                        error_msg = "API密钥验证失败，请检查API密钥是否正确"
+                    elif "502" in error_msg or "Bad Gateway" in error_msg:
+                        # 特殊处理Ollama服务未启动的情况
+                        error_msg = "请确认Ollama服务已启动"
+                    elif "1000" in error_msg:
+                        error_msg = f"API错误: {error_msg}"
+                    elif "Connection" in error_msg or "连接" in error_msg:
+                        error_msg = "无法连接到翻译服务，请检查服务是否已启动"
+                    progress_queue.put({"status": "error", "message": error_msg})
             def run_babel_translate():
                 try:
                     no_dual = True
@@ -376,11 +390,27 @@ class PdfController:
                     }
                     progress_queue.put({"status": "completed", "process": 100, "result": final_result, "msg": "翻译完成"})
                 except ScannedPDFError as spe:
-                    logger.error_ext(f"An error occurred: {spe}")
+                    logger.error_ext(f"ScannedPDFError occurred: {spe}")
+                    import traceback
+                    traceback.print_exc()
                     progress_queue.put({"status": "error", "message": "检测到可能是OCR识别的PDF，请开启【消除重影】后再次尝试"})
                 except Exception as e:
-                    logger.error_ext(f"An error occurred: {e}")
-                    progress_queue.put({"status": "error", "message": str(e)})
+                    logger.error_ext(f"Translation error occurred: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    # 提取更有用的错误信息
+                    error_msg = str(e)
+                    # 如果错误信息包含特定的API错误,提供更友好的提示
+                    if "401" in error_msg or "身份验证失败" in error_msg or "authentication" in error_msg.lower():
+                        error_msg = "API密钥验证失败，请检查API密钥是否正确"
+                    elif "502" in error_msg or "Bad Gateway" in error_msg:
+                        # 特殊处理Ollama服务未启动的情况
+                        error_msg = "无法连接到翻译服务，请确认Ollama服务已启动（执行 'ollama serve' 命令）"
+                    elif "1000" in error_msg:
+                        error_msg = f"API错误: {error_msg}"
+                    elif "Connection" in error_msg or "连接" in error_msg:
+                        error_msg = "无法连接到翻译服务，请检查服务是否已启动"
+                    progress_queue.put({"status": "error", "message": error_msg})
             # 提交翻译任务到线程池
             match translate_engine:
                 case TSCore.pdfmath:

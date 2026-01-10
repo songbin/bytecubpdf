@@ -342,7 +342,6 @@ class TranslateConverter(PDFConverterEx):
         # B. 段落翻译
         log.debug("\n==========[SSTACK]==========\n")
 
-        @retry(wait=wait_fixed(1))
         def worker(s: str):  # 多线程翻译
             if not s.strip() or re.match(r"^\{v\d+\}$", s):  # 空白和公式不翻译
                 if ENVDict.ENGINE == TSCore.pdfmath:
@@ -355,11 +354,31 @@ class TranslateConverter(PDFConverterEx):
                     log.exception(e)
                 else:
                     log.exception(e, exc_info=False)
-                raise e
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.thread
-        ) as executor:
-            news = list(executor.map(worker, sstk))
+                # 重新抛出异常,不进行重试(对于API密钥、配额等致命错误)
+                raise  # 立即抛出异常,让异常传播到上层
+        try:
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=self.thread
+            ) as executor:
+                # 使用executor.map但不立即转换为list,以便捕获异常
+                futures = {executor.submit(worker, s): s for s in sstk}
+                news = []
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        result = future.result()  # 这里会抛出异常
+                        news.append(result)
+                    except Exception as e:
+                        # 提供更详细的错误信息,包括源文本
+                        source_text = futures[future]
+                        error_msg = f"翻译失败: {str(e)}\n源文本: {source_text[:100]}..."
+                        log.error(error_msg)
+                        # 包装异常并重新抛出
+                        error_msg1 = f"翻译失败: {str(e)}..."
+                        raise Exception(error_msg1) from e
+        except Exception as e:
+            # 捕获并重新抛出异常,确保能够传播到上层
+            log.error(f"Translation failed: {str(e)}")
+            raise
 
         ############################################################
         # C. 新文档排版

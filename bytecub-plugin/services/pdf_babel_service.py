@@ -126,14 +126,14 @@ class PdfBabelSerive:
             dual_out_file_name,
             result.total_pages
         )
-    @classmethod        
+    @classmethod
     async def __yadt_translate_coro(cls, file_path= None, yadt_config=None, cancellation_event=None, callback = None):
                 progress_context, progress_handler = create_progress_handler(yadt_config)
                 # 开始翻译
                 with progress_context:
                     try:
                         async for event in yadt_translate(yadt_config):
-                            # logger.info(event)   
+                            # logger.info(event)
                             progress_handler(event)
                             # 检查是否取消
                             if cancellation_event and cancellation_event.is_set():
@@ -144,8 +144,9 @@ class PdfBabelSerive:
                                 if isinstance(error_msg, ScannedPDFError):
                                     raise ScannedPDFError("Scanned PDF detected, please enable OCR recognition")
                                 else:
-                                    logger.warning_ext(f"Translation failed: {str(event['error'])}")
-                                    raise Exception(str(event['error']))
+                                    logger.error_ext(f"Translation failed: {str(event['error'])}")
+                                    # 将错误信息包装成更详细的异常
+                                    raise Exception(f"翻译过程中发生错误: {str(event['error'])}") from event['error'] if isinstance(event['error'], Exception) else Exception(str(event['error']))
                             if event["type"] == "progress_update" and callback:
                                 try:
                                     await cls.handle_progress_event(event, callback)
@@ -157,9 +158,16 @@ class PdfBabelSerive:
                                 except Exception as fe:
                                     logger.warning(f"Finish event handler failed: {fe}")
                                 #break
+                    except ScannedPDFError as spe:
+                        # 特殊处理扫描版PDF错误
+                        logger.error_ext(f"Scanned PDF error: {spe}")
+                        raise
                     except Exception as e:
-                        logger.error(f"Translation failed: {e}")
-                        raise e
+                        # 捕获所有其他异常并记录详细日志
+                        logger.error_ext(f"Translation failed with error: {str(e)}")
+                        logger.error_ext(f"Error type: {type(e).__name__}")
+                        # 重新抛出异常,确保能够传播到上层
+                        raise
 
     @classmethod
     def __query_platform( cls, service_name:str,lang_in, lang_out, service_model, envs, prompt):

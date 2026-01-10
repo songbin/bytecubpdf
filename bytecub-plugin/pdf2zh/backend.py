@@ -45,13 +45,22 @@ def translate_task(
         self.update_state(state="PROGRESS", meta={"n": t.n, "total": t.total})  # noqa
         print(f"Translating {t.n} / {t.total} pages")
 
-    doc_mono, doc_dual = translate_stream(
-        stream,
-        callback=progress_bar,
-        model=ModelInstance.value,
-        **args,
-    )
-    return doc_mono, doc_dual
+    try:
+        doc_mono, doc_dual = translate_stream(
+            stream,
+            callback=progress_bar,
+            model=ModelInstance.value,
+            **args,
+        )
+        return doc_mono, doc_dual
+    except Exception as e:
+        # 捕获异常并更新任务状态为FAILURE
+        import traceback
+        error_msg = str(e)
+        error_trace = traceback.format_exc()
+        print(f"Translation task failed: {error_msg}\n{error_trace}")
+        # 重新抛出异常,让Celery将任务标记为FAILURE
+        raise
 
 
 @flask_app.route("/v1/translate", methods=["POST"])
@@ -69,6 +78,10 @@ def get_translate_task(id: str):
     result: AsyncResult = celery_app.AsyncResult(id)
     if str(result.state) == "PROGRESS":
         return {"state": str(result.state), "info": result.info}
+    elif str(result.state) == "FAILURE":
+        # 任务失败,返回错误信息
+        error_info = str(result.info) if result.info else "Unknown error"
+        return {"state": str(result.state), "error": error_info}, 500
     else:
         return {"state": str(result.state)}
 
@@ -86,7 +99,9 @@ def get_translate_result(id: str, format: str):
     if not result.ready():
         return {"error": "task not finished"}, 400
     if not result.successful():
-        return {"error": "task failed"}, 400
+        # 任务失败,返回详细的错误信息
+        error_info = str(result.info) if result.info else "Unknown error"
+        return {"error": f"task failed: {error_info}"}, 400
     doc_mono, doc_dual = result.get()
     to_send = doc_mono if format == "mono" else doc_dual
     return send_file(io.BytesIO(to_send), "application/pdf")

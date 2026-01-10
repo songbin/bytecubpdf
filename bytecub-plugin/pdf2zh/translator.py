@@ -383,6 +383,9 @@ class OllamaTranslator(BaseTranslator):
         if (max_token := len(text) * 5) > self.options["num_predict"]:
             self.options["num_predict"] = max_token
             term_dict = self.envs[ENVDict.TERM_DICT] if ENVDict.TERM_DICT in self.envs else {}
+            # 确保 term_dict 不是 None
+            if term_dict is None:
+                term_dict = {}
             has_term_dict = len(term_dict) > 0
             mapping = {}
             if has_term_dict:
@@ -522,7 +525,27 @@ class OpenAITranslator(BaseTranslator):
         )
         if not response.choices:
             if hasattr(response, "error"):
-                raise ValueError("Error response from Service", response.error)
+                error = response.error
+                # Check for specific error types
+                if isinstance(error, dict):
+                    error_code = error.get("code", "")
+                    error_message = error.get("message", "")
+                    
+                    # Handle insufficient balance/quota errors
+                    if error_code in ["insufficient_quota", "billing_not_active", "quota_exceeded"] or \
+                       "insufficient quota" in error_message.lower() or \
+                       "billing" in error_message.lower() or \
+                       "balance" in error_message.lower():
+                        raise ValueError("账户余额不足或配额已用完，请检查账户状态", error)
+                    
+                    # Handle invalid API key errors
+                    if error_code in ["invalid_api_key", "invalid_request", "unauthorized"] or \
+                       "invalid api key" in error_message.lower() or \
+                       "unauthorized" in error_message.lower() or \
+                       "authentication" in error_message.lower():
+                        raise ValueError("API密钥无效或已过期，请检查API密钥配置", error)
+                
+                raise ValueError("Error response from Service", error)
         content = response.choices[0].message.content.strip()
         content = self.think_filter_regex.sub("", content).strip()
          # 后处理阶段：恢复术语并校验

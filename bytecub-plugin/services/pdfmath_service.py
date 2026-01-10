@@ -114,8 +114,14 @@ class PdfMathService:
             translate_pdf = translate(**param)
             return translate_pdf
         except Exception as e:
-            logger.warning_ext(f"翻译文件时发生错误: {e}")
-            raise ChatException("Translation cancelled")
+            # 记录详细的错误信息和堆栈跟踪
+            logger.error_ext(f"翻译文件时发生错误: {str(e)}")
+            logger.error_ext(f"Error type: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
+            # 重新抛出原始异常，保留完整的错误信息
+            # 而不是简单地抛出"Translation cancelled"
+            raise e
         
     @classmethod
     def _build_envs(cls, service:str, model_name:str, 
