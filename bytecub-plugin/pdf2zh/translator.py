@@ -43,7 +43,7 @@ class BaseTranslator:
     envs = {}
     lang_map: dict[str, str] = {}
     CustomPrompt = False
-    ignore_cache = False
+    ignore_cache = True
 
     def __init__(self, lang_in: str, lang_out: str, model: str):
         lang_in = self.lang_map.get(lang_in.lower(), lang_in)
@@ -484,6 +484,7 @@ class OpenAITranslator(BaseTranslator):
         prompt=None,
     ):
         self.set_envs(envs)
+        self.ignore_cache = True
         if not model:
             model = self.envs["OPENAI_MODEL"]
         super().__init__(lang_in, lang_out, model)

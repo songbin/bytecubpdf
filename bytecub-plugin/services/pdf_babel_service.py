@@ -172,51 +172,13 @@ class PdfBabelSerive:
     @classmethod
     def __query_platform( cls, service_name:str,lang_in, lang_out, service_model, envs, prompt):
         from pdf2zh.translator import (
-        AzureOpenAITranslator,
-        GoogleTranslator,
-        BingTranslator,
-        DeepLTranslator,
-        DeepLXTranslator,
         OllamaTranslator,
-        OpenAITranslator,
-        ZhipuTranslator,
-        ModelScopeTranslator,
-        SiliconTranslator,
-        GeminiTranslator,
-        AzureTranslator,
-        TencentTranslator,
-        DifyTranslator,
-        AnythingLLMTranslator,
-        XinferenceTranslator,
-        GorkTranslator,
-        GroqTranslator,
-        DeepseekTranslator,
-        OpenAIlikedTranslator,
-        QwenMtTranslator,
+        OpenAITranslator
     )
 
         for translator in [
-            GoogleTranslator,
-            BingTranslator,
-            DeepLTranslator,
-            DeepLXTranslator,
-            OllamaTranslator,
-            XinferenceTranslator,
-            AzureOpenAITranslator,
+            OllamaTranslator, 
             OpenAITranslator,
-            ZhipuTranslator,
-            ModelScopeTranslator,
-            SiliconTranslator,
-            GeminiTranslator,
-            AzureTranslator,
-            TencentTranslator,
-            DifyTranslator,
-            AnythingLLMTranslator,
-            GorkTranslator,
-            GroqTranslator,
-            DeepseekTranslator,
-            OpenAIlikedTranslator,
-            QwenMtTranslator,
         ]:
             translater = None
             if service_name == translator.name:
