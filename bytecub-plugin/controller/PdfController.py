@@ -267,14 +267,15 @@ class PdfController:
 
             progress_queue = Queue()
             cancellation_event = asyncio.Event()
+            errors_list = []  # 用于收集错误信息的列表
 
             # 注册取消事件到全局管理器
-            cancellation_events[task_id] = cancellation_event  
+            cancellation_events[task_id] = cancellation_event
 
             def on_page_callback(
-                current_page, 
-                total_pages, 
-                stage = '', 
+                current_page,
+                total_pages,
+                stage = '',
                 overall_progress=0,
                 core=TSCore.pdfmath,
                 current_part=0,
@@ -282,7 +283,22 @@ class PdfController:
                 status=TSStatus.processing,
                 target_file='',
                 source_file='',
+                error_message=None,  # 新增错误消息参数
                 ):
+                # 处理错误消息
+                if error_message is not None:
+                    # 将错误添加到错误列表
+                    errors_list.append(error_message)
+                    progress_queue.put({
+                        "status": "error",
+                        "error": error_message,  # 使用 'error' 字段传递原始错误信息
+                        "message": error_message,  # 兼容旧的 'message' 字段
+                        "stage": stage,
+                        "core": core,
+                        "errors": errors_list.copy(),  # 添加所有错误的列表
+                    })
+                    return
+
                 current_status = TSStatus.processing,
                 if core == TSCore.pdfmath:
                     progress = int((current_page / total_pages) * 100)
@@ -306,7 +322,8 @@ class PdfController:
                     "current_page": current_page,
                     "total_pages": total_pages,
                     "core": core,
-                    "msg": msg
+                    "msg": msg,
+                    "errors": errors_list.copy()  # 添加错误列表到所有进度事件
                 })
 
             def run_translate():
@@ -337,7 +354,13 @@ class PdfController:
                         "total_pages": total_page,
                         "core": TSCore.pdfmath,
                     }
-                    progress_queue.put({"status": "completed", "process": 100, "result": final_result, "msg": "翻译完成"})
+                    progress_queue.put({
+                        "status": "completed",
+                        "process": 100,
+                        "result": final_result,
+                        "msg": "翻译完成",
+                        "errors": errors_list.copy()  # 添加错误列表到完成事件
+                    })
                 except Exception as e:
                     logger.error_ext(f"Translation error occurred: {str(e)}")
                     import traceback
@@ -354,7 +377,14 @@ class PdfController:
                         error_msg = f"API错误: {error_msg}"
                     elif "Connection" in error_msg or "连接" in error_msg:
                         error_msg = "无法连接到翻译服务，请检查服务是否已启动"
-                    progress_queue.put({"status": "error", "message": error_msg})
+
+                    # 将错误添加到错误列表
+                    errors_list.append(error_msg)
+                    progress_queue.put({
+                        "status": "error",
+                        "message": error_msg,
+                        "errors": errors_list.copy()  # 添加错误列表
+                    })
             def run_babel_translate():
                 try:
                     no_dual = True
@@ -388,12 +418,25 @@ class PdfController:
                         "core": TSCore.babeldoc,
                         "dual_file_name": dual_file_name,
                     }
-                    progress_queue.put({"status": "completed", "process": 100, "result": final_result, "msg": "翻译完成"})
+                    progress_queue.put({
+                        "status": "completed",
+                        "process": 100,
+                        "result": final_result,
+                        "msg": "翻译完成",
+                        "errors": errors_list.copy()  # 添加错误列表到完成事件
+                    })
                 except ScannedPDFError as spe:
                     logger.error_ext(f"ScannedPDFError occurred: {spe}")
                     import traceback
                     traceback.print_exc()
-                    progress_queue.put({"status": "error", "message": "检测到可能是OCR识别的PDF，请开启【消除重影】后再次尝试"})
+                    error_msg = "检测到可能是OCR识别的PDF，请开启【消除重影】后再次尝试"
+                    # 将错误添加到错误列表
+                    errors_list.append(error_msg)
+                    progress_queue.put({
+                        "status": "error",
+                        "message": error_msg,
+                        "errors": errors_list.copy()  # 添加错误列表
+                    })
                 except Exception as e:
                     logger.error_ext(f"Translation error occurred: {str(e)}")
                     import traceback
@@ -410,7 +453,14 @@ class PdfController:
                         error_msg = f"API错误: {error_msg}"
                     elif "Connection" in error_msg or "连接" in error_msg:
                         error_msg = "无法连接到翻译服务，请检查服务是否已启动"
-                    progress_queue.put({"status": "error", "message": error_msg})
+
+                    # 将错误添加到错误列表
+                    errors_list.append(error_msg)
+                    progress_queue.put({
+                        "status": "error",
+                        "message": error_msg,
+                        "errors": errors_list.copy()  # 添加错误列表
+                    })
             # 提交翻译任务到线程池
             match translate_engine:
                 case TSCore.pdfmath:

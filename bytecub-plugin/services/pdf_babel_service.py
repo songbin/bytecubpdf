@@ -141,12 +141,34 @@ class PdfBabelSerive:
                             # 处理进度事件（关键修改点）
                             if event["type"] == "error":
                                 error_msg = event['error']
+                                # 提取错误信息的字符串表示
+                                error_str = str(error_msg) if not isinstance(error_msg, str) else error_msg
+
+                                # 立即通过 callback 传递错误信息到 SSE 流
+                                if callback:
+                                    try:
+                                        # 调用 callback，传递特殊标识表示这是错误信息
+                                        # 使用 -1 表示错误状态
+                                        callback(
+                                            current_page=-1,  # 错误标识
+                                            total_pages=1,
+                                            core=TSCore.babeldoc,
+                                            current_part=0,
+                                            total_parts=1,
+                                            stage="error",
+                                            overall_progress=0,
+                                            error_message=error_str  # 传递原始错误信息
+                                        )
+                                    except Exception as cb_err:
+                                        logger.warning(f"Failed to send error via callback: {cb_err}")
+
+                                # 然后抛出异常以终止翻译
                                 if isinstance(error_msg, ScannedPDFError):
                                     raise ScannedPDFError("Scanned PDF detected, please enable OCR recognition")
                                 else:
-                                    logger.error_ext(f"Translation failed: {str(event['error'])}")
+                                    logger.error_ext(f"Translation failed: {error_str}")
                                     # 将错误信息包装成更详细的异常
-                                    raise Exception(f"翻译过程中发生错误: {str(event['error'])}") from event['error'] if isinstance(event['error'], Exception) else Exception(str(event['error']))
+                                    raise Exception(f"翻译过程中发生错误: {error_str}") from error_msg if isinstance(error_msg, Exception) else Exception(error_str)
                             if event["type"] == "progress_update" and callback:
                                 try:
                                     await cls.handle_progress_event(event, callback)

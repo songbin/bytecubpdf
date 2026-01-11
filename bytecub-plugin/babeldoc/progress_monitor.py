@@ -64,6 +64,7 @@ class ProgressMonitor:
         self.loop = loop
         self.disable = False
         self.cancel_message = None  # Store the error message when cancelling
+        self.errors = []  # Store all errors and warnings during translation
         if finish_event and not loop:
             raise ValueError("finish_event requires a loop")
         if self.progress_change_callback:
