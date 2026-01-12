@@ -34,7 +34,8 @@ export class TranslateHistoryManager {
             this.sanitizeString(history.ext1),
             this.sanitizeString(history.ext2),
             this.sanitizeString(history.ext3),
-            this.sanitizeString(history.ext4)
+            this.sanitizeString(history.ext4),
+            this.sanitizeString(history.ext5)
         ];
 
         const result = await SqliteDbCore.executeQuery<{ lastInsertRowid: number }>(`
@@ -53,8 +54,9 @@ export class TranslateHistoryManager {
                 ext1,
                 ext2,
                 ext3,
-                ext4      
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ext4,
+                ext5
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         `, sanitizedValues);
         
         return 0; 

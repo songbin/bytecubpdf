@@ -5,8 +5,8 @@
   "private": true,
   "main": "dist-electron/main/index.js",
   "scripts": {
-    "dev": "vite",
-    "electron:dev": "concurrently -k \"vite dev\" \"wait-on http-get://localhost:5173/ && cross-env ELECTRON_DISABLE_SANDBOX=1 electron . --remote-debugging-port=9222 --disk-cache-dir=./.electron-cache\"",
+    "dev": "npm run electron:dev",
+    "electron:dev": "concurrently -k \"vite dev\" \"wait-on http-get://localhost:5173/ && electron . --remote-debugging-port=9222 --disk-cache-dir=./.electron-cache\"",
     "prebuild": "npm run clean",
     "build": "npm run clean && vite build && electron-builder",
     "clean": "rimraf dist release dist-electron",

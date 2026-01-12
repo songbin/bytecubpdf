@@ -624,6 +624,11 @@ const formatRequestData = async () => {
 };
 // 在 handleTranslate 方法之前添加
 const formatHistoryParams = async (resultData: any) => {
+  // 立即捕获错误信息快照，避免在异步操作后丢失
+  const errorsSnapshot = [...errors.value];
+   
+  const errorsJson = errorsSnapshot.length > 0 ? JSON.stringify(errorsSnapshot) : '';
+
   // 获取平台和模型信息
   const platform = formData.value.platformId
     ? await llmManager.getPlatformBasicInfo(formData.value.platformId)
@@ -633,7 +638,6 @@ const formatHistoryParams = async (resultData: any) => {
     ? await llmManager.getModel(formData.value.platformId, formData.value.modelId)
     : null;
 
-  
   const params = {
     platformId: formData.value.platformId || '',
     platformName: platform?.platformName || '',
@@ -650,7 +654,7 @@ const formatHistoryParams = async (resultData: any) => {
     ext2: resultData.dual_file_name ? resultData.dual_file_name : '', //用户存储原生双语对照文件路径
     ext3: '',
     ext4: '',
-    ext5: ''
+    ext5: errorsJson
   };
   return params;
 };
@@ -818,6 +822,8 @@ const handleTranslate = async () => {
           // 在翻译完成处理逻辑中修改为：
           formatHistoryParams(data.result).then(history => {
             historyManager.createHistory(history);
+          }).catch(err => {
+            console.error('保存翻译历史失败:', err);
           });
           console.log('翻译完成:', data);
         } else if (data.status === 'error') {

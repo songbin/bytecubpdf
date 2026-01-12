@@ -58,21 +58,40 @@ function getStopBatPath() {
 //   batProcess.unref();
 //   return scriptPath;
 // }
-function runCoreServer(mainWindow: any) {
-  console.log('Starting core server directly...');
+function runCoreServer(mainWindow: BrowserWindow | null) {
+  console.log('[子程序] 准备启动核心服务...');
   // 移除函数内的重复声明
   const baseDir = BuildPath.getCacheDirPath();
-  
+
   // 根据环境变量区分开发和生产环境路径
   let exePath;
   if (process.env.NODE_ENV === 'development') {
-    // 开发环境路径
-    exePath = path.join(__dirname, '../../execute/bytecubplugin.exe');
+    // 开发环境路径 - 使用项目根目录
+    exePath = path.join(process.cwd(), 'execute', 'bytecubplugin.exe');
   } else {
     // 生产环境路径（打包后）
     exePath = path.join(path.dirname(process.resourcesPath), 'execute', 'bytecubplugin.exe');
   }
-  
+
+  // 验证exe文件是否存在
+  const fs = require('fs');
+  console.log('[子程序] 检查路径:', exePath);
+
+  if (!fs.existsSync(exePath)) {
+    const errorMsg = `子程序不存在: ${exePath}`;
+    console.error('[子程序] ' + errorMsg);
+    pluginLogger.appendStderr(Buffer.from(errorMsg));
+
+    // 发送错误到渲染进程,但不阻塞主程序
+    if (mainWindow?.webContents) {
+      mainWindow.webContents.send('script-output', {
+        type: 'error',
+        data: errorMsg
+      });
+    }
+    return; // 直接返回,不启动子进程
+  }
+
   // 先杀死可能存在的旧进程
   exec('taskkill /F /IM bytecubplugin.exe 2>nul', (error:any) => {
     if (error) {
@@ -80,40 +99,82 @@ function runCoreServer(mainWindow: any) {
     } else {
       console.log('已成功终止残留的bytecubplugin进程');
     }
-    
+
     // 延迟2秒确保进程已完全退出
     setTimeout(() => {
-      // 保存子进程引用到全局变量
-      coreServerProcess = spawn(exePath, [`--basedir=${baseDir}`], {
-        windowsHide: true,
-        shell: false
-      });
-      
-      coreServerProcess.stdout.on('data', (data: any) => {
-        const stdout = iconv.decode(data, 'utf-8').trim();
-        console.log(stdout);
-        mainWindow?.webContents.send('script-output-update', stdout.split('\n'));
-        pluginLogger.appendStdout(data);
-      });
-      
-      coreServerProcess.stderr.on('data', (data: any) => {
-        const stderr = iconv.decode(data, 'utf-8').trim();
-        console.error(stderr);
-        mainWindow?.webContents.send('script-output-update', stderr.split('\n'));
-        pluginLogger.appendStdout(data);
-      });
-      
-      coreServerProcess.on('exit', (code: number) => {
-        coreServerProcess = null; // 进程退出后清除引用
-        if (code !== 0) {
-          const error = `Core server exited with code: ${code}`;
-          console.error(error);
-          mainWindow?.webContents.send('script-output', {
+      try {
+        // 保存子进程引用到全局变量
+        coreServerProcess = spawn(exePath, [`--basedir=${baseDir}`], {
+          windowsHide: true,
+          shell: false
+        });
+
+        // 监听子进程启动错误
+        coreServerProcess.on('error', (err: any) => {
+          const errorMsg = `子程序启动失败: ${err.message}`;
+          console.error('[子程序] ' + errorMsg);
+          pluginLogger.appendStderr(Buffer.from(errorMsg));
+
+          // 发送错误到渲染进程,但不阻塞主程序
+          if (mainWindow?.webContents && !mainWindow.webContents.isDestroyed()) {
+            mainWindow.webContents.send('script-output', {
+              type: 'error',
+              data: errorMsg
+            });
+          }
+          coreServerProcess = null; // 清除引用
+        });
+
+        coreServerProcess.stdout.on('data', (data: any) => {
+          const stdout = iconv.decode(data, 'utf-8').trim();
+          console.log(stdout);
+          if (mainWindow?.webContents && !mainWindow.webContents.isDestroyed()) {
+            mainWindow.webContents.send('script-output-update', stdout.split('\n'));
+          }
+          pluginLogger.appendStdout(data);
+        });
+
+        coreServerProcess.stderr.on('data', (data: any) => {
+          const stderr = iconv.decode(data, 'utf-8').trim();
+          console.error(stderr);
+          if (mainWindow?.webContents && !mainWindow.webContents.isDestroyed()) {
+            mainWindow.webContents.send('script-output-update', stderr.split('\n'));
+          }
+          pluginLogger.appendStdout(data);
+        });
+
+        coreServerProcess.on('exit', (code: number) => {
+          coreServerProcess = null; // 进程退出后清除引用
+          if (code !== 0) {
+            const error = `Core server exited with code: ${code}`;
+            console.error(error);
+            pluginLogger.appendStderr(Buffer.from(error));
+
+            // 发送退出信息到渲染进程,但不阻塞主程序
+            if (mainWindow?.webContents && !mainWindow.webContents.isDestroyed()) {
+              mainWindow.webContents.send('script-output', {
+                type: 'error',
+                data: error
+              });
+            }
+          }
+        });
+
+        console.log('[子程序] 已成功启动, PID:', coreServerProcess.pid);
+      } catch (err: any) {
+        const errorMsg = `启动子程序时发生异常: ${err.message}`;
+        console.error('[子程序] ' + errorMsg);
+        pluginLogger.appendStderr(Buffer.from(errorMsg));
+
+        // 发送错误到渲染进程,但不阻塞主程序
+        if (mainWindow?.webContents && !mainWindow.webContents.isDestroyed()) {
+          mainWindow.webContents.send('script-output', {
             type: 'error',
-            data: error
+            data: errorMsg
           });
         }
-      });
+        coreServerProcess = null; // 确保引用被清除
+      }
     }, 1000);
   });
 }
@@ -184,8 +245,8 @@ function createWindow(): void {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
-      disableBlinkFeatures: '',
+      sandbox: false,
+      disableBlinkFeatures: 'Auxclick',
       webSecurity: false, // 禁用同源策略
       allowRunningInsecureContent: true // 允许运行不安全内容
     },
@@ -198,32 +259,90 @@ function createWindow(): void {
   // 根据环境加载不同内容
   if (process.env.VITE_DEV_SERVER_URL) {
     console.log('检测到开发环境:', process.env.VITE_DEV_SERVER_URL)
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
-    mainWindow.webContents.openDevTools({ mode: 'detach' })
-    console.log('开发环境 - 开发工具已打开')
+
+    const loadDevServer = async () => {
+      try {
+        if (!mainWindow) {
+          console.error('主窗口不存在，无法加载开发服务器')
+          return
+        }
+        if (!process.env.VITE_DEV_SERVER_URL) {
+          console.error('VITE_DEV_SERVER_URL 环境变量未设置')
+          return
+        }
+
+        // 先加载URL
+        await mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
+
+        // 在ready-to-show时打开DevTools,确保窗口已准备显示
+        mainWindow.webContents.once('did-finish-load', () => {
+          console.debug('[主窗口] 页面加载完成')
+          if (mainWindow && !mainWindow.webContents.isDevToolsOpened()) {
+            console.debug('[主窗口] 尝试打开开发工具')
+            mainWindow.webContents.openDevTools({ mode: 'detach' })
+            console.log('开发环境 - 开发工具已打开')
+          }
+        });
+
+      } catch (error) {
+        console.error('开发服务器加载失败，将在2秒后重试:', error)
+        setTimeout(loadDevServer, 2000)
+      }
+    }
+
+    loadDevServer()
   } else {
     console.log('生产环境')
-    mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'))
-    // mainWindow.webContents.openDevTools()
+    if (mainWindow) {
+      mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'))
+      // mainWindow.webContents.openDevTools()
+    }
   }
   
 
   // 窗口准备就绪后显示
-  mainWindow.on('ready-to-show', () => {
-    mainWindow?.show()
-  })
+  if (mainWindow) {
+    mainWindow.on('ready-to-show', () => {
+      mainWindow?.show()
+      console.log('[主窗口] 窗口已准备就绪并显示')
 
-  // 窗口关闭事件处理
-  mainWindow.on('closed', () => {
-    mainWindow = null
-  })
+      // 窗口显示后再启动子程序,避免影响主窗口加载
+      setTimeout(() => {
+        try {
+          runCoreServer(mainWindow)
+        } catch (error) {
+          console.error('[子程序] 执行启动脚本时出错:', error);
+          // 不影响主窗口显示,只记录错误
+        }
+      }, 500); // 延迟500ms启动子程序
+    })
 
-  // 在窗口创建完成后执行 .bat 脚本
-  try {
-      //executeBatScript(mainWindow);
-      runCoreServer(mainWindow)
-  } catch (error) {
-    console.error('执行启动脚本时出错:', error);
+    // 监听加载失败事件
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('页面加载失败:', errorCode, errorDescription, validatedURL)
+    })
+
+    // 监听渲染进程崩溃
+    mainWindow.webContents.on('render-process-gone', (event, details) => {
+      console.error('渲染进程崩溃:', details.reason)
+      if (details.reason === 'crashed') {
+        mainWindow?.reload()
+      }
+    })
+
+    // 监听未响应事件
+    mainWindow.on('unresponsive', () => {
+      console.error('窗口未响应')
+    })
+
+    mainWindow.on('responsive', () => {
+      console.log('窗口恢复响应')
+    })
+
+    // 窗口关闭事件处理
+    mainWindow.on('closed', () => {
+      mainWindow = null
+    })
   }
 }
  

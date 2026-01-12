@@ -64,6 +64,34 @@
         @close="handleCloseCompareViewer"
       />
     </n-modal>
+
+    <!-- 错误详情对话框 -->
+    <n-modal v-model:show="showErrorDialog">
+      <n-card
+        style="width: 600px; max-height: 500px;"
+        :bordered="false"
+        size="huge"
+        role="dialog"
+        aria-modal="true"
+        closable
+        @close="showErrorDialog = false"
+      >
+        <template #header>
+          翻译错误详情 - 共 {{ currentErrors.length }} 条错误
+        </template>
+        <n-scrollbar style="max-height: 400px;">
+          <div v-if="currentErrors.length > 0">
+            <n-list hoverable clickable>
+              <n-list-item v-for="(error, index) in currentErrors" :key="index">
+                <n-text type="error">{{ index + 1 }}. {{ error }}</n-text>
+              </n-list-item>
+            </n-list>
+          </div>
+          <n-empty v-else description="暂无错误信息" />
+        </n-scrollbar>
+      </n-card>
+    </n-modal>
+
     <n-flex justify="end" style="margin-bottom: 12px" :size="8">
   <n-button 
     size="small" 
@@ -116,10 +144,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, h } from 'vue';
 import { Folder } from '@vicons/carbon';
-import { NDataTable, NFlex, NPagination, NSpace, useDialog,NButton, NTooltip, NModal, NIcon, NButtonGroup, useMessage } from 'naive-ui';
-import { h } from 'vue';
+import { NDataTable, NFlex, NPagination, NSpace, useDialog,NButton, NTooltip, NModal, NIcon, NButtonGroup, useMessage, NText, NTag, NList, NListItem, NScrollbar, NEmpty, NCard } from 'naive-ui';
 import { TranslateHistory } from '@/renderer/model/translate/TranslateHistory';
 import { TranslateHistoryManager } from '@/renderer/service/manager/TranslateHistoryManager';
 import PdfViewer from './PdfViewer.vue';
@@ -151,6 +178,32 @@ const columns: TableColumn<TranslateHistory>[] = [
           trigger: () => h('span', { style: 'width: 100%' }, row.sourceFile),
         }
       ),
+  },
+    {
+    title: '错误',
+    key: 'ext5',
+    width: 100,
+    render: (row: TranslateHistory) => {
+      if (!row.ext5 || row.ext5.trim() === '' || row.ext5 === '[]') {
+        return h(NText, { style: 'color: #18a058; font-size: 13px;' }, () => '✓ 正常');
+      }
+      try {
+        const errors = JSON.parse(row.ext5);
+        const errorCount = Array.isArray(errors) ? errors.length : 0;
+        return h(
+          NButton,
+          {
+            size: 'small',
+            type: 'error',
+            text: true,
+            onClick: () => handleViewErrors(row.ext5!),
+          },
+          () => `错误 (${errorCount})`
+        );
+      } catch {
+        return h(NText, { type: 'default' }, () => '-');
+      }
+    }
   },
   {
     title: '平台',
@@ -190,7 +243,28 @@ const columns: TableColumn<TranslateHistory>[] = [
   },
   { title: '页数', key: 'totalPages', width: 80 },
   { title: '耗时(秒)', key: 'timeConsumed', width: 80 },
-  { title: '创建时间', key: 'createdAt', width: 180 },
+  {
+    title: '创建时间',
+    key: 'createdAt',
+    width: 180,
+    render: (row: TranslateHistory) => {
+      if (!row.createdAt) return '-';
+      // SQLite CURRENT_TIMESTAMP 返回 UTC 时间，需要明确指定为 UTC 时间
+      // 在时间字符串末尾添加 'Z' 或替换空格为 'T' 并添加 'Z' 来表示 UTC 时间
+      const dateStr = row.createdAt.replace(' ', 'T') + 'Z';
+      const date = new Date(dateStr);
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    }
+  },
+
   {
     title: '操作',
     key: 'actions',
@@ -307,6 +381,20 @@ onMounted(() => {
 const message = useMessage();
 const showPdfViewer = ref(false);
 const currentPdfPath = ref('');
+
+// 错误详情对话框相关
+const showErrorDialog = ref(false);
+const currentErrors = ref<string[]>([]);
+
+const handleViewErrors = (errorsJson: string) => {
+  try {
+    const errors = JSON.parse(errorsJson);
+    currentErrors.value = Array.isArray(errors) ? errors : [];
+    showErrorDialog.value = true;
+  } catch (error) {
+    message.error('解析错误信息失败');
+  }
+};
 
 const handleViewSource = async (path: string) => {
   try {
@@ -478,6 +566,30 @@ const handleOpenTranslateDir = async () => {
 }
 :deep(.close-btn:hover) {
   background-color: #c0392b !important;
+}
+
+/* 错误对话框样式 */
+:deep(.n-card__footer) {
+  background-color: #fff;
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+:deep(.n-card) {
+  background-color: #fff;
+}
+
+:deep(.n-modal__content) {
+  background-color: #fff;
+}
+
+:deep(.n-list-item) {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+:deep(.n-list-item:last-child) {
+  border-bottom: none;
 }
 /* 调整按钮内容布局 */
 :deep(.n-button__content) {
