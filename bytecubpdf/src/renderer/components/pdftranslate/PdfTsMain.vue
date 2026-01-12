@@ -160,6 +160,14 @@
 
           </n-text>
           
+          <n-button v-if="errors.length > 0" attr-type="button" size="small" type="error" @click="showErrorDialog = true">
+            <template #icon>
+              <n-icon>
+                <AlertCircle />
+              </n-icon>
+            </template>
+            错误 ({{ errors.length }})
+          </n-button>
           <n-button attr-type="button" size="small" type="success" @click="handleTranslate" :disabled="isLoading">
             {{ t('pdfts.main.tsform.buttons.translate') }}
           </n-button>
@@ -196,6 +204,32 @@
       <DlTranslateResourceModal 
         :filesToDownload= filesToDownload
        />
+
+      <n-modal v-model:show="showErrorDialog">
+        <n-card
+          style="width: 600px; max-height: 500px;"
+          :bordered="false"
+          size="huge"
+          role="dialog"
+          aria-modal="true"
+          closable
+          @close="showErrorDialog = false"
+        >
+          <template #header>
+            翻译错误详情 - 共 {{ errors.length }} 条错误
+          </template>
+          <n-scrollbar style="max-height: 400px;">
+            <div v-if="errors.length > 0">
+              <n-list hoverable clickable>
+                <n-list-item v-for="(error, index) in errors" :key="index">
+                  <n-text type="error">{{ index + 1 }}. {{ error }}</n-text>
+                </n-list-item>
+              </n-list>
+            </div>
+            <n-empty v-else description="暂无错误信息" />
+          </n-scrollbar>
+        </n-card>
+      </n-modal>
   </div>
 </template>
 
@@ -225,10 +259,17 @@ import {
   NButton,
   NSelect,
   NProgress,
+  NModal,
+  NCard,
+  NList,
+  NListItem,
+  NSpace,
+  NScrollbar,
+  NEmpty,
 } from 'naive-ui';
 import { CloudUpload } from '@vicons/carbon';
 import { useI18n } from 'vue-i18n';
-import { CheckmarkCircle,HelpCircle } from '@vicons/ionicons5';
+import { CheckmarkCircle, HelpCircle, AlertCircle } from '@vicons/ionicons5';
 import axios from 'axios';
 import { ref, onMounted, watch, nextTick } from 'vue';
 import { LlmModelManager } from '@/renderer/service/manager/LlmModelManager';
@@ -254,6 +295,7 @@ const llmManager = new LlmModelManager();
 const pdfTsIndexDb = new PdfTsIndexDb();
 const message = useMessage();
 const uploadData = ref<Record<string, any>>({});
+const showErrorDialog = ref(false);
 import { UPLOAD_BIZ } from '@/renderer/constants/appconfig'
 //是否在翻译前先进行扫描版检测
 const verifyScanned = ref(false)
@@ -291,7 +333,8 @@ const {
   abortController,
   startTime,
   startCheckTime,
-  currentTaskId
+  currentTaskId,
+  errors
 } = storeToRefs(store)
 
 // 平台和模型数据
@@ -478,6 +521,7 @@ const handleFileChange = ({ fileList: newFileList }: { fileList: UploadFileInfo[
   statusClass.value = '';
   isLoading.value = false;
   errorMessage.value = '';
+  store.clearErrors();
 };
 
 const handleUploadError = ({ file, event }: { file: UploadFileInfo; event?: ProgressEvent }) => {
@@ -613,7 +657,8 @@ const toChatPdf = () => {
 // 开始翻译任务
 const handleTranslate = async () => {
  
-  console.log('开始翻译任务'); // 添加日志
+  console.log('开始翻译任务');
+  store.clearErrors();
   filesToDownload.value = await window.electronAPI.verifyFilePathDownloads();
   if (filesToDownload.value.length > 0) {
     filesToDownload.value = await window.electronAPI.verifyFileDownloads();
@@ -717,6 +762,11 @@ const handleTranslate = async () => {
       },
       onmessage(event) {
         const data = JSON.parse(event.data);
+        
+        if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+          store.addErrors(data.errors);
+        }
+        
         // 处理任务启动事件,保存task_id
         if (data.status === 'task_started') {
           store.setCurrentTaskId(data.task_id);
@@ -882,10 +932,49 @@ watch(pluginLogs, async () => {
 /* 新增日志容器样式 */
 .log-container {
   width: 100%;
-  border: 1px solid #f0f0f0;
+  max-width: 800px;
+  background-color: #f5f5f5;
   border-radius: 4px;
-  padding: 8px;
-  background-color: #fafafa;
-  margin-top: 2px;
+  overflow: hidden;
+}
+
+:deep(.n-log) {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d4d4d4;
+}
+
+.error-summary {
+  font-size: 14px;
+  font-weight: 500;
+  color: #d03050;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background-color: #fef0f0;
+  border-radius: 4px;
+  border-left: 3px solid #d03050;
+}
+
+:deep(.n-card__footer) {
+  background-color: #fff;
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+:deep(.n-card) {
+  background-color: #fff;
+}
+
+:deep(.n-modal__content) {
+  background-color: #fff;
+}
+
+:deep(.n-list-item) {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+:deep(.n-list-item:last-child) {
+  border-bottom: none;
 }
 </style>
