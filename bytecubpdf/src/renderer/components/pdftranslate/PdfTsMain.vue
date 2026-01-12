@@ -454,7 +454,11 @@ const handlePlatformChange = async (platformId: string) => {
     label: m.name,
   }));
   if (modelList.length > 0) {
-    formData.value.modelId = modelList[0].id;
+    const currentModelId = formData.value.modelId;
+    const modelExists = modelList.some(m => m.id === currentModelId);
+    if (!modelExists) {
+      formData.value.modelId = modelList[0].id;
+    }
   } else {
     formData.value.modelId = '';
   }
