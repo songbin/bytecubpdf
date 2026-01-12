@@ -8,8 +8,9 @@ import { mkdirSync } from 'fs';
 import { existsSync } from 'fs';
 import BuildPath from '@/main/core/BuildPath';
 import {warmup,verifyFileDownloads} from '@/main/core/assets';
-const configService = new ConfigService();
+
 export async function initialize() {
+  const configService = new ConfigService();
   let storagePath = configService.getFileStoragePath();
   if (!storagePath) {
     const defaultStoragePath = BuildPath.getRootPath();

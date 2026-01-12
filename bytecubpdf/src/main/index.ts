@@ -274,15 +274,9 @@ function createWindow(): void {
         // 先加载URL
         await mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
 
-        // 在ready-to-show时打开DevTools,确保窗口已准备显示
-        mainWindow.webContents.once('did-finish-load', () => {
-          console.debug('[主窗口] 页面加载完成')
-          if (mainWindow && !mainWindow.webContents.isDevToolsOpened()) {
-            console.debug('[主窗口] 尝试打开开发工具')
-            mainWindow.webContents.openDevTools({ mode: 'detach' })
-            console.log('开发环境 - 开发工具已打开')
-          }
-        });
+        // 开发环境：直接打开开发工具
+        mainWindow.webContents.openDevTools({ mode: 'detach' })
+        console.log('开发环境 - 开发工具已打开')
 
       } catch (error) {
         console.error('开发服务器加载失败，将在2秒后重试:', error)

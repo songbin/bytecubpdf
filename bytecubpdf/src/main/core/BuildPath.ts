@@ -3,12 +3,22 @@ import * as path from 'path';
 import { app } from 'electron';
 import * as fs from 'fs';
 import ConfigService from '@/main/services/ConfigService'
-const configService = new ConfigService()
+
+// 延迟实例化，避免在 app 准备好之前访问
+let configServiceInstance: ConfigService | null = null;
+
+function getConfigService(): ConfigService {
+    if (!configServiceInstance) {
+        configServiceInstance = new ConfigService();
+    }
+    return configServiceInstance;
+}
+
 class BuildPath {
 
     static getRootDirFromConfig(): string {
-         
-        let rootDir = configService.getFileStoragePath();
+
+        let rootDir = getConfigService().getFileStoragePath();
         //判断下 如果path是空或者是undefined
         if (!rootDir) {
             rootDir = path.join(app.getPath('userData'), STORAGE_CONFIG.root);
