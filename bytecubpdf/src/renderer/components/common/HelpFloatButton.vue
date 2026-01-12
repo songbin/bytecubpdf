@@ -30,7 +30,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, defineOptions } from 'vue'
+import { ref, computed } from 'vue'
 import { NFloatButton, NIcon, NTooltip, NFloatButtonGroup } from 'naive-ui'
 import { QuestionMarkFilled as QuestionMark } from '@vicons/material'
 import { STATISTICS } from '@/renderer/constants/appconfig'

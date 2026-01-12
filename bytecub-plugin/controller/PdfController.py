@@ -284,20 +284,33 @@ class PdfController:
                 target_file='',
                 source_file='',
                 error_message=None,  # 新增错误消息参数
+                errors_list_param=None,  # 新增错误列表参数（从monitor传递过来的）- 重命名避免遮蔽外部变量
                 ):
+                nonlocal errors_list  # 使用nonlocal访问外部的errors_list
+
+                logger.info(f"[SSE Callback] core={core}, stage={stage}, error_message={error_message}, errors_list_param={errors_list_param}")
+
                 # 处理错误消息
                 if error_message is not None:
-                    # 将错误添加到错误列表
-                    errors_list.append(error_message)
+                    # 如果传递了errors_list_param，更新外部的errors_list
+                    if errors_list_param is not None:
+                        errors_list = errors_list_param
+                    else:
+                        # 否则将单个错误添加到列表
+                        errors_list.append(error_message)
+
                     progress_queue.put({
-                        "status": "error",
+                        "status": "error_report" if current_page == -1 else "error",
                         "error": error_message,  # 使用 'error' 字段传递原始错误信息
                         "message": error_message,  # 兼容旧的 'message' 字段
                         "stage": stage,
                         "core": core,
                         "errors": errors_list.copy(),  # 添加所有错误的列表
                     })
-                    return
+                    logger.info(f"[SSE Callback] Error queued: {error_message}, errors_list: {errors_list}")
+                    # 如果是error_report（非致命错误），不return，继续翻译
+                    if current_page != -1:
+                        return
 
                 current_status = TSStatus.processing,
                 if core == TSCore.pdfmath:
@@ -315,7 +328,8 @@ class PdfController:
                 msg = f"正在处理第 {current_page} 页"
                 if core == TSCore.babeldoc:
                     msg = f"正在处理部分 {current_page}/{total_pages}"
-                progress_queue.put({
+
+                progress_data = {
                     "status": current_status,
                     "progress": progress,
                     "stage": stage,
@@ -324,7 +338,9 @@ class PdfController:
                     "core": core,
                     "msg": msg,
                     "errors": errors_list.copy()  # 添加错误列表到所有进度事件
-                })
+                }
+                progress_queue.put(progress_data)
+                logger.info(f"[SSE Callback] Progress queued: {progress_data}")
 
             def run_translate():
                 try:

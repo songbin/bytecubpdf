@@ -281,6 +281,42 @@ class ProgressMonitor:
             logger.info(f"Translation canceled: {message if message else 'No message'}")
             self.cancel_event.set()
 
+    def report_error(self, error_message: str):
+        """Report a non-fatal error during translation.
+
+        This method collects error messages without stopping the translation process.
+        Errors are stored in the errors list and can be retrieved later.
+
+        Args:
+            error_message: The error message to report
+        """
+        if self.disable or self.parent_monitor and self.parent_monitor.disable:
+            return
+
+        # Add error to the errors list
+        with self.lock:
+            self.errors.append(error_message)
+
+        # Log the error
+        logger.warning(f"Translation error reported: {error_message}")
+
+        # If there's a progress callback, send the error immediately via SSE
+        if self.progress_change_callback:
+            try:
+                self.progress_change_callback(
+                    type="error_report",
+                    error=error_message,
+                    errors=self.errors.copy(),  # Send all errors collected so far
+                    part_index=self.part_index + 1,
+                    total_parts=self.total_parts,
+                )
+            except Exception as e:
+                logger.error(f"Failed to send error via callback: {e}")
+
+        # If this is a part monitor, also report to parent monitor
+        if self.parent_monitor:
+            self.parent_monitor.report_error(error_message)
+
 
 class TranslationStage:
     def __init__(

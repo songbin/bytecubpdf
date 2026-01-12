@@ -1272,17 +1272,24 @@ class ILTranslator:
                 logger.error(
                     f"Authentication error translating paragraph. Paragraph: {paragraph.debug_id} ({paragraph.unicode}). Error: {e}. ",
                 )
-                # Cancel translation with error message
-                self.translation_config.cancel_translation(str(e))
+                # Report error to monitor and cancel translation
+                error_msg = f"API认证失败: {str(e)}"
+                self.translation_config.progress_monitor.report_error(error_msg)
+                self.translation_config.cancel_translation(error_msg)
                 # Raise to ensure error propagates
                 raise
             except ContentFilterError as e:
                 logger.warning(f"ContentFilterError: {e.message}")
+                # Report content filter error to monitor
+                error_msg = f"内容过滤错误: {e.message}"
+                self.translation_config.progress_monitor.report_error(error_msg)
                 self.add_content_filter_hint(page, paragraph)
                 return
             except Exception as e:
+                error_msg = f"翻译段落 {paragraph.debug_id} 时出错: {str(e)}"
                 logger.exception(
                     f"Error translating paragraph. Paragraph: {paragraph.debug_id} ({paragraph.unicode}). Error: {e}. ",
                 )
-                # ignore error and continue
+                # Report error to monitor instead of ignoring
+                self.translation_config.progress_monitor.report_error(error_msg)
                 return

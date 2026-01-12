@@ -100,19 +100,73 @@ class PdfBabelSerive:
                 cancellation_event=cancellation_event, 
                 callback=callback))
             return result_path
-    @classmethod                     
+    @classmethod
     async def handle_progress_event(cls, event, callback):
-        current_page = event.get("stage_current", 0)
-        total_pages = event.get("stage_total", 1)
-        stage = event.get("stage", "")
-        overall_progress = event.get("overall_progress", 0)
-        if callback:
-            callback(current_page, total_pages,
+        event_type = event.get("type", "")
+
+        # Handle error_report events (non-fatal errors during translation)
+        if event_type == "error_report":
+            error_message = event.get("error", "Unknown error")
+            errors_list_param = event.get("errors", [])
+            stage = event.get("stage", "")
+            if callback:
+                try:
+                    # Send error to SSE stream without stopping translation
+                    callback(
+                        current_page=-1,  # Error indicator
+                        total_pages=1,
+                        core=TSCore.babeldoc,
+                        current_part=event.get("part_index", 0),
+                        total_parts=event.get("total_parts", 1),
+                        stage=stage,
+                        overall_progress=0,
+                        error_message=error_message,  # Individual error message
+                        errors_list_param=errors_list_param  # All errors collected so far
+                    )
+                except Exception as cb_err:
+                    logger.warning(f"Failed to send error_report via callback: {cb_err}")
+            return
+
+        # Handle progress events (progress_start, progress_update, progress_end)
+        if event_type in ("progress_start", "progress_update", "progress_end"):
+            current_page = event.get("stage_current", event.get("current", 0))
+            total_pages = event.get("stage_total", event.get("total", 1))
+            stage = event.get("stage", "")
+            overall_progress = event.get("overall_progress", 0)
+            part_index = event.get("part_index", 0)
+            total_parts = event.get("total_parts", 1)
+
+            if callback:
+                callback(
+                    current_page=current_page,
+                    total_pages=total_pages,
                     core=TSCore.babeldoc,
-                    current_part=current_page,
-                    total_parts=total_pages,
+                    current_part=part_index,
+                    total_parts=total_parts,
                     stage=stage,
-                    overall_progress=overall_progress)
+                    overall_progress=overall_progress
+                )
+            return
+
+        # Handle fatal error events
+        if event_type == "error":
+            error_msg = event.get('error', 'Unknown error')
+            error_str = str(error_msg) if not isinstance(error_msg, str) else error_msg
+            if callback:
+                try:
+                    callback(
+                        current_page=-1,
+                        total_pages=1,
+                        core=TSCore.babeldoc,
+                        current_part=0,
+                        total_parts=1,
+                        stage="error",
+                        overall_progress=0,
+                        error_message=error_str
+                    )
+                except Exception as cb_err:
+                    logger.warning(f"Failed to send error via callback: {cb_err}")
+            return
     @classmethod 
     def handle_finish_event(cls, event):
         result = event["translate_result"]
@@ -133,34 +187,23 @@ class PdfBabelSerive:
                 with progress_context:
                     try:
                         async for event in yadt_translate(yadt_config):
-                            # logger.info(event)
+                            logger.info(f"[SSE] Event received: {event.get('type', 'unknown')}")
                             progress_handler(event)
                             # 检查是否取消
                             if cancellation_event and cancellation_event.is_set():
                                 raise Exception("Translation cancelled by user")
-                            # 处理进度事件（关键修改点）
+                            # 处理所有事件类型
+                            if callback:
+                                try:
+                                    await cls.handle_progress_event(event, callback)
+                                    logger.info(f"[SSE] Event {event.get('type')} processed successfully")
+                                except Exception as pe:
+                                    logger.warning(f"Progress event handler failed: {pe}")
+                            # 处理致命错误事件（需要终止翻译）
                             if event["type"] == "error":
                                 error_msg = event['error']
                                 # 提取错误信息的字符串表示
                                 error_str = str(error_msg) if not isinstance(error_msg, str) else error_msg
-
-                                # 立即通过 callback 传递错误信息到 SSE 流
-                                if callback:
-                                    try:
-                                        # 调用 callback，传递特殊标识表示这是错误信息
-                                        # 使用 -1 表示错误状态
-                                        callback(
-                                            current_page=-1,  # 错误标识
-                                            total_pages=1,
-                                            core=TSCore.babeldoc,
-                                            current_part=0,
-                                            total_parts=1,
-                                            stage="error",
-                                            overall_progress=0,
-                                            error_message=error_str  # 传递原始错误信息
-                                        )
-                                    except Exception as cb_err:
-                                        logger.warning(f"Failed to send error via callback: {cb_err}")
 
                                 # 然后抛出异常以终止翻译
                                 if isinstance(error_msg, ScannedPDFError):
@@ -169,11 +212,7 @@ class PdfBabelSerive:
                                     logger.error_ext(f"Translation failed: {error_str}")
                                     # 将错误信息包装成更详细的异常
                                     raise Exception(f"翻译过程中发生错误: {error_str}") from error_msg if isinstance(error_msg, Exception) else Exception(error_str)
-                            if event["type"] == "progress_update" and callback:
-                                try:
-                                    await cls.handle_progress_event(event, callback)
-                                except Exception as pe:
-                                    logger.warning(f"Progress event handler failed: {pe}")
+                            # 处理完成事件
                             if event["type"] == "finish":
                                 try:
                                     return cls.handle_finish_event(event)

@@ -809,7 +809,8 @@ class ILTranslatorLLMOnly:
                 except Exception as e:
                     error_message = f"Error translating paragraph. Error: {e}."
                     logger.exception(error_message)
-                    # Ignore error and continue
+                    # Report error to monitor instead of ignoring
+                    self.translation_config.progress_monitor.report_error(error_message)
                     for llm_translate_tracker in llm_translate_trackers:
                         llm_translate_tracker.set_error_message(error_message)
                     continue
@@ -845,13 +846,17 @@ class ILTranslatorLLMOnly:
                 logger.error(
                     f"Authentication error translating paragraph. Error: {e}. ",
                 )
-                # Cancel translation with error message
-                self.translation_config.cancel_translation(str(e))
+                # Report error to monitor and cancel translation
+                error_msg = f"API认证失败: {str(e)}"
+                self.translation_config.progress_monitor.report_error(error_msg)
+                self.translation_config.cancel_translation(error_msg)
                 # Raise to ensure error propagates
                 raise
         except Exception as e:
             error_message = f"Error {e} during translation. try fallback"
             logger.warning(error_message)
+            # Report error to monitor
+            self.translation_config.progress_monitor.report_error(error_message)
             for llm_translate_tracker in llm_translate_trackers:
                 llm_translate_tracker.set_error_message(error_message)
                 llm_translate_tracker.set_fallback_to_translate()

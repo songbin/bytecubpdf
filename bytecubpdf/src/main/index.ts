@@ -197,10 +197,12 @@ function createWindow(): void {
 
   // 根据环境加载不同内容
   if (process.env.VITE_DEV_SERVER_URL) {
+    console.log('检测到开发环境:', process.env.VITE_DEV_SERVER_URL)
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
-    mainWindow.webContents.openDevTools()
-    console.log('开发环境')
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
+    console.log('开发环境 - 开发工具已打开')
   } else {
+    console.log('生产环境')
     mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'))
     // mainWindow.webContents.openDevTools()
   }
