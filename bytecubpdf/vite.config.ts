@@ -18,7 +18,7 @@ export default defineConfig({
             }
           },
           build: {
-            sourcemap: true,  // 确保主进程启用 sourcemap
+            sourcemap: true,
             outDir: 'dist-electron/main',
             rollupOptions: {
               external: ['electron', 'sqlite3', 'fs', 'path']
@@ -44,16 +44,63 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: false,
-    sourcemap: 'inline'  // 渲染进程启用内联 sourcemap
+    sourcemap: 'inline',
+    // ✨ 新增：代码分割配置
+    rollupOptions: {
+      output: {
+        // 手动分包策略
+        manualChunks: (id) => {
+          // 将 node_modules 中的包进行分包
+          if (id.includes('node_modules')) {
+            // Vue 核心库单独打包
+            if (id.includes('vue') || id.includes('pinia') || id.includes('@vue')) {
+              return 'vue-vendor'
+            }
+            // vue-router 单独打包
+            if (id.includes('vue-router')) {
+              return 'router'
+            }
+            // naive-ui 单独打包
+            if (id.includes('naive-ui')) {
+              return 'naive-ui'
+            }
+            // PDF 相关库单独打包
+            if (id.includes('pdfjs') || id.includes('pdf')) {
+              return 'pdf-vendor'
+            }
+            // i18n 相关库单独打包
+            if (id.includes('i18n') || id.includes('vue-i18n')) {
+              return 'i18n'
+            }
+            // 其他第三方库打包到 vendor
+            return 'vendor'
+          }
+        }
+      }
+    },
+    // ✨ 新增：chunk 大小警告阈值（KB）
+    chunkSizeWarningLimit: 1000
   },
   resolve: {
     alias: {
-      // '@': path.resolve(__dirname, './src/renderer'),
       '@/renderer': path.resolve(__dirname, './src/renderer'),
       '@/main': path.resolve(__dirname, './src/main'),
       '@/preload': path.resolve(__dirname, './src/preload'),
       '@/shared': path.resolve(__dirname, './src/shared'),
       'vue-i18n': 'vue-i18n/dist/vue-i18n.cjs.js',
     }
+  },
+  // ✨ 新增：优化依赖预构建
+  optimizeDeps: {
+    include: [
+      'vue',
+      'vue-router',
+      'pinia',
+      'naive-ui'
+    ],
+    exclude: [
+      // PDF.js 不预构建，按需加载
+      'pdfjs-dist'
+    ]
   }
 })

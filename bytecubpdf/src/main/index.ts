@@ -341,7 +341,10 @@ function createWindow(): void {
 }
  
 // 应用准备就绪后创建窗口
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  const appReadyTime = Date.now();
+  console.log('✅ [启动优化] app.whenReady 触发');
+
   // const procName = 'bytecubplugin.exe'; // 替换为你要杀死的进程名
 
   // if (process.platform === 'win32') {
@@ -350,11 +353,33 @@ app.whenReady().then(() => {
   // } else {
   //   //killProcessOnUnix(procName);
   // }
-  createWindow()
-  setupIPCHandlers() // 初始化所有 IPC 处理器
-  FileIpcSetup()
-  initialize() // 初始化应用
-  updateManager.checkForUpdates() // 启动时自动检查更新
+
+  // ===== 第1步：创建窗口（最高优先级）=====
+  createWindow();
+  console.log('✅ [启动优化] 窗口创建完成');
+
+  // ===== 第2步：设置IPC处理器（快速，不阻塞）=====
+  setupIPCHandlers();
+  FileIpcSetup();
+  console.log('✅ [启动优化] IPC处理器设置完成');
+
+  // ===== 第3步：初始化应用（关键表快速初始化）=====
+  // 现在这是异步的，只等待关键表初始化完成
+  try {
+    await initialize();
+    const initElapsed = Date.now() - appReadyTime;
+    console.log(`✅ [启动优化] 应用初始化完成 (${initElapsed}ms)`);
+  } catch (error) {
+    console.error('❌ [启动优化] 初始化失败:', error);
+  }
+
+  // ===== 第4步：检查更新（完全异步，不阻塞）=====
+  updateManager.checkForUpdates();
+  console.log('✅ [启动优化] 更新检查已启动（异步）');
+
+  const totalElapsed = Date.now() - appReadyTime;
+  console.log(`🎉 [启动优化] 主进程启动流程完成，窗口即将显示 (${totalElapsed}ms)`);
+
   // macOS应用激活事件处理
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

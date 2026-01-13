@@ -1,6 +1,6 @@
 <template>
   <div>
-    <n-upload directory-dnd action="http://localhost:8089/pdf/import" :multiple="false" :file-list="fileList"
+    <n-upload action="http://localhost:8089/pdf/import" :multiple="false" :file-list="fileList"
       :data="uploadData" :disabled="isLoading" accept=".pdf,application/pdf" class="upload-area"
       @before-upload="beforeUpload" @finish="handleUploadFinish" @error="handleUploadError" @change="handleFileChange">
       <n-upload-dragger class="upload-dragger">
@@ -313,7 +313,7 @@ const formData = ref({
   maxPages: 0, // 新增每页最大页数字段
   enableOCR: false,  // 新增OCR识别字段
   disableRichText: false,  // 新增禁用富文字段
-  enableTable: false,  // 新增表格翻译字段
+  enableTable: true,  // 新增表格翻译字段
   enableDual: true,  // 新增双语对照字段
   verifyScanned:true,//是否开启扫描版检测
   enableClean: false,  // 新增skip_clean字段
@@ -374,7 +374,7 @@ onMounted(async () => {
           maxPages: config.maxPages || 0, // 新增每页最大页数字段
           enableOCR:  false,  // 新增OCR识别字段
           disableRichText: config.disableRichText || false,  // 新增富文字段
-          enableTable: config.enableTable || false,  // 新增表格翻译字段
+          enableTable: config.enableTable || true,  // 新增表格翻译字段
           enableDual: config.enableDual || false,  // 新增双语对照字段
           verifyScanned: config.verifyScanned || true,
           enableClean: config.enableClean || false,  // 新增优化体积字段

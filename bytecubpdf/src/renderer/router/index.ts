@@ -1,72 +1,65 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
-import PdfTranslateView from '@/renderer/views/PdfTranslateView.vue'
-import SettingsView from '@/renderer/views/SettingsView.vue'
-import AboutView from '@/renderer/views/AboutView.vue'
-import ModelSettings from  '@/renderer/components/settings/ModelSettings.vue'
-import MainChatView from '@/renderer/views/MainChatView.vue'
-import HomeIndexView from '@/renderer/views/HomeIndexView.vue'
-import AssistantSettings from '@/renderer/components/settings/AssistantSettings.vue'
 
-// 路由配置
+// ✨ 改为懒加载：只在访问路由时才加载对应组件
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: 'HomeIndex',
-    component: HomeIndexView,
+    component: () => import('@/renderer/views/HomeIndexView.vue'),
     meta: {
       title: '主页',
-      keepAlive: false  // 需要缓存
+      keepAlive: false
     }
   },
   {
     path: '/chat',
     name: 'MainChat',
-    component: MainChatView,
+    component: () => import('@/renderer/views/MainChatView.vue'),
     meta: {
       title: '聊天',
-      keepAlive: true  // 需要缓存
+      keepAlive: true
     }
   },
   {
     path: '/pdf',
     name: 'PdfTranslate',
-    component: PdfTranslateView,
+    component: () => import('@/renderer/views/PdfTranslateView.vue'),
     meta: {
       title: '首页',
-      keepAlive: true  // 需要缓存
+      keepAlive: true
     }
   },
- 
+
   {
     path: '/settings',
     name: 'Settings',
-    component: SettingsView,
+    component: () => import('@/renderer/views/SettingsView.vue'),
     children: [
       {
-        path: '', // 默认子路由
+        path: '',
         redirect: { name: 'ModelSettings' }
       },
       {
         path: 'model',
         name: 'ModelSettings',
-        component: ModelSettings,
+        component: () => import('@/renderer/components/settings/ModelSettings.vue'),
         meta: {
           title: '大模型设置',
-          keepAlive: true  // 需要缓存
+          keepAlive: true,
         },
-        props: (route) => ({  // 添加props传递
+        props: (route) => ({
           platformId: route.params.platformId
         })
       },
       {
         path: 'assistant',
         name: 'AssistantSettings',
-        component: AssistantSettings,
+        component: () => import('@/renderer/components/settings/AssistantSettings.vue'),
         meta: {
           title: '助手设置',
-          keepAlive: true  // 需要缓存
+          keepAlive: true,
         },
-        props: (route) => ({  // 添加props传递
+        props: (route) => ({
           assistantId: route.params.assistantId
         })
       }
@@ -75,7 +68,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/about',
     name: 'About',
-    component: AboutView,
+    component: () => import('@/renderer/views/AboutView.vue'),
     meta: {
       title: '关于'
     }
