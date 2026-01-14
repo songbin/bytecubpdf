@@ -288,7 +288,12 @@ function createWindow(): void {
   } else {
     console.log('生产环境')
     if (mainWindow) {
-      mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'))
+      // 修正:使用相对于asar包的正确路径
+      // 打包后 __dirname 指向 app.asar/dist-electron/main
+      // dist 目录在 app.asar/dist，所以应该使用 ../dist/index.html
+      const htmlPath = path.join(__dirname, '../../dist/index.html')
+      console.log('加载HTML路径:', htmlPath)
+      mainWindow.loadFile(htmlPath)
       // mainWindow.webContents.openDevTools()
     }
   }

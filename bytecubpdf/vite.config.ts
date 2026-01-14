@@ -52,9 +52,17 @@ export default defineConfig({
         manualChunks: (id) => {
           // 将 node_modules 中的包进行分包
           if (id.includes('node_modules')) {
-            // Vue 核心库单独打包
-            if (id.includes('vue') || id.includes('pinia') || id.includes('@vue')) {
-              return 'vue-vendor'
+            // Vue 核心单独打包
+            if (id.includes('vue') && id.includes('node_modules/vue')) {
+              return 'vue-core'
+            }
+            // Pinia 单独打包
+            if (id.includes('pinia')) {
+              return 'pinia'
+            }
+            // @vue 相关库单独打包
+            if (id.includes('@vue')) {
+              return 'vue-utils'
             }
             // vue-router 单独打包
             if (id.includes('vue-router')) {
@@ -102,5 +110,15 @@ export default defineConfig({
       // PDF.js 不预构建，按需加载
       'pdfjs-dist'
     ]
-  }
+  },
+  // ✨ 新增：CSS 配置，抑制字体解析警告
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler' // 使用现代编译器，避免 legacy 警告
+      }
+    }
+  },
+  // 静态资源处理配置
+  assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.ttf']
 })

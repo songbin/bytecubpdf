@@ -32,12 +32,14 @@ def build_executable():
         '--name=bytecubplugin',
         f'--distpath={output_dir}',
         '--add-data=.env;.',  # 添加配置文件
+        '--additional-hooks-dir=hooks',  # 使用自定义 hooks 目录
         '--exclude-module=PyQt5',  # 排除可能引起冲突的模块
         '--exclude-module=tkinter',  # 排除Tkinter避免Tcl/Tk打包问题
-        '--exclude-module=matplotlib',  # 排除matplotlib的GUI后端，使用Agg后端
         '--exclude-module=IPython',
         '--exclude-module=jupyter',
         '--exclude-module=notebook',
+        '--exclude-module=torch.testing',  # 排除 torch 测试模块，避免递归
+        '--exclude-module=torch._C._distributed',  # 排除分布式相关模块
     ]
     
     # 必要的隐藏导入 - 仅添加PyInstaller无法自动检测的动态导入模块
@@ -55,6 +57,9 @@ def build_executable():
         'pyzstd',
         'sse_starlette',
         'charset_normalizer',
+        'matplotlib',
+        'matplotlib.pyplot',
+        'matplotlib.backends.backend_agg',
     ]
     
     # 添加所有必需的包作为hidden-imports
