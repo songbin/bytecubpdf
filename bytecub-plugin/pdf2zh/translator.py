@@ -4,14 +4,19 @@ import logging
 from math import log
 import os
 import re
+import time
 import unicodedata
 from copy import copy
 from string import Template
 from typing import cast
-from config.ts_constants import  ENVDict
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
+from config.ts_constants import ENVDict
+
 logger = logging.getLogger(__name__)
 
 import deepl
+import httpx
 import ollama
 import openai
 import requests
@@ -29,7 +34,7 @@ from pdf2zh.cache import TranslationCache
 from pdf2zh.config import ConfigManager
 
 
-from tenacity import retry, retry_if_exception_type
+from tenacity import retry, retry_if_exception_type, before_sleep_log
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
@@ -110,18 +115,19 @@ class BaseTranslator:
         :return: translated text
         """
         raise NotImplementedError
+
     def pre_process(self, text, term_dict):
         """术语预处理：长匹配优先 + 边界保护"""
         mapping = {}
         counter = 1
-        
+
         # 按长度排序确保长术语优先匹配
         sorted_terms = sorted(term_dict.items(), key=lambda x: (-len(x[0]), x[0]))
-        
+
         for src, dst in sorted_terms:
-            pattern = fr'(?<!\w){re.escape(src)}(?!\w)'  # 单词边界保护
+            pattern = rf"(?<!\w){re.escape(src)}(?!\w)"  # 单词边界保护
             placeholder = f"[T{counter}]"
-            
+
             if dst == src:  # 值等于键则保留原文
                 if re.search(pattern, text):
                     mapping[placeholder] = src
@@ -131,7 +137,7 @@ class BaseTranslator:
                     mapping[placeholder] = dst
                     text = re.sub(pattern, placeholder, text)
             counter += 1
-                    
+
         return text, mapping
 
     def post_process(self, translated_text, mapping):
@@ -139,17 +145,17 @@ class BaseTranslator:
         # 恢复术语
         for placeholder, value in mapping.items():
             translated_text = translated_text.replace(placeholder, value)
-        
+
         # 公式标记校验
         import re
+
         formula_pattern = r"\{v\d+\}"
         for match in re.finditer(formula_pattern, translated_text):
             assert match.group() in translated_text, f"公式破坏检测: {match.group()}"
-        
+
         return translated_text
-    def prompt(
-        self, text: str, prompt_template: Template | None = None
-    ) -> list[dict[str, str]]:
+
+    def prompt(self, text: str, prompt_template: Template | None = None) -> list[dict[str, str]]:
         try:
             return [
                 {
@@ -167,33 +173,36 @@ class BaseTranslator:
             pass
         except Exception:
             logging.exception("Error parsing prompt, use the default prompt.")
-           
+
         term_dict = self.envs[ENVDict.TERM_DICT] if ENVDict.TERM_DICT in self.envs else {}
         term_dict = {} if term_dict is None else term_dict
         has_term_dict = len(term_dict) > 0
-        
-       # logging.info(f"glossary_str: {glossary_str}")
+
+        # logging.info(f"glossary_str: {glossary_str}")
         if has_term_dict:
-            return [{
-                "role": "system",
-                "content": self.envs[ENVDict.SYSTEM_PROMPT],
-            },{
-                "role": "user",
-                "content": (
-                     "You are a professional translation engine.\n"
+            return [
+                {
+                    "role": "system",
+                    "content": self.envs[ENVDict.SYSTEM_PROMPT],
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        "You are a professional translation engine.\n"
                         "KEEP {v*} placeholders UNMODIFIED.\n"
                         f"TRANSLATE all other content to {self.lang_out}.\n"
                         "OUTPUT ONLY the translated text with NO explanations or formatting.\n\n"
-                        
                         f"Source Text: {text}\n\n"
                         "Translated Text:"
-                )
-            }]
+                    ),
+                },
+            ]
         else:
-            return [{
-                "role": "system",
-                "content": self.envs[ENVDict.SYSTEM_PROMPT],
-            },
+            return [
+                {
+                    "role": "system",
+                    "content": self.envs[ENVDict.SYSTEM_PROMPT],
+                },
                 {
                     "role": "user",
                     "content": (
@@ -221,9 +230,7 @@ class BaseTranslator:
         return f"</b{id}>"
 
     def get_formular_placeholder(self, id: int):
-        return self.get_rich_text_left_placeholder(
-            id
-        ) + self.get_rich_text_right_placeholder(id)
+        return self.get_rich_text_left_placeholder(id) + self.get_rich_text_right_placeholder(id)
 
 
 class GoogleTranslator(BaseTranslator):
@@ -245,9 +252,7 @@ class GoogleTranslator(BaseTranslator):
             params={"tl": self.lang_out, "sl": self.lang_in, "q": text},
             headers=self.headers,
         )
-        re_result = re.findall(
-            r'(?s)class="(?:t0|result-container)">(.*?)<', response.text
-        )
+        re_result = re.findall(r'(?s)class="(?:t0|result-container)">(.*?)<', response.text)
         if response.status_code == 400:
             result = "IRREPARABLE TRANSLATION ERROR"
         else:
@@ -275,9 +280,7 @@ class BingTranslator(BaseTranslator):
         url = response.url[:-10]
         ig = re.findall(r"\"ig\":\"(.*?)\"", response.text)[0]
         iid = re.findall(r"data-iid=\"(.*?)\"", response.text)[-1]
-        key, token = re.findall(
-            r"params_AbusePreventionHelper\s=\s\[(.*?),\"(.*?)\",", response.text
-        )[0]
+        key, token = re.findall(r"params_AbusePreventionHelper\s=\s\[(.*?),\"(.*?)\",", response.text)[0]
         return url, ig, iid, key, token
 
     def do_translate(self, text):
@@ -313,9 +316,7 @@ class DeepLTranslator(BaseTranslator):
         self.client = deepl.Translator(auth_key)
 
     def do_translate(self, text):
-        response = self.client.translate_text(
-            text, target_lang=self.lang_out, source_lang=self.lang_in
-        )
+        response = self.client.translate_text(text, target_lang=self.lang_out, source_lang=self.lang_in)
         return response.text
 
 
@@ -397,7 +398,7 @@ class OllamaTranslator(BaseTranslator):
             options=self.options,
         )
         content = self._remove_cot_content(response.message.content or "")
-         # 后处理阶段：恢复术语并校验
+        # 后处理阶段：恢复术语并校验
         if has_term_dict:
             translated = content
             final_result = self.post_process(translated, mapping)
@@ -442,9 +443,7 @@ class XinferenceTranslator(BaseTranslator):
                 xf_prompt = [
                     {
                         "role": "user",
-                        "content": xf_prompt[0]["content"]
-                        + "\n"
-                        + xf_prompt[1]["content"],
+                        "content": xf_prompt[0]["content"] + "\n" + xf_prompt[1]["content"],
                     }
                 ]
                 response = xf_model.chat(
@@ -452,9 +451,7 @@ class XinferenceTranslator(BaseTranslator):
                     messages=xf_prompt,
                 )
 
-                response = response["choices"][0]["message"]["content"].replace(
-                    "<end_of_turn>", ""
-                )
+                response = response["choices"][0]["message"]["content"].replace("<end_of_turn>", "")
                 if len(response) > maxlen:
                     raise Exception("Response too long")
                 return response.strip()
@@ -531,25 +528,29 @@ class OpenAITranslator(BaseTranslator):
                 if isinstance(error, dict):
                     error_code = error.get("code", "")
                     error_message = error.get("message", "")
-                    
+
                     # Handle insufficient balance/quota errors
-                    if error_code in ["insufficient_quota", "billing_not_active", "quota_exceeded"] or \
-                       "insufficient quota" in error_message.lower() or \
-                       "billing" in error_message.lower() or \
-                       "balance" in error_message.lower():
+                    if (
+                        error_code in ["insufficient_quota", "billing_not_active", "quota_exceeded"]
+                        or "insufficient quota" in error_message.lower()
+                        or "billing" in error_message.lower()
+                        or "balance" in error_message.lower()
+                    ):
                         raise ValueError("账户余额不足或配额已用完，请检查账户状态", error)
-                    
+
                     # Handle invalid API key errors
-                    if error_code in ["invalid_api_key", "invalid_request", "unauthorized"] or \
-                       "invalid api key" in error_message.lower() or \
-                       "unauthorized" in error_message.lower() or \
-                       "authentication" in error_message.lower():
+                    if (
+                        error_code in ["invalid_api_key", "invalid_request", "unauthorized"]
+                        or "invalid api key" in error_message.lower()
+                        or "unauthorized" in error_message.lower()
+                        or "authentication" in error_message.lower()
+                    ):
                         raise ValueError("API密钥无效或已过期，请检查API密钥配置", error)
-                
+
                 raise ValueError("Error response from Service", error)
         content = response.choices[0].message.content.strip()
         content = self.think_filter_regex.sub("", content).strip()
-         # 后处理阶段：恢复术语并校验
+        # 后处理阶段：恢复术语并校验
         if has_term_dict:
             translated = content
             final_result = self.post_process(translated, mapping)
@@ -557,15 +558,15 @@ class OpenAITranslator(BaseTranslator):
         return content
 
     def get_formular_placeholder(self, id: int):
-        #return "{{v" + str(id) + "}}"
+        # return "{{v" + str(id) + "}}"
         return f"{{v{id}}}"
 
     def get_rich_text_left_placeholder(self, id: int):
-        #return self.get_formular_placeholder(id)
+        # return self.get_formular_placeholder(id)
         return f"{{v{id}}}"
 
     def get_rich_text_right_placeholder(self, id: int):
-        #return self.get_formular_placeholder(id + 1)
+        # return self.get_formular_placeholder(id + 1)
         return f"{{v{id}}}"
 
 
@@ -669,10 +670,7 @@ class ZhipuTranslator(OpenAITranslator):
                 messages=self.prompt(text, self.prompttext),
             )
         except openai.BadRequestError as e:
-            if (
-                json.loads(response.choices[0].message.content.strip())["error"]["code"]
-                == "1301"
-            ):
+            if json.loads(response.choices[0].message.content.strip())["error"]["code"] == "1301":
                 return "IRREPARABLE TRANSLATION ERROR"
             raise e
         return response.choices[0].message.content.strip()
@@ -733,9 +731,7 @@ class AzureTranslator(BaseTranslator):
         endpoint = self.envs["AZURE_ENDPOINT"]
         api_key = self.envs["AZURE_API_KEY"]
         credential = AzureKeyCredential(api_key)
-        self.client = TextTranslationClient(
-            endpoint=endpoint, credential=credential, region="chinaeast2"
-        )
+        self.client = TextTranslationClient(endpoint=endpoint, credential=credential, region="chinaeast2")
         # https://github.com/Azure/azure-sdk-for-python/issues/9422
         logger = logging.getLogger("azure.core.pipeline.policies.http_logging_policy")
         logger.setLevel(logging.WARNING)
@@ -802,9 +798,7 @@ class AnythingLLMTranslator(BaseTranslator):
             "sessionId": "translation_expert",
         }
 
-        response = requests.post(
-            self.api_url, headers=self.headers, data=json.dumps(payload)
-        )
+        response = requests.post(self.api_url, headers=self.headers, data=json.dumps(payload))
         response.raise_for_status()
         data = response.json()
 
@@ -842,9 +836,7 @@ class DifyTranslator(BaseTranslator):
         }
 
         # 向 Dify 服务器发送请求
-        response = requests.post(
-            self.api_url, headers=headers, data=json.dumps(payload)
-        )
+        response = requests.post(self.api_url, headers=headers, data=json.dumps(payload))
         response.raise_for_status()
         response_data = response.json()
 
@@ -1000,3 +992,53 @@ class QwenMtTranslator(OpenAITranslator):
             extra_body={"translation_options": translation_options},
         )
         return response.choices[0].message.content.strip()
+
+
+class RateLimitError(Exception):
+    pass
+
+
+class ServerNotAvailableError(Exception):
+    pass
+
+
+AVAILABLE_SERVER_ENDPOINTS = [
+    "https://api1.pdf2zh-next.com/chatproxy",
+    "https://api2.pdf2zh-next.com/chatproxy",
+]
+
+
+class SiliconFlowFreeTranslator(OpenAITranslator):
+    # https://github.com/openai/openai-python
+    name = "siliconflowfree"
+    envs = {
+        "SILICONFLOWFREE_ENABLE_JSON_MODE": False,
+    }
+
+    def __init__(
+        self,
+        lang_in: str,
+        lang_out: str,
+        model: str,
+        base_url=None,
+        api_key=None,
+        envs=None,
+        prompt=None,
+    ):
+        self.set_envs(envs)
+        # 免费服务不需要 API key 和 base_url，使用 None
+        super().__init__(lang_in, lang_out, model, base_url=None, api_key=None, prompt=prompt)
+
+        self.enable_json_mode = False
+        if self.envs["SILICONFLOWFREE_ENABLE_JSON_MODE"]:
+            self.add_cache_impact_parameters("request_json_mode", True)
+            self.enable_json_mode = True
+
+        # 使用 httpx 客户端而不是 OpenAI 客户端
+        self.client = httpx.Client(timeout=100)
+
+        self.url = AVAILABLE_SERVER_ENDPOINTS[0]
+        self.get_fast_service()
+        self.pdf2zh_next_recommended_qps = 10
+        self.pdf2zh_next_recommended_pool_max_workers = 100
+        self.fetch_setting()

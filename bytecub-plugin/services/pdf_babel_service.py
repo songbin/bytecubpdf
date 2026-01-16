@@ -234,12 +234,14 @@ class PdfBabelSerive:
     def __query_platform( cls, service_name:str,lang_in, lang_out, service_model, envs, prompt):
         from pdf2zh.translator import (
         OllamaTranslator,
-        OpenAITranslator
+        OpenAITranslator,
+        SiliconFlowFreeTranslator,
     )
 
         for translator in [
             OllamaTranslator, 
             OpenAITranslator,
+            SiliconFlowFreeTranslator,
         ]:
             translater = None
             if service_name == translator.name:
