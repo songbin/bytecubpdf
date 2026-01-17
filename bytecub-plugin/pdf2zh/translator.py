@@ -1008,8 +1008,7 @@ AVAILABLE_SERVER_ENDPOINTS = [
 ]
 
 
-class SiliconFlowFreeTranslator(OpenAITranslator):
-    # https://github.com/openai/openai-python
+class SiliconFlowFreeTranslator(BaseTranslator):
     name = "siliconflowfree"
     envs = {
         "SILICONFLOWFREE_ENABLE_JSON_MODE": False,
@@ -1020,21 +1019,16 @@ class SiliconFlowFreeTranslator(OpenAITranslator):
         lang_in: str,
         lang_out: str,
         model: str,
-        base_url=None,
-        api_key=None,
         envs=None,
-        prompt=None,
     ):
         self.set_envs(envs)
-        # 免费服务不需要 API key 和 base_url，使用 None
-        super().__init__(lang_in, lang_out, model, base_url=None, api_key=None, prompt=prompt)
+        super().__init__(lang_in, lang_out, model)
 
         self.enable_json_mode = False
         if self.envs["SILICONFLOWFREE_ENABLE_JSON_MODE"]:
             self.add_cache_impact_parameters("request_json_mode", True)
             self.enable_json_mode = True
 
-        # 使用 httpx 客户端而不是 OpenAI 客户端
         self.client = httpx.Client(timeout=100)
 
         self.url = AVAILABLE_SERVER_ENDPOINTS[0]
@@ -1042,3 +1036,168 @@ class SiliconFlowFreeTranslator(OpenAITranslator):
         self.pdf2zh_next_recommended_qps = 10
         self.pdf2zh_next_recommended_pool_max_workers = 100
         self.fetch_setting()
+
+    def fetch_setting(self):
+        try:
+            response = self.client.get(f"{self.url}/config")
+            if response.status_code == 200:
+                resp = response.json()
+                if resp["status"] == "ok":
+                    qps = resp["qps"]
+                    max_pool_size = resp["max_pool_size"]
+
+                    assert isinstance(qps, int)
+                    assert isinstance(max_pool_size, int)
+
+                    assert qps > 0
+                    assert max_pool_size > 0
+
+                    self.pdf2zh_next_recommended_qps = qps
+                    self.pdf2zh_next_recommended_pool_max_workers = max_pool_size
+
+                    logger.info(
+                        f"Fetched setting and updated: qps: {qps}, max_pool_size: {max_pool_size}"
+                    )
+
+        except Exception as e:
+            logger.error(f"Failed to fetch setting and update: {e}")
+
+    def get_fast_service(self):
+        def test_endpoint_speed(endpoint):
+            total_response_time = 0
+            success_count = 0
+
+            for i in range(3):
+                start_time = time.time()
+                success = self.check_server_status(endpoint)
+                response_time = time.time() - start_time
+                total_response_time += response_time
+
+                if success:
+                    success_count += 1
+
+                logger.debug(
+                    f"Endpoint {endpoint} test {i + 1}/3: {response_time:.3f}s, success: {success}"
+                )
+
+            overall_success = success_count >= 2
+
+            if not overall_success:
+                total_response_time = float("inf")
+
+            logger.info(
+                f"Endpoint {endpoint} overall: {total_response_time:.3f}s total, {success_count}/3 successes"
+            )
+            return (endpoint, total_response_time, overall_success)
+
+        fastest_endpoint = None
+        fastest_time = float("inf")
+
+        with ThreadPoolExecutor(
+            max_workers=len(AVAILABLE_SERVER_ENDPOINTS)
+        ) as executor:
+            future_to_endpoint = {
+                executor.submit(test_endpoint_speed, endpoint): endpoint
+                for endpoint in AVAILABLE_SERVER_ENDPOINTS
+            }
+
+            for future in as_completed(future_to_endpoint):
+                endpoint, response_time, success = future.result()
+
+                if success and response_time < fastest_time:
+                    fastest_time = response_time
+                    fastest_endpoint = endpoint
+                    logger.info(
+                        f"Found faster endpoint: {endpoint} ({response_time:.3f}s)"
+                    )
+
+        if fastest_endpoint:
+            self.url = fastest_endpoint
+            logger.info(
+                f"Selected fastest endpoint: {fastest_endpoint} ({fastest_time:.3f}s)"
+            )
+        else:
+            logger.warning("No available endpoints found, using default")
+            self.url = AVAILABLE_SERVER_ENDPOINTS[0]
+
+        return self.url
+
+    def check_server_status(self, server_endpoint: str):
+        try:
+            response = self.client.post(f"{server_endpoint}/check", timeout=5)
+            logger.info(
+                f"Checking server status: {server_endpoint}, status code: {response.status_code}, response: {response.json()}"
+            )
+            if response.status_code == 200:
+                resp = response.json()
+                if resp["status"] == "ok":
+                    return True
+                else:
+                    raise ServerNotAvailableError(
+                        f"Server is not available, message: {resp['message']}"
+                    )
+            else:
+                return False
+        except ServerNotAvailableError as e:
+            raise
+        except Exception as e:
+            return False
+
+    def do_translate(self, text, rate_limit_params: dict = None) -> str:
+        term_dict = self.envs[ENVDict.TERM_DICT] if ENVDict.TERM_DICT in self.envs else {}
+        if term_dict is None:
+            term_dict = {}
+        has_term_dict = len(term_dict) > 0
+        mapping = {}
+        if has_term_dict:
+            processed_text, mapping = self.pre_process(text, term_dict)
+            text = processed_text
+        translated = self.do_llm_translate(
+            f"You are a professional,authentic machine translation engine.\n\n;; Treat next line as plain text input and translate it into {self.lang_out}, output translation ONLY. If translation is unnecessary (e.g. proper nouns, codes, {'{{1}}, etc. '}), return the original text. NO explanations. NO notes. Input:\n\n{text}",
+            rate_limit_params,
+        )
+        if has_term_dict:
+            final_result = self.post_process(translated, mapping)
+            translated = final_result
+        return translated
+
+    @retry(
+        retry=retry_if_exception_type(httpx.HTTPError),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=30, max=60),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    @retry(
+        retry=retry_if_exception_type(RateLimitError),
+        stop=stop_after_attempt(100),
+        wait=wait_exponential(multiplier=1, min=4, max=120),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    def do_llm_translate(self, text, rate_limit_params: dict = None):
+        if text is None:
+            return None
+
+        if (
+            self.enable_json_mode
+            and rate_limit_params
+            and rate_limit_params.get("request_json_mode", False)
+        ):
+            request = {
+                "text": text,
+                "requestJsonMode": True,
+            }
+        else:
+            request = {
+                "text": text,
+            }
+
+        response = self.client.post(
+            self.url,
+            json=request,
+            timeout=60,
+        )
+        if response.status_code == 429:
+            raise RateLimitError
+        response.raise_for_status()
+        message = response.json()["content"]
+        return message
