@@ -483,13 +483,23 @@ const beforeUpload = async (data: { file: UploadFileInfo; fileList: UploadFileIn
     message.error('仅支持 PDF 文件格式');
     return false;
   }
-  // 新增路径长度校验
   const uploadDir = await (window as any).window.electronAPI?.getUploadDirPath();
   const fullPath = await (window as any).window.electronAPI?.pathJoin(uploadDir, file.name);
-  console.log('完整路径:', fullPath); // 打印完整路径
-  if (fullPath.length > 200) {
-    message.error(`上传保存路径太长（${fullPath.length}/200），请缩短文件名`);
-    fileList.value = []; // 清空文件列表
+  console.log('完整路径:', fullPath);
+  if (fullPath.length > 250) {
+    dialog.warning({
+      title: '路径过长',
+      content: `上传保存路径太长（${fullPath.length}/250），可以在设置-存储里修改文件存储路径以缩短路径。`,
+      positiveText: '去设置',
+      negativeText: '取消',
+      onPositiveClick: () => {
+        router.push({ 
+          path: '/settings',
+          query: { panel: 'storage' }
+        });
+      }
+    });
+    fileList.value = [];
     return false;
   }
   return true;

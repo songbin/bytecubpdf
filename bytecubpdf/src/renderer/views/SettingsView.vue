@@ -46,6 +46,18 @@ watch(() => route.name,
   { immediate: true }
 )
 
+//监听query参数，自动切换到对应面板
+watch(() => route.query.panel,
+  (panel) => {
+    if (panel && ['storage', 'model', 'assistant'].includes(panel as string)) {
+      activePanel.value = panel as string
+    } else {
+      activePanel.value = 'model'
+    }
+  },
+  { immediate: true }
+)
+
 // 动态计算组件
 const activeComponent = computed(() => {
   return {
