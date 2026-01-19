@@ -245,9 +245,14 @@ class PdfBabelSerive:
         ]:
             translater = None
             if service_name == translator.name:
-                translater = translator(
-                    lang_in, lang_out, service_model, envs=envs, prompt=prompt
-                )
+                if getattr(translator, "CustomPrompt", False):
+                    translater = translator(
+                        lang_in, lang_out, service_model, envs=envs, prompt=prompt
+                    )
+                else:
+                    translater = translator(
+                        lang_in, lang_out, service_model, envs=envs
+                    )
                 break
         
         if translater is None:

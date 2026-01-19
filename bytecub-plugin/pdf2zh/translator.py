@@ -1152,7 +1152,7 @@ class SiliconFlowFreeTranslator(BaseTranslator):
         if has_term_dict:
             processed_text, mapping = self.pre_process(text, term_dict)
             text = processed_text
-        translated = self.do_llm_translate(
+        translated = self.sf_do_llm_translate(
             f"You are a professional,authentic machine translation engine.\n\n;; Treat next line as plain text input and translate it into {self.lang_out}, output translation ONLY. If translation is unnecessary (e.g. proper nouns, codes, {'{{1}}, etc. '}), return the original text. NO explanations. NO notes. Input:\n\n{text}",
             rate_limit_params,
         )
@@ -1173,7 +1173,7 @@ class SiliconFlowFreeTranslator(BaseTranslator):
         wait=wait_exponential(multiplier=1, min=4, max=120),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    def do_llm_translate(self, text, rate_limit_params: dict = None):
+    def sf_do_llm_translate(self, text, rate_limit_params: dict = None):
         if text is None:
             return None
 
