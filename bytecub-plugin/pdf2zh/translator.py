@@ -1014,13 +1014,14 @@ class SiliconFlowFreeTranslator(BaseTranslator):
     envs = {
         "SILICONFLOWFREE_ENABLE_JSON_MODE": False,
     }
-
+    CustomPrompt = False
     def __init__(
         self,
         lang_in: str,
         lang_out: str,
         model: str,
         envs=None,
+        prompt=None,
     ):
         self.set_envs(envs)
         super().__init__(lang_in, lang_out, model)
