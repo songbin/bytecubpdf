@@ -8,6 +8,7 @@ import { LlmResModel } from "@/renderer/llm/model/LlmResModel";
 import { LLMAdapter } from '@/renderer/llm/LLMAdapter';
 import { LlmRequestModel,LlmMessageList } from "@/renderer/llm/model/LlmRequestModel";
 import {ChatRole} from '@/renderer/model/chat/ChatConfig'
+import {checkEnableThinkSwitch} from '@/renderer/service/chat/config/OpenAIModelsConfig'
 export class ChatService {
   llmManager = new LlmModelManager()
   async call(platformId: string, modelId:string,temperature:number,maxTokens:number,prompt:string) {
@@ -50,6 +51,7 @@ export class ChatService {
         const baseurl = platform.apiUrl
         const apiKey = platform.apiKey
         const modelName = model.id
+        const supportThinking = checkEnableThinkSwitch(modelName)
         const config:ClientConfig = {
             baseUrl: baseurl,
             apiKey: apiKey,
@@ -59,6 +61,7 @@ export class ChatService {
             platformId: platformId,
             protocolType: platform.protocolType,
             useStream:false,
+            enableThinking: supportThinking ? false : undefined
         }
         // console.log(JSON.stringify(config))
          // 根据平台协议类型选择不同的AI客户端

@@ -19,7 +19,12 @@ export class CustomOpenAI extends BaseLlmClient {
    async call(messages: LlmMessageList): Promise<LlmResModel> {
         try {
            let maxTokens = calcMaxTokens(this.config.modelName,this.config.maxTokens);
-           let thinkingEnableConfig = buildThinkingEnableQwen(this.config.modelName,false,false);
+           let thinkingEnableConfig;
+           if (this.config.enableThinking !== undefined) {
+               thinkingEnableConfig = { enable_thinking: this.config.enableThinking };
+           } else {
+               thinkingEnableConfig = buildThinkingEnableQwen(this.config.modelName,false,false);
+           }
            // @ts-ignore 因为会有额外的字段
            const response = await this.llm.chat.completions.create({
                 model: this.config.modelName,

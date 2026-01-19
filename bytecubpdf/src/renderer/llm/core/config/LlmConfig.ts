@@ -7,6 +7,7 @@ export interface ClientConfig{
     platformId: string,
     protocolType:string,
     useStream:boolean,
+    enableThinking?:boolean,
 }
 export interface ChatRequestMessage{
     role: string;

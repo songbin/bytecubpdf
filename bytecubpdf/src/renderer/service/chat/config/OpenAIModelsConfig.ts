@@ -17,7 +17,8 @@ export const checkEnableThinkSwitch = (modelName: string) => {
         'qwen-turbo',
         'qwen-turbo-latest',
         'qwen-turbo-0428',
-        'qwen-turbo-2025-04-28']
+        'qwen-turbo-2025-04-28',
+        'qwen3-']
     //如果modelName字符串包含models里任意一个字符串，则返回true
     let supportThinking = false
     if (models.some(item => modelName.toLowerCase().includes(item))) {
