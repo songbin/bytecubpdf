@@ -389,22 +389,12 @@ onMounted(async () => {
       label: p.platformName,
     }));
 
-    // 添加硬编码的硅基免费平台
-    const siliconFlowFreePlatformId = 'siliconflowfree_builtin';
-    platforms.value.unshift({
-      value: siliconFlowFreePlatformId,
-      label: '硅基免费',
-    });
-
-    // 如果IndexedDB没有选中记录，默认选中硅基免费
+    // 如果IndexedDB没有选中记录，默认选中第一个平台
     if (!config || !config.platformId) {
-      formData.value.platformId = siliconFlowFreePlatformId;
-      // 设置默认模型
-      formData.value.modelId = 'deepseek-ai/DeepSeek-V3';
-      models.value = [
-        { value: 'deepseek-ai/DeepSeek-V3', label: 'DeepSeek-V3' },
-        { value: 'zai-org/GLM-4', label: 'GLM-4' },
-      ];
+      if (platformList.length > 0) {
+        formData.value.platformId = platformList[0].id;
+        await handlePlatformChange(platformList[0].id);
+      }
     }
 
     await loadAssistantList()
@@ -466,19 +456,6 @@ watch(
 
 // 处理平台切换
 const handlePlatformChange = async (platformId: string) => {
-  // 处理硬编码的硅基免费平台
-  if (platformId === 'siliconflowfree_builtin') {
-    models.value = [
-      { value: 'deepseek-ai/DeepSeek-V3', label: 'DeepSeek-V3' },
-      { value: 'zai-org/GLM-4', label: 'GLM-4' },
-    ];
-    // 如果当前模型不在列表中，设置默认模型
-    if (!models.value.some(m => m.value === formData.value.modelId)) {
-      formData.value.modelId = 'deepseek-ai/DeepSeek-V3';
-    }
-    return;
-  }
-
   const modelList = await llmManager.getModelsByPlatform(platformId);
   models.value = modelList.map((m) => ({
     value: m.id,
@@ -611,12 +588,7 @@ const formatRequestData = async () => {
   let baseUrl = '';
   let protocolType = '';
 
-  // 处理硬编码的硅基免费平台
-  if (formData.value.platformId === 'siliconflowfree_builtin') {
-    protocolType = 'siliconflowfree';
-    apiKey = '';
-    baseUrl = '';
-  } else if (formData.value.platformId) {
+  if (formData.value.platformId) {
     const platform = await llmManager.getPlatformBasicInfo(formData.value.platformId);
     if (platform) {
       apiKey = platform.apiKey || '';
@@ -670,20 +642,15 @@ const formatHistoryParams = async (resultData: any) => {
   let platformName = '';
   let modelName = formData.value.modelId || '';
 
-  // 处理硬编码的硅基免费平台
-  if (formData.value.platformId === 'siliconflowfree_builtin') {
-    platformName = '硅基免费';
-  } else {
-    const platform = formData.value.platformId
-      ? await llmManager.getPlatformBasicInfo(formData.value.platformId)
-      : null;
-    platformName = platform?.platformName || '';
+  const platform = formData.value.platformId
+    ? await llmManager.getPlatformBasicInfo(formData.value.platformId)
+    : null;
+  platformName = platform?.platformName || '';
 
-    const model = formData.value.modelId
-      ? await llmManager.getModel(formData.value.platformId, formData.value.modelId)
-      : null;
-    modelName = model?.name || modelName;
-  }
+  const model = formData.value.modelId
+    ? await llmManager.getModel(formData.value.platformId, formData.value.modelId)
+    : null;
+  modelName = model?.name || modelName;
 
   const params = {
     platformId: formData.value.platformId || '',
@@ -726,25 +693,27 @@ const handleTranslate = async () => {
 
   // 新增API Key检查
   if (formData.value.platformId) {
+    const platform = await llmManager.getPlatformBasicInfo(formData.value.platformId);
+    if(!platform){
+      message.error('当前平台不存在，请先完成配置');
+      return;
+    }
     // 硅基免费平台不需要API Key和API URL配置
-    if (formData.value.platformId !== 'siliconflowfree_builtin') {
-      const platform = await llmManager.getPlatformBasicInfo(formData.value.platformId);
-      if (!platform?.apiUrl || !platform?.apiKey) {
-        message.error('当前平台未配置API地址或密钥，请先完成配置');
-        dialog.warning({
-          title: t('pdfts.main.platformConfigIncomplete'),
-          content: t('pdfts.main.platformConfigIncompleteDesc'),
-          positiveText: t('pdfts.main.goToSettings'),
-          negativeText: t('pdfts.main.cancel'),
-          onPositiveClick: () => {
-            router.push({
-              path: '/settings/model',
-              query: { platformId: formData.value.platformId }
-            });
-          }
-        });
-        return;
-      }
+    if (platform.protocolType !== 'siliconflowfree' && (!platform?.apiUrl || !platform?.apiKey)) {
+      message.error('当前平台未配置API地址或密钥，请先完成配置');
+      dialog.warning({
+        title: t('pdfts.main.platformConfigIncomplete'),
+        content: t('pdfts.main.platformConfigIncompleteDesc'),
+        positiveText: t('pdfts.main.goToSettings'),
+        negativeText: t('pdfts.main.cancel'),
+        onPositiveClick: () => {
+          router.push({
+            path: '/settings/model',
+            query: { platformId: formData.value.platformId }
+          });
+        }
+      });
+      return;
     }
   }
   if(!formData.value.verifyScanned){

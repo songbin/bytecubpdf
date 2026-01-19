@@ -19,6 +19,7 @@
                                 :options="PROTOCOL_CAN_LLM"
                                 :placeholder="t('settings.model.protocolTypePlaceholder')"
                                 clearable
+                                :disabled="isSiliconFlowFree"
                                 style="width: 120px"
                             />
                         </n-form-item>
@@ -37,9 +38,9 @@
                                     :placeholder="formData.protocolType === LLM_PROTOCOL.ollama 
                                         ? t('settings.model.apiKeyPlaceholder.ollama') 
                                         : t('settings.model.apiKeyPlaceholder.default')" 
-                                   
+                                    :disabled="isSiliconFlowFree"
                                     class="full-width-input" />
-                                <n-button type="primary" ghost @click="checkApiConnection">
+                                <n-button type="primary" ghost @click="checkApiConnection" :disabled="isSiliconFlowFree">
                                     {{ t('settings.model.apiCheck') }}
                                 </n-button>
                             </n-input-group>
@@ -57,6 +58,7 @@
                             class="full-width-form-item" :show-feedback="false">
                             <n-input v-model:value="formData.apiUrl" 
                                 :placeholder="t('settings.model.apiUrlPlaceholder')" 
+                                :disabled="isSiliconFlowFree"
                                 class="full-width-input" />
                         </n-form-item>
                     </n-flex>
@@ -98,14 +100,14 @@
                             </n-flex>
 
                             <n-flex :style="{ flexShrink: 0, marginLeft: '12px', gap: '4px' }">
-                                <n-button type="primary" text size="small" @click="editModel(index)">
+                                <n-button type="primary" text size="small" @click="editModel(index)"  >
                                     <template #icon>
                                         <n-icon>
                                             <Edit />
                                         </n-icon>
                                     </template>
                                 </n-button>
-                                <n-button type="error" text size="small" @click="removeModel(index)">
+                                <n-button type="error" text size="small" @click="removeModel(index)"  >
                                     <template #icon>
                                         <n-icon>
                                             <TrashCan />
@@ -117,6 +119,7 @@
                     </n-flex>
 
                     <n-button type="primary" text @click="showAddModelDialog"
+                      
                         :style="{ alignSelf: 'flex-start', marginTop: '8px' }">
                         <template #icon>
                             <n-icon>
@@ -297,6 +300,10 @@ const modelTypes = computed(() => [
     { value: 'embedded', label: 'settings.model.types.embedded' },
     { value: 'multi', label: 'settings.model.types.multi' }
 ])
+
+const isSiliconFlowFree = computed(() => {
+    return formData.value.id === 'siliconflowfree_builtin'
+})
 
 const pricingTypes = computed(() => [
     { value: 'free', label: '免费' },

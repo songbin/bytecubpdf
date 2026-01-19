@@ -79,10 +79,19 @@ export class LlmModelManager {
             `SELECT * FROM ${this.platformTable} ORDER BY createdAt desc`
         ) as unknown[] || [];
         
-        return Promise.all(platforms.map(async (platform) => {
+        const result = await Promise.all(platforms.map(async (platform) => {
             const models = await this.getModelsByPlatform((platform as any).id);
             return { ...(platform as Omit<SettingLLMPlatform, 'models'>), models };
         }));
+
+        // 将硅基免费平台排在第一位
+        const siliconFlowFreeIndex = result.findIndex(p => p.id === 'siliconflowfree_builtin');
+        if (siliconFlowFreeIndex > 0) {
+            const [siliconFlowFree] = result.splice(siliconFlowFreeIndex, 1);
+            result.unshift(siliconFlowFree);
+        }
+
+        return result;
     }
 
     // 获取单个平台

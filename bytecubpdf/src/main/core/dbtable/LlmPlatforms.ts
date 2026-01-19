@@ -37,6 +37,7 @@ export async function initLlmPlatforms(db: Database) {
 
     // 初始化平台数据 - 逐条检查并插入
     const platforms = [
+        { id: 'siliconflowfree_builtin', platformName: '硅基免费', protocolType: 'siliconflowfree', apiKey: '免费平台', apiUrl: '免费平台' },
         { id: 'zhipu', platformName: '智谱AI', protocolType: 'openai', apiKey: '', apiUrl: 'https://open.bigmodel.cn/api/paas/v4' },
         { id: 'deepseek', platformName: 'DeepSeek', protocolType: 'openai', apiKey: '', apiUrl: 'https://api.deepseek.com/v1' },
         { id: 'silicon', platformName: '硅基流动', protocolType: 'openai', apiKey: '', apiUrl: 'https://api.siliconflow.cn/v1' },

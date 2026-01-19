@@ -31,6 +31,10 @@ export async function initLlmModels(db: Database) {
     await createLlmModelsTable(db)
     // 初始化模型数据 - 逐条检查并插入
     const models = [
+        // 硅基免费平台模型
+        { id: 'deepseek-ai/DeepSeek-V3', platformId: 'siliconflowfree_builtin', name: 'DeepSeek-V3', type: '["text"]', pricingType: 'free' },
+        { id: 'zai-org/GLM-4', platformId: 'siliconflowfree_builtin', name: 'GLM-4', type: '["text"]', pricingType: 'free' },
+
         // 智谱AI模型
         { id: 'GLM-4-Flash', platformId: 'zhipu', name: 'GLM-4-Flash(免费)', type: '["text"]', pricingType: 'free' },
         { id: 'GLM-4-Plus', platformId: 'zhipu', name: 'GLM-4-Plus', type: '["text"]', pricingType: 'charge' },
