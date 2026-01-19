@@ -11,6 +11,7 @@ from string import Template
 from typing import cast
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
+from bs4 import BeautifulSoup
 from config.ts_constants import ENVDict
 
 logger = logging.getLogger(__name__)
@@ -1173,6 +1174,25 @@ class SiliconFlowFreeTranslator(BaseTranslator):
         wait=wait_exponential(multiplier=1, min=4, max=120),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
+    def _clean_html_tags(self, text: str) -> str:
+        """
+        使用 BeautifulSoup 清理 HTML 标签
+        
+        Args:
+            text: 可能包含 HTML 标签的文本
+            
+        Returns:
+            清理后的纯文本
+        """
+        try:
+            soup = BeautifulSoup(text, 'html.parser')
+            cleaned_text = soup.get_text(separator='', strip=True)
+            return cleaned_text
+        except Exception as e:
+            logger.warning(f"Failed to parse HTML with BeautifulSoup: {e}, falling back to regex")
+            text = re.sub(r'<[^>]+>', '', text)
+            return html.unescape(text).strip()
+
     def sf_do_llm_translate(self, text, rate_limit_params: dict = None):
         if text is None:
             return None
@@ -1200,4 +1220,5 @@ class SiliconFlowFreeTranslator(BaseTranslator):
             raise RateLimitError
         response.raise_for_status()
         message = response.json()["content"]
+        message = self._clean_html_tags(message)
         return message
