@@ -391,7 +391,7 @@ onMounted(async () => {
 
     // 添加硬编码的硅基免费平台
     const siliconFlowFreePlatformId = 'siliconflowfree_builtin';
-    platforms.value.push({
+    platforms.value.unshift({
       value: siliconFlowFreePlatformId,
       label: '硅基免费',
     });
@@ -402,8 +402,8 @@ onMounted(async () => {
       // 设置默认模型
       formData.value.modelId = 'deepseek-ai/DeepSeek-V3';
       models.value = [
-        { value: 'deepseek-ai/DeepSeek-V3', label: 'deepseek-ai/DeepSeek-V3' },
-        { value: 'zai-org/GLM-4', label: 'zai-org/GLM-4' },
+        { value: 'deepseek-ai/DeepSeek-V3', label: 'DeepSeek-V3' },
+        { value: 'zai-org/GLM-4', label: 'GLM-4' },
       ];
     }
 
@@ -469,8 +469,8 @@ const handlePlatformChange = async (platformId: string) => {
   // 处理硬编码的硅基免费平台
   if (platformId === 'siliconflowfree_builtin') {
     models.value = [
-      { value: 'deepseek-ai/DeepSeek-V3', label: 'deepseek-ai/DeepSeek-V3' },
-      { value: 'zai-org/GLM-4', label: 'zai-org/GLM-4' },
+      { value: 'deepseek-ai/DeepSeek-V3', label: 'DeepSeek-V3' },
+      { value: 'zai-org/GLM-4', label: 'GLM-4' },
     ];
     // 如果当前模型不在列表中，设置默认模型
     if (!models.value.some(m => m.value === formData.value.modelId)) {
