@@ -371,7 +371,7 @@ const initializeChatConfig = async () => {
   try {
     // 1. 先加载平台列表（确保后续逻辑可用）
     const platformList = await llmManager.getPlatforms();
-    platforms.value = platformList.map(p => ({
+    platforms.value = platformList.filter(p => p.id !== 'siliconflowfree_builtin').map(p => ({
       value: p.id,
       label: p.platformName,
     }));
