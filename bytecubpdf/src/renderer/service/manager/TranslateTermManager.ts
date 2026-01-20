@@ -130,6 +130,52 @@ export class TranslateTermManager {
             throw error;
         }
     }
+
+    async existsBySourceTerm(sourceTerm: string): Promise<boolean> {
+        const result = await SqliteDbCore.executeQuery<{ count: number }>(
+            `SELECT COUNT(id) as count FROM ${this.tableName} WHERE sourceTerm = ?`,
+            [sourceTerm]
+        );
+        return (result[0]?.count || 0) > 0;
+    }
+
+    async batchExistsBySourceTerms(sourceTerms: string[]): Promise<string[]> {
+        if (sourceTerms.length === 0) return [];
+
+        const placeholders = sourceTerms.map(() => '?').join(',');
+        const result = await SqliteDbCore.executeQuery<{ sourceTerm: string }>(
+            `SELECT sourceTerm FROM ${this.tableName} WHERE sourceTerm IN (${placeholders})`,
+            sourceTerms
+        );
+
+        return result.map(r => r.sourceTerm);
+    }
+
+    async batchCreate(terms: Omit<Term, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> {
+        if (terms.length === 0) return;
+
+        try {
+            await SqliteDbCore.beginTransaction();
+
+            for (const term of terms) {
+                await this.create(term);
+            }
+
+            await SqliteDbCore.commit();
+        } catch (error) {
+            await SqliteDbCore.rollback();
+            throw error;
+        }
+    }
+
+    async updateBySourceTerm(sourceTerm: string, updates: Partial<Omit<Term, 'id' | 'createdAt'>>): Promise<void> {
+        await SqliteDbCore.executeQuery(
+            `UPDATE ${this.tableName} SET 
+                translatedTerm = COALESCE(?, translatedTerm)
+            WHERE sourceTerm = ?`,
+            [updates.translatedTerm, sourceTerm]
+        );
+    }
 }
 
 export const translateTermManager = new TranslateTermManager();

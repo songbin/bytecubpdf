@@ -127,3 +127,4 @@ bytecub-plugin/bytecubplugin.spec
 /vitepress/debug.*
 /testdata
 /bytecubpdf/nul
+specs
