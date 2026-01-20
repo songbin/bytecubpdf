@@ -344,9 +344,15 @@ class OpenAITranslator(BaseTranslator):
                 self.prompt_token_count.inc(response.usage.prompt_tokens)
             if response.usage and response.usage.completion_tokens:
                 self.completion_token_count.inc(response.usage.completion_tokens)
-            if response.usage and (
-                hit_count := getattr(response.usage, "prompt_cache_hit_tokens", 0)
+             # Support both response.usage.prompt_cache_hit_tokens and response.prompt_tokens_details.cached_tokens
+            hit_count = 0
+            if response.usage and hasattr(response.usage, "prompt_cache_hit_tokens"):
+                hit_count = getattr(response.usage, "prompt_cache_hit_tokens", 0)
+            if hasattr(response, "prompt_tokens_details") and getattr(
+                response.prompt_tokens_details, "cached_tokens", 0
             ):
+                hit_count += getattr(response.prompt_tokens_details, "cached_tokens", 0)
+            if hit_count:
                 self.cache_hit_prompt_token_count.inc(hit_count)
         except Exception as e:
             logger.exception("Error updating token count")

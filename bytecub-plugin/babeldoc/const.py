@@ -6,7 +6,7 @@ import subprocess
 import threading
 from pathlib import Path
 
-__version__ = "0.5.22"
+__version__ = "0.5.23"
 
 CACHE_FOLDER = Path.home() / ".cache" / "babeldoc"
 def set_cache_folder(path: str | Path):

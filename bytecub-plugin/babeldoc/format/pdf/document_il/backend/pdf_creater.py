@@ -485,10 +485,13 @@ def reproduce_cmap(doc):
     assert doc
     font_set = set()
     for page in doc:
-        font_list = page.get_fonts()
-        for font in font_list:
-            if font[1] == "ttf" and font[3] in FONT_NAMES and ".ttf" in font[4]:
-                font_set.add(font)
+        try:
+            font_list = page.get_fonts()
+            for font in font_list:
+                if font[1] == "ttf" and font[3] in FONT_NAMES and ".ttf" in font[4]:
+                    font_set.add(font)
+        except Exception as e:
+            logger.error(f"Error in getting page fonts: {e}")
     for font in font_set:
         reproduce_one_font(doc, font[0])
     return doc

@@ -766,7 +766,12 @@ class ILTranslatorLLMOnly:
                     input_token_count = self.calc_token_count(trimed_input)
                     output_token_count = self.calc_token_count(output_unicode)
 
-                    if trimed_input == output_unicode and input_token_count > 10:
+                    same_as_input = trimed_input == output_unicode
+                    if (
+                        same_as_input
+                        and input_token_count > 10
+                        and not self.translation_config.disable_same_text_fallback
+                    ):
                         llm_translate_tracker.set_error_message(
                             "Translation result is the same as input, fallback."
                         )
@@ -786,16 +791,19 @@ class ILTranslatorLLMOnly:
                         llm_translate_tracker.set_placeholder_full_match()
                         continue
 
-                    edit_distance = Levenshtein.distance(input_unicode, output_unicode)
-                    if edit_distance < 5 and input_token_count > 20:
-                        llm_translate_tracker.set_error_message(
-                            f"Translation result edit distance is too small. distance: {edit_distance}, input: {input_unicode}, output: {output_unicode}"
+                    if not self.translation_config.disable_same_text_fallback:
+                        edit_distance = Levenshtein.distance(
+                            input_unicode, output_unicode
                         )
-                        logger.warning(
-                            f"Translation result edit distance is too small. distance: {edit_distance}, input: {input_unicode}, output: {output_unicode}"
-                        )
-                        llm_translate_tracker.set_placeholder_full_match()
-                        continue
+                        if edit_distance < 5 and input_token_count > 20:
+                            llm_translate_tracker.set_error_message(
+                                f"Translation result edit distance is too small. distance: {edit_distance}, input: {input_unicode}, output: {output_unicode}"
+                            )
+                            logger.warning(
+                                f"Translation result edit distance is too small. distance: {edit_distance}, input: {input_unicode}, output: {output_unicode}"
+                            )
+                            llm_translate_tracker.set_placeholder_full_match()
+                            continue
                     # Apply the translation to the paragraph
                     self.il_translator.post_translate_paragraph(
                         inputs[id_][2],

@@ -26,7 +26,7 @@ from babeldoc.translator.translator import OpenAITranslator
 from babeldoc.translator.translator import set_translate_rate_limiter
 
 logger = logging.getLogger(__name__)
-__version__ = "0.5.22"
+__version__ = "0.5.23"
 
 
 def create_parser():
@@ -268,6 +268,12 @@ def create_parser():
         action="store_true",
         default=False,
         help="Add formula placeholder hint for translation. (Currently not recommended, it may affect translation quality, default: False)",
+    )
+    translation_group.add_argument(
+        "--disable-same-text-fallback",
+        action="store_true",
+        default=False,
+        help="Disable fallback translation when LLM output matches input text. (default: False)",
     )
     translation_group.add_argument(
         "--glossary-files",
@@ -703,6 +709,7 @@ async def main():
             custom_system_prompt=args.custom_system_prompt,
             working_dir=working_dir,
             add_formula_placehold_hint=args.add_formula_placehold_hint,
+            disable_same_text_fallback=args.disable_same_text_fallback,
             glossaries=loaded_glossaries,
             pool_max_workers=args.pool_max_workers,
             auto_extract_glossary=args.auto_extract_glossary,

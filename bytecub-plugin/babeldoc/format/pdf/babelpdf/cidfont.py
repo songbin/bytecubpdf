@@ -43,8 +43,12 @@ def get_descendant_fonts(doc, xref):
 def get_glyph_bbox(face, g):
     try:
         face.load_glyph(g, freetype.FT_LOAD_NO_SCALE)
-        cbox = face.glyph.outline.get_bbox()
-        return cbox.xMin, cbox.yMin, cbox.xMax, cbox.yMax
+        outline = face.glyph.outline
+        if outline.contours:
+            cbox = outline.get_bbox()
+            return cbox.xMin, cbox.yMin, cbox.xMax, cbox.yMax
+        else:
+            return 0, 0, 0, 0
     except Exception:
         return 0, 0, 0, 0
 
