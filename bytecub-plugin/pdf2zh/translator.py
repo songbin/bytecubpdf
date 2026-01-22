@@ -382,24 +382,26 @@ class OllamaTranslator(BaseTranslator):
         self.add_cache_impact_parameters("temperature", self.options["temperature"])
 
     def do_translate(self, text: str) -> str:
+        term_dict = self.envs[ENVDict.TERM_DICT] if ENVDict.TERM_DICT in self.envs else {}
+        if term_dict is None:
+            term_dict = {}
+        has_term_dict = len(term_dict) > 0
+        mapping = {}
+        
         if (max_token := len(text) * 5) > self.options["num_predict"]:
             self.options["num_predict"] = max_token
-            term_dict = self.envs[ENVDict.TERM_DICT] if ENVDict.TERM_DICT in self.envs else {}
-            # 确保 term_dict 不是 None
-            if term_dict is None:
-                term_dict = {}
-            has_term_dict = len(term_dict) > 0
-            mapping = {}
-            if has_term_dict:
-                processed_text, mapping = self.pre_process(text, term_dict)
-                text = processed_text
+        
+        if has_term_dict:
+            processed_text, mapping = self.pre_process(text, term_dict)
+            text = processed_text
+            
         response = self.client.chat(
             model=self.model,
             messages=self.prompt(text, self.prompt_template),
             options=self.options,
         )
         content = self._remove_cot_content(response.message.content or "")
-        # 后处理阶段：恢复术语并校验
+        
         if has_term_dict:
             translated = content
             final_result = self.post_process(translated, mapping)
